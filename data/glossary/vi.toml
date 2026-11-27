@@ -783,10 +783,8 @@ vi = "truy vấn phân cấp"
 
 [[term]]
 en = "N3"
-vi = "N3"
-keep = true
-abbr = "Notation3"
-note = "Từ viết tắt chuẩn, không dịch."
+vi = "Notation3"
+note = "Viết tắt của Notation3; giữ tên gốc, không dịch."
 
 [[term]]
 en = "Semantic Web"
@@ -3524,3 +3522,26 @@ vi = "hiệu năng"
 [[term]]
 en = "redundancy"
 vi = "dư thừa"
+
+[[term]]
+en = "hydrating IDs"
+vi = "bổ sung ID"
+note = "Thay ID bằng thông tin con người đọc được bằng cách tra cứu (phép nối ở tầng ứng dụng)."
+
+[[term]]
+en = "schemaless"
+vi = "không có schema"
+note = "Nhất quán với 'schema' giữ nguyên tiếng Anh."
+
+[[term]]
+en = "projection"
+vi = "phép chiếu"
+ctx = "materialized view"
+
+[[term]]
+en = "read model"
+vi = "mô hình đọc"
+
+[[term]]
+en = "pivot table"
+vi = "bảng tổng hợp xoay"

@@ -1,6 +1,4 @@
 ---
-draft: true
-book_status: draft
 translationKey: ddia-v2-ch3
 title: Mô hình dữ liệu và ngôn ngữ truy vấn
 book_kind: chapter
@@ -14,83 +12,83 @@ breadcrumbs: false
 
 ![](/map/ch02.png)
 
-> *我的语言的边界，意味着我的世界的边界。*
+> *Giới hạn của ngôn ngữ của tôi nghĩa là giới hạn của thế giới của tôi.*
 >
-> 路德维希・维特根斯坦，《逻辑哲学论》（1922）
+> Ludwig Wittgenstein, *Tractatus Logico-Philosophicus* (1922)
 
-数据模型可能是软件开发中最重要的部分了，因为它们的影响如此深远：不仅仅影响着软件的编写方式，而且影响着我们的 *解题思路*。
+Mô hình dữ liệu có lẽ là phần quan trọng nhất của phát triển phần mềm, vì chúng có ảnh hưởng sâu rộng: không chỉ đến cách phần mềm được viết, mà còn đến cách chúng ta *suy nghĩ về vấn đề* cần giải quyết.
 
-多数应用使用层层叠加的数据模型构建。对于每层数据模型的关键问题是：它是如何用低一层数据模型来 *表示* 的？例如：
+Hầu hết ứng dụng được xây dựng bằng cách xếp chồng các lớp mô hình dữ liệu. Câu hỏi then chốt với mỗi lớp là: nó được *biểu diễn* bằng mô hình dữ liệu của lớp thấp hơn như thế nào? Chẳng hạn:
 
-1. 作为一名应用开发人员，你观察现实世界（里面有人员、组织、货物、行为、资金流向、传感器等），并采用对象或数据结构，以及操控那些数据结构的 API 来进行建模。那些结构通常是特定于应用程序的。
-2. 当要存储那些数据结构时，你可以利用通用数据模型来表示它们，如 JSON 或 XML 文档、关系数据库中的表，或者图中的顶点和边。这些数据模型正是本章的主题。
-3. 构建数据库软件的工程师决定如何以内存、磁盘或网络上的字节来表示文档、关系或图数据。这类表示形式使数据有可能以各种方式来查询、搜索、操纵和处理。我们将在 [第 4 章](/ch4#ch_storage) 讨论这些存储引擎的设计。
-4. 在更低的层次上，硬件工程师已经想出了使用电流、光脉冲、磁场或者其他东西来表示字节的方法。
+1. Là lập trình viên ứng dụng, bạn quan sát thế giới thực (với con người, tổ chức, hàng hóa, hành động, dòng tiền, cảm biến, v.v.) và mô hình hóa nó bằng các đối tượng hoặc cấu trúc dữ liệu, cùng các API để thao tác trên những cấu trúc đó. Các cấu trúc này thường đặc thù cho từng ứng dụng.
+2. Khi cần lưu trữ các cấu trúc dữ liệu đó, bạn biểu diễn chúng bằng một mô hình dữ liệu đa dụng, như tài liệu JSON hoặc XML, các bảng trong cơ sở dữ liệu quan hệ, hay các đỉnh và cạnh trong một đồ thị. Những mô hình dữ liệu này chính là chủ đề của chương này.
+3. Các kỹ sư xây dựng phần mềm cơ sở dữ liệu quyết định cách biểu diễn dữ liệu tài liệu, quan hệ hay đồ thị dưới dạng các byte trong bộ nhớ, trên đĩa hoặc trên mạng. Cách biểu diễn này giúp dữ liệu có thể được truy vấn, tìm kiếm, thao tác và xử lý theo nhiều cách. Ta sẽ bàn về thiết kế của các storage engine này ở [Chương 4](/ch4#ch_storage).
+4. Ở tầng thấp hơn nữa, các kỹ sư phần cứng đã nghĩ ra cách biểu diễn byte bằng dòng điện, xung ánh sáng, từ trường và nhiều thứ khác.
 
-一个复杂的应用程序可能会有更多的中间层次，比如基于 API 的 API，不过基本思想仍然是一样的：每个层都通过提供一个明确的数据模型来隐藏更低层次中的复杂性。这些抽象允许不同的人群有效地协作，例如数据库厂商的工程师和使用数据库的应用程序开发人员。
+Một ứng dụng phức tạp có thể có nhiều tầng trung gian hơn, chẳng hạn các API xây trên các API khác, nhưng ý tưởng cơ bản vẫn như nhau: mỗi tầng che giấu sự phức tạp của các tầng thấp hơn bằng cách cung cấp một mô hình dữ liệu rõ ràng. Những lớp trừu tượng này cho phép các nhóm người khác nhau, ví dụ kỹ sư của hãng cơ sở dữ liệu và lập trình viên ứng dụng dùng cơ sở dữ liệu đó, cộng tác hiệu quả.
 
-实践中广泛使用着几种不同的数据模型，通常各有用途。某些类型的数据和查询在一种模型中很容易表达，在另一种模型中却很别扭。本章将比较 *关系模型*（*relational model*）、*文档模型*（*document model*）、*图数据模型*（*graph data model*）、*事件溯源*（*event sourcing*）和 *数据框*（*dataframe*），探讨其中的权衡。我们还将简要介绍操作这些模型的查询语言，帮助你判断何时应该使用哪种模型。
+Trong thực tế có nhiều mô hình dữ liệu khác nhau được dùng rộng rãi, thường mỗi loại phục vụ một mục đích. Một số kiểu dữ liệu và truy vấn dễ diễn đạt trong mô hình này nhưng lại vụng về trong mô hình khác. Chương này sẽ so sánh *mô hình quan hệ* (*relational model*), *mô hình tài liệu* (*document model*), *mô hình dữ liệu đồ thị* (*graph data model*), *event sourcing* (*event sourcing*) và *dataframe* (*dataframe*), qua đó khảo sát các đánh đổi. Ta cũng sẽ lướt qua các ngôn ngữ truy vấn dùng cho những mô hình này, để bạn có thể quyết định nên dùng mô hình nào trong từng trường hợp.
 
 
-> [!TIP] 术语：声明式查询语言
+> [!TIP] Thuật ngữ: ngôn ngữ truy vấn khai báo
 >
-> 本章中的许多查询语言（如 SQL、Cypher、SPARQL 或 Datalog）都是 *声明式*（*declarative*）的。在声明式查询语言中，你只需指定所需数据的模式——结果必须符合哪些条件，以及数据应如何转换（例如排序、分组和聚合）——而不必说明 *如何* 实现这一目标。数据库系统的查询优化器决定使用哪些索引和连接算法，以及以何种顺序执行查询的各个部分。
+> Nhiều ngôn ngữ truy vấn trong chương này (như SQL, Cypher, SPARQL hay Datalog) là ngôn ngữ *khai báo* (*declarative*). Với ngôn ngữ truy vấn khai báo, bạn chỉ cần chỉ rõ mẫu của dữ liệu mong muốn — kết quả phải thỏa mãn điều kiện nào, và dữ liệu cần được biến đổi ra sao (ví dụ sắp xếp, nhóm và tổng hợp) — chứ không cần nói *làm thế nào* để đạt được điều đó. Bộ tối ưu truy vấn của hệ cơ sở dữ liệu sẽ quyết định dùng chỉ mục (*index*) và thuật toán nối nào, cũng như thứ tự thực thi các phần của truy vấn.
 >
-> 相比之下，使用大多数编程语言时，你必须写出一套 *算法*（*algorithm*），告诉计算机以特定顺序执行哪些操作。声明式查询语言通常比显式算法更加简洁，也更容易编写；但更重要的是，它隐藏了查询引擎的实现细节，使数据库系统可以在无须对查询做任何修改的情况下提升性能 [^1]。
+> Ngược lại, với hầu hết ngôn ngữ lập trình, bạn phải viết một *thuật toán* (*algorithm*), tức là bảo máy tính thực hiện những thao tác nào theo thứ tự nào. Ngôn ngữ truy vấn khai báo thường ngắn gọn và dễ viết hơn thuật toán tường minh, nhưng quan trọng hơn, nó che giấu chi tiết triển khai của bộ máy truy vấn, nhờ đó hệ cơ sở dữ liệu có thể cải thiện hiệu năng mà không cần thay đổi bất kỳ truy vấn nào [^1].
 >
-> 例如，数据库或许能跨多个 CPU 核心和多台机器并行执行一条声明式查询，而你无须操心如何实现这种并行 [^2]。若是手写算法，自行实现这种并行执行将费不少功夫。
+> Chẳng hạn, một cơ sở dữ liệu có thể thực thi truy vấn khai báo song song trên nhiều lõi CPU và nhiều máy mà bạn không phải lo cách hiện thực việc song song đó [^2]. Nếu tự viết thuật toán bằng tay, việc hiện thực thực thi song song sẽ tốn rất nhiều công sức.
 
 
-## 关系模型与文档模型 {#sec_datamodels_history}
+## Mô hình quan hệ và mô hình tài liệu {#sec_datamodels_history}
 
-如今最广为人知的数据模型或许是 SQL 所采用的关系模型，它由 Edgar Codd 于 1970 年提出 [^3]：数据被组织成 *关系*（*relation*，SQL 称之为 *表*，*table*），每个关系都是由 *元组*（*tuple*，SQL 称之为 *行*，*row*）构成的无序集合。
+Mô hình dữ liệu nổi tiếng nhất hiện nay có lẽ là mô hình quan hệ mà SQL sử dụng, do Edgar Codd đề xuất năm 1970 [^3], theo đó dữ liệu được tổ chức thành các *quan hệ* (*relation*, trong SQL gọi là *bảng*, *table*), mỗi quan hệ là một tập không có thứ tự gồm các *bộ* (*tuple*, trong SQL gọi là *hàng*, *row*).
 
-关系模型最初只是一项理论提议，当时许多人怀疑它能否得到高效实现。然而到了 20 世纪 80 年代中期，对于大多数需要存储和查询具有某种规则结构的数据的人来说，关系数据库管理系统（RDBMS）和 SQL 已成为首选工具。几十年过去，关系数据仍主导着许多数据管理场景，例如商业分析（参见 [“星型与雪花型：分析模式”](/ch3#sec_datamodels_analytics)）。
+Ban đầu mô hình quan hệ chỉ là một đề xuất lý thuyết, và nhiều người nghi ngờ liệu nó có thể được hiện thực hiệu quả hay không. Tuy nhiên, đến giữa thập niên 1980, hệ quản trị cơ sở dữ liệu quan hệ (RDBMS) và SQL đã trở thành công cụ được lựa chọn của hầu hết những người cần lưu trữ và truy vấn dữ liệu có cấu trúc tương đối đều đặn. Nhiều thập kỷ sau, dữ liệu quan hệ vẫn thống trị nhiều tình huống quản lý dữ liệu, chẳng hạn phân tích kinh doanh (xem [“Star schema và snowflake schema: các schema cho phân tích”](/ch3#sec_datamodels_analytics)).
 
-多年来，数据存储和查询领域涌现过许多彼此竞争的方法。20 世纪 70 年代至 80 年代初，*网状模型*（*network model*）和 *层次模型*（*hierarchical model*）是关系模型的主要对手，但最终都败下阵来。对象数据库在 20 世纪 80 年代末至 90 年代初兴起后又销声匿迹；XML 数据库于 21 世纪初出现，却始终只在少数场景中得到采用。关系模型的每个竞争者都曾盛极一时，但无一长久 [^4]。反倒是 SQL 在关系模型这个核心之上不断吸收其他数据类型，例如增加了对 XML、JSON 和图数据的支持 [^5]。
+Qua nhiều năm, đã có rất nhiều cách tiếp cận cạnh tranh trong lưu trữ và truy vấn dữ liệu. Từ thập niên 1970 đến đầu thập niên 1980, *mô hình mạng* (*network model*) và *mô hình phân cấp* (*hierarchical model*) là các đối thủ chính của mô hình quan hệ, nhưng cuối cùng đều thất bại. Cơ sở dữ liệu hướng đối tượng xuất hiện rồi biến mất vào cuối thập niên 1980 và đầu thập niên 1990. Cơ sở dữ liệu XML xuất hiện đầu thập niên 2000 nhưng chỉ được dùng trong một số ít tình huống. Mỗi đối thủ của mô hình quan hệ đều từng gây tiếng vang lớn, nhưng không cái nào trụ được lâu [^4]. Thay vào đó, SQL đã tiếp thu thêm các kiểu dữ liệu khác trên nền tảng quan hệ, chẳng hạn bổ sung hỗ trợ XML, JSON và dữ liệu đồ thị [^5].
 
-到了 2010 年代，*NoSQL* 成了试图撼动关系数据库统治地位的最新流行语。NoSQL 并非某项特定技术，而是围绕新数据模型、模式灵活性、可伸缩性和开源许可模式形成的一组宽泛理念。另一些数据库则以 *NewSQL* 自居，力图在保留传统关系数据库的数据模型和事务保证的同时，提供 NoSQL 系统的可伸缩性。NoSQL 和 NewSQL 的理念深刻影响了数据系统的设计；不过，随着这些原则被广泛吸收，两个术语本身已渐渐淡出。
+Đến thập niên 2010, *NoSQL* là từ thời thượng mới nhất nhằm lật đổ vị thế thống trị của cơ sở dữ liệu quan hệ. NoSQL không phải một công nghệ cụ thể mà là một nhóm ý tưởng rộng xoay quanh mô hình dữ liệu mới, tính linh hoạt của schema, khả năng mở rộng và mô hình cấp phép mã nguồn mở. Một số cơ sở dữ liệu khác tự xưng là *NewSQL*, nhằm cung cấp khả năng mở rộng của hệ NoSQL trong khi vẫn giữ mô hình dữ liệu và các đảm bảo giao dịch của cơ sở dữ liệu quan hệ truyền thống. Các ý tưởng NoSQL và NewSQL đã ảnh hưởng sâu sắc đến thiết kế hệ thống dữ liệu, nhưng khi các nguyên tắc ấy được tiếp nhận rộng rãi, bản thân hai thuật ngữ này dần ít được dùng.
 
-NoSQL 运动留下的一项持久影响，是通常以 JSON 表示数据的 *文档模型*（*document model*）广受欢迎。这个模型最初由 MongoDB、Couchbase 等专用文档数据库推广，如今大多数关系数据库也已加入 JSON 支持。关系表的模式常被视为严格而僵化，相比之下，JSON 文档被认为更加灵活。
+Một di sản bền vững của phong trào NoSQL là sự phổ biến của mô hình tài liệu, trong đó dữ liệu thường được biểu diễn bằng JSON. Mô hình này ban đầu được các cơ sở dữ liệu tài liệu chuyên dụng như MongoDB và Couchbase phổ biến, và đến nay hầu hết cơ sở dữ liệu quan hệ cũng đã hỗ trợ JSON. So với schema bảng quan hệ vốn thường bị coi là cứng nhắc và thiếu linh hoạt, tài liệu JSON được xem là linh hoạt hơn.
 
-文档数据与关系数据孰优孰劣，已经引发过大量争论。下面来看看其中几个关键问题。
+Dữ liệu tài liệu và dữ liệu quan hệ, bên nào tốt hơn, đã gây ra nhiều tranh luận. Hãy cùng xem xét một số vấn đề then chốt trong đó.
 
-### 对象关系不匹配 {#sec_datamodels_document}
+### Sự không khớp đối tượng-quan hệ {#sec_datamodels_document}
 
-如今，大量应用开发使用面向对象的编程语言，这也引出了针对 SQL 数据模型的一项常见批评：数据若存储在关系表中，就需要一个笨拙的转换层，在应用代码中的对象与数据库的表、行、列模型之间来回转换。两种模型之间的这种脱节，有时称为 *阻抗不匹配*（*impedance mismatch*）。
+Ngày nay phần lớn việc phát triển ứng dụng dùng các ngôn ngữ lập trình hướng đối tượng, dẫn đến một lời chỉ trích phổ biến đối với mô hình dữ liệu SQL: nếu dữ liệu lưu trong các bảng quan hệ, cần có một tầng chuyển đổi vụng về giữa các đối tượng trong mã ứng dụng và mô hình bảng, hàng, cột của cơ sở dữ liệu. Sự rời rạc giữa hai mô hình này đôi khi được gọi là *impedance mismatch*.
 
 
 > [!NOTE]
-> *阻抗不匹配* 一词借自电子学。每个电路的输入和输出都有一定的阻抗（对交流电的阻力）。把一个电路的输出接到另一个电路的输入时，若两边阻抗匹配，连接处的功率传输就能达到最大；阻抗不匹配则可能造成信号反射等问题。
+> Thuật ngữ *impedance mismatch* được mượn từ điện tử học. Mỗi mạch điện có một trở kháng nhất định (sức cản đối với dòng điện xoay chiều) ở đầu vào và đầu ra. Khi nối đầu ra của mạch này với đầu vào của mạch kia, nếu trở kháng hai bên khớp nhau thì công suất truyền qua chỗ nối sẽ lớn nhất. Trở kháng không khớp có thể gây ra các vấn đề như phản xạ tín hiệu.
 
 
-#### 对象关系映射（ORM） {#object-relational-mapping-orm}
+#### Ánh xạ đối tượng-quan hệ (ORM) {#object-relational-mapping-orm}
 
-ActiveRecord、Hibernate 等对象关系映射（ORM）框架减少了转换层所需的样板代码，但也时常遭到批评 [^6]。常见问题包括：
+Các framework ánh xạ đối tượng-quan hệ (ORM) như ActiveRecord và Hibernate giảm lượng mã khuôn mẫu cần cho tầng chuyển đổi này, nhưng cũng thường bị chỉ trích [^6]. Một số vấn đề thường gặp:
 
-* ORM 本身很复杂，也无法彻底掩盖两种模型的差异，开发者最终仍得同时考虑数据的关系表示和对象表示。
-* ORM 一般只用于开发 OLTP 应用（参见 [“事务处理与分析的特征”](/ch1#sec_introduction_oltp)）。为了让数据可供分析，数据工程师仍须面对底层的关系表示，因此采用 ORM 并不意味着关系模式的设计不再重要。
-* 许多 ORM 只面向关系型 OLTP 数据库。若组织还使用搜索引擎、图数据库、NoSQL 系统等多种数据系统，ORM 提供的支持可能远远不够。
-* 有些 ORM 会自动生成关系模式，但生成的模式对直接访问关系数据的用户未必友好，在底层数据库上也可能效率不佳。要定制 ORM 生成模式与查询的方式，往往相当复杂，甚至会抵消采用 ORM 原本想获得的好处。
-* 使用 ORM 很容易在无意中写出低效查询，例如触发 *N+1 查询问题*（*N+1 query problem*）[^7]。假设你要在页面上显示用户评论列表：先用一条查询取回 *N* 条评论，每条都含有作者 ID；为了显示作者姓名，还要用这个 ID 查询用户表。手写 SQL 时，你大概会直接在查询中连接用户表，让每条评论连同作者姓名一起返回；使用 ORM 时，却可能对 *N* 条评论逐条查询用户表，最终一共执行 *N*+1 条数据库查询。这比在数据库内完成连接要慢得多。为避免这个问题，你可能必须明确要求 ORM 在获取评论的同时一并取回作者信息。
+* Bản thân ORM phức tạp và không thể che giấu hoàn toàn sự khác biệt giữa hai mô hình, nên lập trình viên rốt cuộc vẫn phải nghĩ đồng thời đến cả biểu diễn quan hệ lẫn biểu diễn đối tượng của dữ liệu.
+* ORM thường chỉ dùng để phát triển ứng dụng OLTP (xem [“Đặc điểm của xử lý giao dịch và phân tích”](/ch1#sec_introduction_oltp)). Để dữ liệu có thể dùng cho phân tích, kỹ sư dữ liệu vẫn phải làm việc với biểu diễn quan hệ bên dưới, nên dùng ORM không có nghĩa là thiết kế schema quan hệ hết quan trọng.
+* Nhiều ORM chỉ hỗ trợ cơ sở dữ liệu OLTP quan hệ. Nếu tổ chức còn dùng các hệ dữ liệu khác như công cụ tìm kiếm, cơ sở dữ liệu đồ thị và hệ NoSQL, sự hỗ trợ của ORM có thể rất thiếu.
+* Một số ORM tự động sinh schema quan hệ, nhưng schema sinh ra có thể không thân thiện với người dùng truy cập trực tiếp dữ liệu quan hệ, và có thể kém hiệu quả trên cơ sở dữ liệu bên dưới. Tùy biến cách ORM sinh schema và truy vấn thường khá phức tạp, thậm chí triệt tiêu những lợi ích vốn là lý do dùng ORM.
+* ORM dễ khiến ta vô tình viết truy vấn kém hiệu quả, chẳng hạn gây ra *vấn đề truy vấn N+1* (*N+1 query problem*) [^7]. Giả sử bạn muốn hiển thị danh sách bình luận của người dùng trên một trang: bạn dùng một truy vấn lấy *N* bình luận, mỗi bình luận chứa ID tác giả. Để hiển thị tên tác giả, bạn lại phải truy vấn bảng người dùng bằng ID đó. Khi viết SQL bằng tay, nhiều khả năng bạn sẽ nối thẳng bảng người dùng vào truy vấn để mỗi bình luận trả về kèm tên tác giả, còn với ORM, bạn có thể bị truy vấn bảng người dùng riêng cho từng trong *N* bình luận, tổng cộng thực thi *N*+1 truy vấn cơ sở dữ liệu. Cách này chậm hơn nhiều so với thực hiện phép nối trong cơ sở dữ liệu. Để tránh vấn đề này, bạn có thể phải yêu cầu ORM lấy kèm thông tin tác giả cùng lúc với bình luận.
 
-不过，ORM 也自有其优势：
+Tuy nhiên, ORM cũng có những ưu điểm riêng:
 
-* 对适合关系模型的数据来说，持久化的关系表示与内存中的对象表示之间总要进行某种转换，ORM 可以减少这类转换所需的样板代码。复杂查询或许仍须绕开 ORM 处理，但简单、重复的场景正适合交给它。
-* 有些 ORM 可以缓存数据库查询结果，从而减轻数据库负载。
-* ORM 还可以协助管理模式迁移和其他数据库管理工作。
+* Với dữ liệu phù hợp mô hình quan hệ, luôn phải có một bước chuyển đổi nào đó giữa biểu diễn quan hệ được lưu bền vững và biểu diễn đối tượng trong bộ nhớ; ORM giúp giảm lượng mã khuôn mẫu cho việc chuyển đổi này. Các truy vấn phức tạp có thể vẫn cần xử lý bỏ qua ORM, nhưng với các tình huống đơn giản, lặp đi lặp lại thì ORM rất hợp.
+* Một số ORM có thể cache kết quả truy vấn cơ sở dữ liệu, giúp giảm tải cho cơ sở dữ liệu.
+* ORM cũng có thể hỗ trợ quản lý di chuyển schema và các công việc quản trị cơ sở dữ liệu khác.
 
-#### 用于一对多关系的文档数据模型 {#the-document-data-model-for-one-to-many-relationships}
+#### Mô hình dữ liệu tài liệu cho quan hệ một-nhiều {#the-document-data-model-for-one-to-many-relationships}
 
-并非所有数据都适合用关系形式表示。下面用一个例子看看关系模型的局限。{{< xref fig="3-1" page="/ch3" anchor="fig_obama_relational" >}}图 3-1{{< /xref >}} 展示了如何用关系模式表示一份简历（LinkedIn 个人资料）。整份资料由唯一标识符 `user_id` 标识；`first_name` 和 `last_name` 等字段对每位用户只出现一次，因此可以建模为 `users` 表中的列。
+Không phải mọi dữ liệu đều phù hợp để biểu diễn dưới dạng quan hệ. Hãy dùng một ví dụ để xem hạn chế của mô hình quan hệ. {{< xref fig="3-1" page="/ch3" anchor="fig_obama_relational" >}}Hình 3-1{{< /xref >}} cho thấy cách biểu diễn một bản sơ yếu lý lịch (hồ sơ LinkedIn) bằng schema quan hệ. Toàn bộ hồ sơ được xác định bởi một định danh duy nhất `user_id`. Các trường như `first_name` và `last_name` chỉ xuất hiện một lần với mỗi người dùng, nên có thể mô hình hóa thành các cột của bảng `users`.
 
-大多数人的职业生涯中都不止有一份工作（即多个职位），每个人的教育经历数量也不相同，联系方式更可能有任意多项。这些 *一对多关系*（*one-to-many relationship*）可以这样表示：把职位、教育经历和联系信息分别放在单独的表中，再通过外键引用 `users` 表，如 {{< xref fig="3-1" page="/ch3" anchor="fig_obama_relational" >}}图 3-1{{< /xref >}} 所示。
+Hầu hết mọi người có nhiều hơn một công việc trong sự nghiệp (nhiều vị trí), số quá trình học vấn của mỗi người cũng khác nhau, và thông tin liên hệ thì có thể có bất kỳ số lượng nào. Các *quan hệ một-nhiều* (*one-to-many relationship*) này có thể được biểu diễn bằng cách đặt vị trí công tác, học vấn và thông tin liên hệ vào các bảng riêng, với khóa ngoại tham chiếu đến bảng `users`, như trong {{< xref fig="3-1" page="/ch3" anchor="fig_obama_relational" >}}Hình 3-1{{< /xref >}}.
 
-{{< fig num="3-1" id="fig_obama_relational" src="/fig/ddia_0301.png" caption="使用关系模式表示 LinkedIn 个人资料。" class="ddia-figure ddia-figure--standard" width="1772" height="1414" />}}
+{{< fig num="3-1" id="fig_obama_relational" src="/fig/ddia_0301.png" caption="Biểu diễn hồ sơ LinkedIn bằng schema quan hệ." class="ddia-figure ddia-figure--standard" width="1772" height="1414" />}}
 
-同一份信息还可以表示为 JSON 文档，如 {{< xref eg="3-1" page="/ch3" anchor="fig_obama_json" >}}示例 3-1{{< /xref >}} 所示。这种形式可能更为自然，也更贴近应用代码中的对象结构。
+Cũng thông tin đó có thể biểu diễn dưới dạng tài liệu JSON, như trong {{< xref eg="3-1" page="/ch3" anchor="fig_obama_json" >}}Ví dụ 3-1{{< /xref >}}. Dạng này có thể tự nhiên hơn và gần với cấu trúc đối tượng trong mã ứng dụng hơn.
 
-{{< eg num="3-1" id="fig_obama_json" caption="将 LinkedIn 个人资料表示为 JSON 文档" >}}
+{{< eg num="3-1" id="fig_obama_json" caption="Biểu diễn hồ sơ LinkedIn dưới dạng tài liệu JSON" >}}
 ```json
 {
     "user_id": 251,
@@ -115,36 +113,36 @@ ActiveRecord、Hibernate 等对象关系映射（ORM）框架减少了转换层�
 ```
 {{< /eg >}}
 
-一些开发者认为，JSON 模型减轻了应用代码与存储层之间的阻抗不匹配。不过，正如我们将在 [第 5 章](/ch5#ch_encoding) 看到的，JSON 用作数据编码格式时也有不少问题。没有模式常被视为它的一项优势，我们将在 [“文档模型中的模式灵活性”](/ch3#sec_datamodels_schema_flexibility) 进一步讨论。
+Một số lập trình viên cho rằng mô hình JSON giảm bớt impedance mismatch giữa mã ứng dụng và tầng lưu trữ. Tuy nhiên, như ta sẽ thấy ở [Chương 5](/ch5#ch_encoding), JSON dùng làm định dạng mã hóa dữ liệu cũng có không ít vấn đề. Việc thiếu schema thường được xem là một ưu điểm của nó. Ta sẽ bàn thêm ở [“Tính linh hoạt của schema trong mô hình tài liệu”](/ch3#sec_datamodels_schema_flexibility).
 
-与 {{< xref fig="3-1" page="/ch3" anchor="fig_obama_relational" >}}图 3-1{{< /xref >}} 的多表模式相比，JSON 表示具有更好的 *局部性*（*locality*；参见 [“读写的数据局部性”](/ch3#sec_datamodels_document_locality)）。在关系模型的例子中，要取回一份个人资料，要么执行多次查询（按 `user_id` 分别查询每张表），要么在 `users` 表及其下属表之间进行繁琐的多路连接 [^8]。而在 JSON 表示中，所有相关信息都集中在一处，查询既简单又快捷。
+So với schema nhiều bảng trong {{< xref fig="3-1" page="/ch3" anchor="fig_obama_relational" >}}Hình 3-1{{< /xref >}}, biểu diễn JSON có *tính cục bộ* (*locality*, xem [“Tính cục bộ của dữ liệu khi đọc và ghi”](/ch3#sec_datamodels_document_locality)) tốt hơn. Trong ví dụ quan hệ, để lấy một hồ sơ bạn phải thực hiện nhiều truy vấn (truy vấn từng bảng theo `user_id`), hoặc thực hiện một phép nối nhiều chiều rắc rối giữa bảng `users` và các bảng phụ thuộc của nó [^8]. Với biểu diễn JSON, mọi thông tin liên quan nằm ở một chỗ, nên truy vấn vừa đơn giản vừa nhanh.
 
-个人资料与职位、教育经历、联系信息之间的一对多关系，在数据中形成了一棵树；JSON 表示则明确呈现了这种树状结构（见 {{< xref fig="3-2" page="/ch3" anchor="fig_json_tree" >}}图 3-2{{< /xref >}}）。
+Quan hệ một-nhiều giữa hồ sơ với các vị trí công tác, học vấn và thông tin liên hệ tạo thành một cấu trúc cây trong dữ liệu, và biểu diễn JSON làm cấu trúc cây này hiện ra rõ ràng (xem {{< xref fig="3-2" page="/ch3" anchor="fig_json_tree" >}}Hình 3-2{{< /xref >}}).
 
-{{< fig num="3-2" id="fig_json_tree" src="/fig/ddia_0302.png" caption="一对多关系形成树状结构。" class="ddia-figure ddia-figure--wide" width="1772" height="780" />}}
+{{< fig num="3-2" id="fig_json_tree" src="/fig/ddia_0302.png" caption="Quan hệ một-nhiều tạo thành cấu trúc cây." class="ddia-figure ddia-figure--wide" width="1772" height="780" />}}
 
 
 > [!NOTE]
-> 这种关系有时称为 *一对少*（*one-to-few*），而非 *一对多*，因为一份简历通常只有少数几个职位 [^9] [^10]。如果相关项目确实可能多到惊人——例如名人的社交媒体帖子可能收到成千上万条评论——把它们全部嵌进同一个文档就太过笨重，此时更适合采用 {{< xref fig="3-1" page="/ch3" anchor="fig_obama_relational" >}}图 3-1{{< /xref >}} 所示的关系方法。
+> Kiểu quan hệ này đôi khi được gọi là *một-vài* (*one-to-few*) thay vì *một-nhiều*, vì một bản sơ yếu lý lịch thường chỉ có vài vị trí công tác [^9] [^10]. Nếu số mục liên quan có thể lớn đến mức đáng kinh ngạc, chẳng hạn bài đăng mạng xã hội của người nổi tiếng có thể nhận hàng nghìn bình luận, thì nhúng tất cả vào cùng một tài liệu sẽ quá cồng kềnh, khi đó nên dùng cách tiếp cận quan hệ như trong {{< xref fig="3-1" page="/ch3" anchor="fig_obama_relational" >}}Hình 3-1{{< /xref >}}.
 
 
-### 规范化、反规范化与连接 {#sec_datamodels_normalization}
+### Chuẩn hóa, phi chuẩn hóa và phép nối {#sec_datamodels_normalization}
 
-前一节的 {{< xref eg="3-1" page="/ch3" anchor="fig_obama_json" >}}示例 3-1{{< /xref >}} 用 ID 表示 `region_id`，而没有直接写成纯文本字符串 `"Washington, DC, United States"`。为什么要这样做？
+Trong {{< xref eg="3-1" page="/ch3" anchor="fig_obama_json" >}}Ví dụ 3-1{{< /xref >}} ở mục trước, `region_id` được biểu diễn bằng ID thay vì chuỗi văn bản thuần `"Washington, DC, United States"`. Vì sao lại như vậy?
 
-如果用户界面提供自由文本框让用户填写地区，那么把输入直接存成文本字符串很合理。不过，预先提供标准化的地理区域列表，让用户通过下拉列表或自动补全来选择，也有不少好处：
+Nếu giao diện người dùng có ô văn bản tự do để nhập khu vực, việc lưu thẳng đầu vào dưới dạng chuỗi văn bản là hợp lý. Tuy nhiên, cung cấp sẵn một danh sách khu vực địa lý được chuẩn hóa, để người dùng chọn qua danh sách thả xuống hoặc tự động hoàn thành, cũng mang lại nhiều lợi ích:
 
-* 所有个人资料中的格式和拼写保持一致
-* 避免同名地点造成歧义（若字符串只有 “Washington”，究竟是指华盛顿特区，还是华盛顿州？）
-* 便于更新——名称只存储在一处，将来如有变动（例如因政治事件而更改城市名称），只改一处便能全局生效
-* 支持本地化——网站翻译成其他语言时，可以本地化这份标准列表，让地区名称以浏览者使用的语言显示
-* 改善搜索——例如，地区列表可以记录华盛顿位于美国东海岸这一事实（单看 `"Washington, DC"` 字符串无法得知），于是搜索美国东海岸的人时也能匹配这份资料
+* Định dạng và cách viết nhất quán trên mọi hồ sơ
+* Tránh nhập nhằng khi có nhiều nơi trùng tên (nếu chuỗi chỉ là “Washington”, thì là Washington, DC hay bang Washington?)
+* Dễ cập nhật: tên chỉ được lưu ở một nơi, nên khi cần đổi (ví dụ đổi tên thành phố do sự kiện chính trị), chỉ cần sửa một chỗ là có hiệu lực trên toàn bộ
+* Hỗ trợ bản địa hóa: khi website được dịch sang ngôn ngữ khác, danh sách chuẩn có thể được bản địa hóa để tên khu vực hiển thị bằng ngôn ngữ của người xem
+* Cải thiện tìm kiếm: ví dụ, danh sách khu vực có thể ghi nhận việc Washington nằm ở bờ Đông nước Mỹ (điều không thể biết chỉ từ chuỗi `"Washington, DC"`), nhờ vậy khi tìm người ở bờ Đông nước Mỹ, hồ sơ này cũng khớp
 
-选择存储 ID 还是文本字符串，实质上是在决定是否 *规范化*（*normalization*）。使用 ID 时，数据更加规范化：对人有意义的信息（如 *Washington, DC* 这段文字）只存储一份，其他地方都用仅在数据库内有意义的 ID 来引用它。若直接存储文本，这段有意义的信息就会复制到每条使用它的记录中；这样的表示便是 *反规范化*（*denormalized*）的。
+Việc lưu ID hay chuỗi văn bản thực chất là quyết định có *chuẩn hóa* (*normalization*) hay không. Khi dùng ID, dữ liệu được chuẩn hóa hơn: thông tin có ý nghĩa với con người (như dòng chữ *Washington, DC*) chỉ lưu một bản, mọi nơi khác tham chiếu đến nó bằng ID chỉ có nghĩa bên trong cơ sở dữ liệu. Nếu lưu thẳng văn bản, thông tin có ý nghĩa này bị sao chép (*replication*) vào mọi bản ghi dùng đến nó. Biểu diễn như vậy là *phi chuẩn hóa* (*denormalized*).
 
-ID 的好处在于，它本身对人没有意义，因而永远不必改变：即使 ID 所标识的信息发生了变化，ID 仍可保持不变。凡是对人有意义的信息，将来都有可能需要修改；一旦这类信息被复制，所有冗余副本就都得随之更新。这不仅需要更多代码、写入操作和磁盘空间，还会带来不一致的风险——有些副本已经更新，另一些却没有。
+Lợi ích của ID là bản thân nó không có ý nghĩa với con người nên không bao giờ cần thay đổi: ID có thể giữ nguyên ngay cả khi thông tin mà nó xác định thay đổi. Mọi thông tin có ý nghĩa với con người đều có thể cần sửa đổi trong tương lai. Nếu thông tin đó bị sao chép (*replication*), mọi bản dư thừa đều phải được cập nhật theo. Điều này đòi hỏi thêm mã, thêm thao tác ghi và thêm dung lượng đĩa, đồng thời gây rủi ro không nhất quán, khi một số bản đã cập nhật còn một số thì chưa.
 
-规范化表示也有代价：每次显示含有 ID 的记录时，都要多做一次查找，把 ID 解析成人能读懂的信息。在关系数据模型中，这项工作通过 *连接*（*join*）完成，例如：
+Biểu diễn chuẩn hóa cũng có cái giá: mỗi lần hiển thị một bản ghi chứa ID, ta phải tra cứu thêm để chuyển ID thành thông tin con người đọc được. Trong mô hình dữ liệu quan hệ, việc này được thực hiện bằng *phép nối* (*join*), ví dụ:
 
 ```sql
 SELECT users.*, regions.region_name
@@ -153,7 +151,7 @@ SELECT users.*, regions.region_name
     WHERE users.id = 251;
 ```
 
-文档数据库既能存储规范化数据，也能存储反规范化数据，但人们往往把它与反规范化联系在一起。一方面，JSON 数据模型很容易加入额外的反规范化字段；另一方面，许多文档数据库对连接支持较弱，采用规范化表示很不方便。有些文档数据库完全不支持连接，只能在应用代码中自行完成：先取回含有 ID 的文档，再发起第二次查询，用 ID 找到另一个文档。MongoDB 也可以通过聚合管道中的 `$lookup` 算子执行连接：
+Cơ sở dữ liệu tài liệu có thể lưu cả dữ liệu chuẩn hóa lẫn phi chuẩn hóa, nhưng người ta thường gắn nó với phi chuẩn hóa. Một mặt, mô hình dữ liệu JSON giúp dễ dàng thêm các trường phi chuẩn hóa. Mặt khác, nhiều cơ sở dữ liệu tài liệu hỗ trợ phép nối khá yếu, khiến việc dùng biểu diễn chuẩn hóa trở nên bất tiện. Một số cơ sở dữ liệu tài liệu hoàn toàn không hỗ trợ phép nối, nên bạn phải tự làm trong mã ứng dụng: lấy tài liệu chứa ID, rồi thực hiện truy vấn thứ hai để dùng ID tìm tài liệu kia. MongoDB cũng có thể thực hiện phép nối bằng toán tử `$lookup` trong aggregation pipeline:
 
 ```mongodb-json
 db.users.aggregate([
@@ -167,26 +165,26 @@ db.users.aggregate([
 ])
 ```
 
-#### 规范化的权衡 {#trade-offs-of-normalization}
+#### Các đánh đổi của chuẩn hóa {#trade-offs-of-normalization}
 
-在简历示例中，`region_id` 字段引用了标准化的地区集合，`organization`（任职的公司或政府机构）和 `school_name`（就读的学校）却只是字符串。这是一种反规范化表示：许多人或许曾在同一家公司工作，但这些记录并没有通过 ID 关联起来。
+Trong ví dụ sơ yếu lý lịch, trường `region_id` tham chiếu đến một tập khu vực được chuẩn hóa, còn `organization` (công ty hoặc cơ quan chính phủ nơi làm việc) và `school_name` (trường đã theo học) lại chỉ là chuỗi. Đây là biểu diễn phi chuẩn hóa: nhiều người có thể từng làm ở cùng một công ty, nhưng các bản ghi này không được liên kết với nhau qua ID.
 
-那么，是否应该把组织和学校也建模为实体，让个人资料引用其 ID，而不是直接写下名称？主张用 ID 引用地区的理由在这里同样成立。比如，假设除了名称之外，我们还想显示学校或公司的徽标：
+Vậy có nên mô hình hóa tổ chức và trường học thành các thực thể, để hồ sơ tham chiếu ID của chúng thay vì ghi trực tiếp tên? Những lý lẽ ủng hộ việc tham chiếu khu vực bằng ID ở đây cũng áp dụng được. Chẳng hạn, giả sử ngoài tên, ta còn muốn hiển thị logo của trường hoặc công ty:
 
-* 采用反规范化表示时，每个人的个人资料都要包含徽标图片的 URL。这样固然让 JSON 文档自给自足，但徽标一旦更换，就必须找出旧 URL 出现的每个地方并逐一更新，十分麻烦 [^9]。
-* 采用规范化表示时，可以建立一个代表组织或学校的实体，只在其中存储一次名称、徽标 URL，也许再加上简介、动态消息等属性。所有提及该组织的简历只引用其 ID，更新徽标便易如反掌。
+* Với biểu diễn phi chuẩn hóa, hồ sơ của mỗi người phải chứa URL của ảnh logo. Cách này khiến tài liệu JSON tự đóng gói đầy đủ, nhưng nếu logo thay đổi, bạn phải tìm mọi nơi xuất hiện URL cũ để cập nhật từng chỗ, rất phiền toái [^9].
+* Với biểu diễn chuẩn hóa, có thể tạo một thực thể đại diện cho tổ chức hoặc trường học, lưu tên, URL logo, có thể thêm phần giới thiệu, bảng tin, v.v. một lần duy nhất. Mọi sơ yếu lý lịch nhắc đến tổ chức đó chỉ tham chiếu ID của nó, nên việc cập nhật logo trở nên dễ dàng.
 
-一般来说，规范化数据写入较快（因为只有一个副本），查询却较慢（因为需要连接）；反规范化数据通常读取较快（连接更少），写入代价却更高（要更新更多副本，也占用更多磁盘空间）。把反规范化看作一种衍生数据或许很有帮助（参见 [“记录系统与衍生数据”](/ch1#sec_introduction_derived)），因为你必须建立相应流程来更新那些冗余的数据副本。
+Nói chung, dữ liệu chuẩn hóa ghi nhanh hơn (vì chỉ có một bản) nhưng truy vấn chậm hơn (vì cần phép nối). Dữ liệu phi chuẩn hóa thường đọc nhanh hơn (ít phép nối hơn) nhưng ghi tốn kém hơn (phải cập nhật nhiều bản, và tốn thêm dung lượng đĩa). Có thể coi phi chuẩn hóa là một dạng dữ liệu dẫn xuất (xem [“Hệ thống ghi nhận gốc và dữ liệu dẫn xuất”](/ch1#sec_introduction_derived)), vì bạn phải thiết lập quy trình để cập nhật các bản sao dư thừa của dữ liệu.
 
-除了更新本身的成本，还要考虑进程在更新中途崩溃时，数据库能否保持一致。支持原子事务的数据库（参见 [“原子性”](/ch8#sec_transactions_acid_atomicity)）更容易维护一致性，但并非所有数据库都能为跨多个文档的操作提供原子性。也可以利用流处理来保证一致性，我们将在 [“保持系统同步”](/ch12#sec_stream_sync) 讨论这种方法。
+Ngoài chi phí cập nhật, còn phải xét xem cơ sở dữ liệu có giữ được tính nhất quán hay không khi tiến trình gặp sự cố giữa chừng lúc cập nhật. Cơ sở dữ liệu hỗ trợ giao dịch nguyên tử (xem [“Tính nguyên tử”](/ch8#sec_transactions_acid_atomicity)) duy trì tính nhất quán dễ hơn, nhưng không phải cơ sở dữ liệu nào cũng đảm bảo tính nguyên tử cho thao tác trải qua nhiều tài liệu. Cũng có thể dùng xử lý luồng để đảm bảo tính nhất quán. Ta sẽ bàn cách này ở [“Giữ các hệ thống đồng bộ”](/ch12#sec_stream_sync).
 
-规范化往往更适合读写都要迅速完成的 OLTP 系统；分析系统通常更适合反规范化数据，因为它们会批量更新，首要关心的是只读查询的性能。此外，中小规模系统通常也更适合规范化数据模型：既不必费心维持多个副本的一致，执行连接的成本也还可以接受。不过到了超大规模，连接的代价就可能成为问题。
+Chuẩn hóa thường phù hợp hơn với hệ thống OLTP, nơi cả đọc lẫn ghi đều phải nhanh. Hệ thống phân tích thường hợp với dữ liệu phi chuẩn hóa hơn, vì chúng cập nhật theo lô và mối quan tâm hàng đầu là hiệu năng của truy vấn chỉ đọc. Ngoài ra, ở hệ thống quy mô vừa và nhỏ, mô hình dữ liệu chuẩn hóa thường là lựa chọn tốt: không cần lo giữ nhất quán giữa nhiều bản sao, và chi phí thực hiện phép nối cũng chấp nhận được. Tuy nhiên, ở quy mô cực lớn, chi phí của phép nối có thể trở thành vấn đề.
 
-#### 社交网络案例研究中的反规范化 {#denormalization-in-the-social-networking-case-study}
+#### Phi chuẩn hóa trong nghiên cứu tình huống mạng xã hội {#denormalization-in-the-social-networking-case-study}
 
-在 [“案例研究：社交网络首页时间线”](/ch2#sec_introduction_twitter) 中，我们比较了规范化表示（{{< xref fig="2-1" page="/ch2" anchor="fig_twitter_relational" >}}图 2-1{{< /xref >}}）和反规范化表示（预计算并物化的时间线）。在那个例子里，连接 `posts` 与 `follows` 的成本太高，于是物化时间线充当了连接结果的缓存；把新帖子扇出到关注者的时间线，正是维持这种反规范化表示一致的手段。
+Trong [“Nghiên cứu tình huống: dòng thời gian trang chủ của mạng xã hội”](/ch2#sec_introduction_twitter), ta đã so sánh biểu diễn chuẩn hóa ({{< xref fig="2-1" page="/ch2" anchor="fig_twitter_relational" >}}Hình 2-1{{< /xref >}}) với biểu diễn phi chuẩn hóa (dòng thời gian được tính trước và vật chất hóa). Trong ví dụ đó, phép nối `posts` với `follows` quá tốn kém, nên dòng thời gian vật chất hóa đóng vai trò bộ nhớ đệm cho kết quả phép nối. Việc fan-out bài đăng mới đến dòng thời gian của người theo dõi chính là cách duy trì tính nhất quán của biểu diễn phi chuẩn hóa này.
 
-不过，X（原 Twitter）的物化时间线实际上并不保存每条帖子的正文。每个条目只存储帖子 ID、发帖用户的 ID，以及少量用于识别转帖和回复的附加信息 [^11]。换句话说，它大致相当于预先算好了下面这条查询的结果：
+Tuy nhiên, dòng thời gian vật chất hóa của X (trước đây là Twitter) thực ra không lưu nội dung của từng bài đăng. Mỗi mục chỉ lưu ID bài đăng, ID người đăng, cùng một ít thông tin bổ sung để nhận biết bài đăng lại và trả lời [^11]. Nói cách khác, nó gần như là kết quả được tính trước của truy vấn sau:
 
 ```sql
 SELECT posts.id, posts.sender_id 
@@ -197,25 +195,25 @@ SELECT posts.id, posts.sender_id
     LIMIT 1000
 ```
 
-因此，每次读取时间线时，服务仍要做两次连接：按帖子 ID 取回正文，以及点赞数、回复数等统计信息；再按发帖用户 ID 取回其用户名、头像和其他资料。这个把 ID 补全为人类可读信息的过程称为 *补全 ID*（hydrating IDs），本质上就是在应用代码中完成连接 [^11]。
+Vì vậy, mỗi lần đọc dòng thời gian, dịch vụ vẫn phải thực hiện hai phép nối: tra theo ID bài đăng để lấy nội dung cùng các thống kê như số lượt thích và số lượt trả lời, và tra theo ID người đăng để lấy tên người dùng, ảnh đại diện và thông tin hồ sơ khác. Quá trình chuyển ID thành thông tin con người đọc được này gọi là *bổ sung ID* (*hydrating IDs*), về bản chất là thực hiện phép nối ngay trong mã ứng dụng [^11].
 
-预计算时间线之所以只存 ID，是因为 ID 所指向的数据变化很快：热门帖子的点赞数和回复数每秒都可能变化多次，有些用户也会经常更换用户名或头像。时间线在展示时应呈现最新的点赞数和头像，所以把这些信息反规范化到物化时间线中并不合理，而且还会大幅增加存储成本。
+Dòng thời gian tính trước chỉ lưu ID vì dữ liệu mà ID trỏ tới thay đổi rất nhanh: số lượt thích và trả lời của bài đăng phổ biến có thể thay đổi nhiều lần mỗi giây, và một số người dùng thường xuyên đổi tên người dùng hoặc ảnh đại diện. Dòng thời gian khi hiển thị phải cho thấy số lượt thích và ảnh đại diện mới nhất, nên phi chuẩn hóa những thông tin này vào dòng thời gian vật chất hóa là không hợp lý, và còn làm chi phí lưu trữ tăng mạnh.
 
-这个例子说明，读取数据时需要执行连接，并不像有些说法所称的那样，会妨碍我们构建高性能、可伸缩的服务。补全帖子 ID 和用户 ID 其实相当容易伸缩：这项工作很适合并行执行，而且成本既不取决于你关注了多少账户，也不取决于有多少人关注你。
+Ví dụ này cho thấy việc phải thực hiện phép nối khi đọc dữ liệu không cản trở ta xây dựng dịch vụ hiệu năng cao và có khả năng mở rộng, như một số quan điểm vẫn nói. Bổ sung ID bài đăng và ID người dùng thực ra khá dễ mở rộng: công việc này dễ song song hóa, và chi phí không phụ thuộc vào số tài khoản bạn theo dõi hay số người theo dõi bạn.
 
-如果要判断应用中的某项数据是否应该反规范化，社交网络案例表明答案并不显而易见：可伸缩性最好的方案，可能是把一部分数据反规范化，同时让另一部分保持规范化。你必须仔细权衡信息的变化频率与读写成本；而成本又可能由极端情况主导，例如社交网络中关注或被关注人数异常多的用户。规范化与反规范化本身无所谓好坏，不过是在读写性能和实现成本之间作取舍。
+Khi cần quyết định có nên phi chuẩn hóa một phần dữ liệu trong ứng dụng hay không, ca nghiên cứu mạng xã hội cho thấy đáp án không hiển nhiên: giải pháp mở rộng tốt nhất có thể là phi chuẩn hóa một số dữ liệu và giữ một số khác ở dạng chuẩn hóa. Bạn phải cân nhắc kỹ tần suất thay đổi của thông tin cùng chi phí đọc và ghi, mà chi phí này lại có thể bị chi phối bởi các trường hợp cực đoan, chẳng hạn người dùng mạng xã hội có số người theo dõi hoặc số người được theo dõi lớn bất thường. Chuẩn hóa và phi chuẩn hóa tự thân không tốt cũng không xấu. Chúng chỉ là sự đánh đổi giữa hiệu năng đọc ghi và chi phí triển khai.
 
-### 多对一与多对多关系 {#sec_datamodels_many_to_many}
+### Quan hệ nhiều-một và nhiều-nhiều {#sec_datamodels_many_to_many}
 
-{{< xref fig="3-1" page="/ch3" anchor="fig_obama_relational" >}}图 3-1{{< /xref >}} 中的 `positions` 和 `education` 是一对多（或一对少）关系：一份简历有多个职位，但每个职位只属于一份简历。相比之下，`region_id` 字段表示 *多对一*（*many-to-one*）关系：许多人住在同一个地区，而我们假设任一时刻每个人只住在一个地区。
+Trong {{< xref fig="3-1" page="/ch3" anchor="fig_obama_relational" >}}Hình 3-1{{< /xref >}}, `positions` và `education` là quan hệ một-nhiều (hay một-vài): một bản sơ yếu lý lịch có nhiều vị trí công tác, nhưng mỗi vị trí chỉ thuộc về một bản sơ yếu lý lịch. Ngược lại, trường `region_id` biểu diễn quan hệ *nhiều-một* (*many-to-one*): nhiều người sống ở cùng một khu vực, và ta giả định tại mỗi thời điểm mỗi người chỉ sống ở một khu vực.
 
-如果进一步把组织和学校建模为实体，让简历通过 ID 引用它们，就会出现 *多对多*（*many-to-many*）关系：一个人曾在多个组织任职，一个组织也有多名现任或前任员工。在关系模型中，这类关系通常用 *关联表*（*associative table*，也称 *连接表*，*join table*）表示，如 {{< xref fig="3-3" page="/ch3" anchor="fig_datamodels_m2m_rel" >}}图 3-3{{< /xref >}} 所示：每个职位把一个用户 ID 与一个组织 ID 关联起来。
+Nếu tiếp tục mô hình hóa tổ chức và trường học thành thực thể, để sơ yếu lý lịch tham chiếu chúng bằng ID, thì sẽ xuất hiện quan hệ *nhiều-nhiều* (*many-to-many*): một người từng làm ở nhiều tổ chức, và một tổ chức có nhiều nhân viên hiện tại hoặc cũ. Trong mô hình quan hệ, loại quan hệ này thường được biểu diễn bằng *bảng liên kết* (*associative table*, còn gọi là *bảng nối*, *join table*), như trong {{< xref fig="3-3" page="/ch3" anchor="fig_datamodels_m2m_rel" >}}Hình 3-3{{< /xref >}}: mỗi vị trí công tác liên kết một ID người dùng với một ID tổ chức.
 
-{{< fig num="3-3" id="fig_datamodels_m2m_rel" src="/fig/ddia_0303.png" caption="关系模型中的多对多关系。" class="ddia-figure ddia-figure--wide" width="1772" height="745" />}}
+{{< fig num="3-3" id="fig_datamodels_m2m_rel" src="/fig/ddia_0303.png" caption="Quan hệ nhiều-nhiều trong mô hình quan hệ." class="ddia-figure ddia-figure--wide" width="1772" height="745" />}}
 
-多对一和多对多关系很难塞进一个自包含的 JSON 文档，它们更适合规范化表示。{{< xref eg="3-2" page="/ch3" anchor="fig_datamodels_m2m_json" >}}示例 3-2{{< /xref >}} 给出了文档模型中的一种方案，{{< xref fig="3-4" page="/ch3" anchor="fig_datamodels_many_to_many" >}}图 3-4{{< /xref >}} 则以图示说明：每个虚线框内的数据可以组成一份文档，但指向组织和学校的链接最好表示为对其他文档的引用。
+Quan hệ nhiều-một và nhiều-nhiều khó nhét vào một tài liệu JSON tự đóng gói. Chúng phù hợp hơn với biểu diễn chuẩn hóa. {{< xref eg="3-2" page="/ch3" anchor="fig_datamodels_m2m_json" >}}Ví dụ 3-2{{< /xref >}} đưa ra một cách làm trong mô hình tài liệu, còn {{< xref fig="3-4" page="/ch3" anchor="fig_datamodels_many_to_many" >}}Hình 3-4{{< /xref >}} minh họa bằng sơ đồ: dữ liệu trong mỗi khung nét đứt có thể tạo thành một tài liệu, nhưng liên kết đến tổ chức và trường học tốt nhất nên biểu diễn dưới dạng tham chiếu đến các tài liệu khác.
 
-{{< eg num="3-2" id="fig_datamodels_m2m_json" caption="通过 ID 引用组织的简历" >}}
+{{< eg num="3-2" id="fig_datamodels_m2m_json" caption="Sơ yếu lý lịch tham chiếu tổ chức bằng ID" >}}
 ```json
 {
     "user_id": 251,
@@ -230,70 +228,70 @@ SELECT posts.id, posts.sender_id
 ```
 {{< /eg >}}
 
-{{< fig num="3-4" id="fig_datamodels_many_to_many" src="/fig/ddia_0304.png" caption="文档模型中的多对多关系；每个虚线框内的数据可以组成一份文档。" class="ddia-figure ddia-figure--standard" width="1772" height="1121" />}}
+{{< fig num="3-4" id="fig_datamodels_many_to_many" src="/fig/ddia_0304.png" caption="Quan hệ nhiều-nhiều trong mô hình tài liệu; dữ liệu trong mỗi khung nét đứt có thể tạo thành một tài liệu." class="ddia-figure ddia-figure--standard" width="1772" height="1121" />}}
 
-多对多关系通常需要从“两个方向”查询：既要找出某人任职过的所有组织，也要找出曾在某组织任职的所有人。一种做法是在关系两端都保存 ID 引用：简历列出此人任职过的各个组织 ID，组织文档也列出提及该组织的简历 ID。由于同一关系存储了两份，这是一种反规范化表示，两边可能彼此不一致。
+Quan hệ nhiều-nhiều thường cần truy vấn theo “hai chiều”: vừa tìm mọi tổ chức mà một người từng làm việc, vừa tìm mọi người từng làm việc tại một tổ chức. Một cách là lưu tham chiếu ID ở cả hai đầu quan hệ: sơ yếu lý lịch liệt kê ID các tổ chức người đó từng làm, còn tài liệu tổ chức liệt kê ID các sơ yếu lý lịch nhắc đến nó. Vì cùng một quan hệ được lưu hai lần, đây là biểu diễn phi chuẩn hóa, và hai phía có thể không nhất quán với nhau.
 
-规范化表示只在一处存储关系，再依靠 *二级索引*（*secondary index*；将在 [第 4 章](/ch4#ch_storage) 讨论）从两个方向高效查询。{{< xref fig="3-3" page="/ch3" anchor="fig_datamodels_m2m_rel" >}}图 3-3{{< /xref >}} 的关系模式中，可以让数据库分别为 `positions` 表的 `user_id` 列和 `org_id` 列建立索引。
+Biểu diễn chuẩn hóa chỉ lưu quan hệ ở một nơi, rồi dựa vào *chỉ mục phụ* (*secondary index*) (sẽ bàn ở [Chương 4](/ch4#ch_storage)) để truy vấn hiệu quả theo cả hai chiều. Với schema quan hệ trong {{< xref fig="3-3" page="/ch3" anchor="fig_datamodels_m2m_rel" >}}Hình 3-3{{< /xref >}}, ta có thể cho cơ sở dữ liệu tạo chỉ mục (*index*) riêng cho cột `user_id` và cột `org_id` của bảng `positions`.
 
-在 {{< xref eg="3-2" page="/ch3" anchor="fig_datamodels_m2m_json" >}}示例 3-2{{< /xref >}} 的文档模型中，数据库则需要索引 `positions` 数组内各对象的 `org_id` 字段。许多文档数据库以及支持 JSON 的关系数据库，都能为文档内部的值建立这种索引。
+Trong mô hình tài liệu ở {{< xref eg="3-2" page="/ch3" anchor="fig_datamodels_m2m_json" >}}Ví dụ 3-2{{< /xref >}}, cơ sở dữ liệu thì cần lập chỉ mục (*index*) trên trường `org_id` của các đối tượng nằm trong mảng `positions`. Nhiều cơ sở dữ liệu tài liệu, cũng như các cơ sở dữ liệu quan hệ hỗ trợ JSON, đều có thể lập loại chỉ mục (*index*) này trên các giá trị bên trong tài liệu.
 
-### 星型与雪花型：分析模式 {#sec_datamodels_analytics}
+### Star schema và snowflake schema: các schema cho phân tích {#sec_datamodels_analytics}
 
-数据仓库（参见 [“数据仓库”](/ch1#sec_introduction_dwh)）通常采用关系模型，其表结构有几种广泛使用的惯例：*星型模式*（*star schema*）、*雪花模式*（*snowflake schema*）、*维度建模*（*dimensional modeling*）[^12]，以及 *一张大表*（*one big table*，OBT）。这些结构针对业务分析师的需求进行了优化，ETL 过程则负责把事务型系统中的数据转换成这种模式。
+Kho dữ liệu (xem [“Kho dữ liệu”](/ch1#sec_introduction_dwh)) thường dùng mô hình quan hệ, với cấu trúc bảng theo một số quy ước được áp dụng rộng rãi: *star schema*, *snowflake schema*, *mô hình hóa theo chiều* (*dimensional modeling*) [^12], và *một bảng lớn* (*one big table*, OBT). Các cấu trúc này được tối ưu cho nhu cầu của các nhà phân tích nghiệp vụ, còn quy trình ETL chịu trách nhiệm chuyển dữ liệu từ các hệ thống giao dịch sang schema đó.
 
-{{< xref fig="3-5" page="/ch3" anchor="fig_dwh_schema" >}}图 3-5{{< /xref >}} 中的示例模式，可能出现在一家食品零售商的数据仓库中。模式的中心是所谓的 *事实表*（*fact table*；本例中名为 `fact_sales`）。事实表的每一行代表在特定时间发生的事件；在这里，每行代表客户购买了一件产品。如果分析的是网站流量而不是零售量，那么每行可能代表一次页面浏览或一次用户点击。
+Schema mẫu trong {{< xref fig="3-5" page="/ch3" anchor="fig_dwh_schema" >}}Hình 3-5{{< /xref >}} có thể xuất hiện trong kho dữ liệu của một nhà bán lẻ thực phẩm. Ở trung tâm của schema là cái gọi là *bảng sự kiện* (*fact table*, trong ví dụ này tên là `fact_sales`). Mỗi hàng của bảng sự kiện biểu diễn một sự kiện xảy ra tại một thời điểm cụ thể. Ở đây, mỗi hàng là một lần khách hàng mua một sản phẩm. Nếu phân tích lưu lượng truy cập web thay vì doanh số bán lẻ, mỗi hàng có thể là một lượt xem trang hoặc một lần nhấp chuột của người dùng.
 
-{{< fig num="3-5" id="fig_dwh_schema" src="/fig/ddia_0305.png" caption="用于数据仓库的星型模式示例。" class="ddia-figure ddia-figure--standard" width="2658" height="2223" />}}
+{{< fig num="3-5" id="fig_dwh_schema" src="/fig/ddia_0305.png" caption="Ví dụ về star schema dùng trong kho dữ liệu." class="ddia-figure ddia-figure--standard" width="2658" height="2223" />}}
 
-通常会把每项事实记录为独立事件，因为这样能为日后的分析保留最大的灵活性。不过，这也意味着事实表可能变得极其庞大。大型企业的数据仓库可能保存着许多 PB 的交易历史，其中大部分都以事实表表示。
+Mỗi sự kiện thường được ghi lại như một event riêng lẻ, vì cách này giữ được tối đa tính linh hoạt cho các phân tích sau này. Tuy nhiên, điều đó cũng có nghĩa là bảng sự kiện có thể lớn đến mức cực đoan. Kho dữ liệu của một doanh nghiệp lớn có thể chứa nhiều petabyte lịch sử giao dịch, phần lớn nằm trong các bảng sự kiện.
 
-事实表中的一些列是属性，例如产品的售价和从供应商处购入的成本（据此可以计算利润率）。另一些列是指向其他表的外键引用，这些表称为 *维度表*（*dimension table*）。由于事实表的每一行表示一个事件，各个维度便代表事件发生的对象、内容、地点、时间、方式和原因。
+Một số cột của bảng sự kiện là thuộc tính, chẳng hạn giá bán của sản phẩm và chi phí mua từ nhà cung cấp (từ đó có thể tính biên lợi nhuận). Các cột khác là tham chiếu khóa ngoại tới những bảng khác, gọi là *bảng chiều* (*dimension table*). Vì mỗi hàng của bảng sự kiện biểu diễn một sự kiện, nên các chiều biểu diễn ai, cái gì, ở đâu, khi nào, như thế nào và tại sao của sự kiện đó.
 
-例如，{{< xref fig="3-5" page="/ch3" anchor="fig_dwh_schema" >}}图 3-5{{< /xref >}} 中的一个维度是售出的产品。`dim_product` 表中的每一行代表一种待售产品，包括库存单位（SKU）、产品描述、品牌名称、类别、脂肪含量、包装尺寸等。`fact_sales` 表的每一行都用外键表明该笔交易售出了哪种产品。查询往往要连接多个维度表。
+Chẳng hạn, trong {{< xref fig="3-5" page="/ch3" anchor="fig_dwh_schema" >}}Hình 3-5{{< /xref >}}, một chiều là sản phẩm được bán. Mỗi hàng của bảng `dim_product` là một loại sản phẩm đang bán, gồm mã đơn vị lưu kho (SKU), mô tả sản phẩm, tên thương hiệu, danh mục, hàm lượng chất béo, kích thước bao bì, v.v. Mỗi hàng của bảng `fact_sales` dùng một khóa ngoại để cho biết giao dịch đó đã bán sản phẩm nào. Truy vấn thường phải join nhiều bảng chiều.
 
-甚至日期和时间也常用维度表表示，以便编码公共假期等额外信息，让查询可以区分节假日与平日的销售情况。
+Ngay cả ngày và giờ cũng thường được biểu diễn bằng bảng chiều, để mã hóa thêm thông tin như ngày lễ, cho phép truy vấn phân biệt doanh số của ngày nghỉ lễ với ngày thường.
 
-{{< xref fig="3-5" page="/ch3" anchor="fig_dwh_schema" >}}图 3-5{{< /xref >}} 展示的便是星型模式。这个名称源自表关系的可视化形状：事实表位于中央，周围环绕着维度表；连接这些表的线条就像星星的光芒。
+{{< xref fig="3-5" page="/ch3" anchor="fig_dwh_schema" >}}Hình 3-5{{< /xref >}} là một ví dụ về star schema. Tên gọi này bắt nguồn từ hình dạng khi trực quan hóa quan hệ giữa các bảng: bảng sự kiện nằm ở giữa, được bao quanh bởi các bảng chiều; các đường nối giữa các bảng tỏa ra như tia sáng của ngôi sao.
 
-这个模板的变体称为 *雪花模式*，其中的维度会进一步分解成子维度。例如，可以为品牌和产品类别分别建表，让 `dim_product` 的每一行以外键引用品牌与类别，而不再把它们作为字符串直接存入 `dim_product` 表。雪花模式比星型模式更规范化，但星型模式通常更受青睐，因为分析师使用起来更简单 [^12]。
+Một biến thể của mẫu này gọi là *snowflake schema*, trong đó các chiều được phân rã tiếp thành các chiều con. Chẳng hạn, có thể tạo bảng riêng cho thương hiệu và danh mục sản phẩm, để mỗi hàng của `dim_product` tham chiếu thương hiệu và danh mục bằng khóa ngoại, thay vì lưu chúng dưới dạng chuỗi ngay trong bảng `dim_product`. Snowflake schema được chuẩn hóa nhiều hơn star schema, nhưng star schema thường được ưa chuộng hơn vì các nhà phân tích dùng đơn giản hơn [^12].
 
-典型数据仓库中的表通常非常宽：事实表往往超过 100 列，有时甚至有数百列。维度表也可能很宽，因为它们会收录所有可能与分析相关的元数据。例如，`dim_store` 表可能记录每家商店提供哪些服务、是否设有店内面包房、店面面积、首次开业日期、最近一次改造时间，以及离最近的高速公路有多远，等等。
+Các bảng trong kho dữ liệu điển hình thường rất rộng: bảng sự kiện hay có hơn 100 cột, đôi khi lên đến hàng trăm cột. Các bảng chiều cũng có thể rất rộng, vì chúng gom mọi siêu dữ liệu có thể liên quan đến phân tích. Chẳng hạn, bảng `dim_store` có thể ghi lại mỗi cửa hàng cung cấp dịch vụ nào, có tiệm bánh trong cửa hàng hay không, diện tích mặt bằng, ngày khai trương lần đầu, lần cải tạo gần nhất, khoảng cách đến đường cao tốc gần nhất, v.v.
 
-星型模式和雪花模式主要由多对一关系构成，例如许多笔销售对应同一种产品、同一家商店。这些关系表现为事实表指向维度表的外键，或维度表指向子维度表的外键。原则上也可以存在其他类型的关系，但为了简化查询，通常会把它们反规范化。例如，顾客一次买了几种不同产品时，这笔多商品交易不会得到显式表示；事实表只是为每件商品各存一行，而这些事实恰好具有相同的顾客 ID、商店 ID 和时间戳。
+Star schema và snowflake schema chủ yếu gồm các quan hệ nhiều-một, chẳng hạn nhiều giao dịch bán hàng cùng thuộc một sản phẩm, một cửa hàng. Các quan hệ này thể hiện qua khóa ngoại từ bảng sự kiện tới bảng chiều, hoặc từ bảng chiều tới bảng chiều con. Về nguyên tắc cũng có thể có các loại quan hệ khác, nhưng để đơn giản hóa truy vấn, chúng thường được phi chuẩn hóa. Chẳng hạn, khi khách hàng mua nhiều sản phẩm cùng lúc, giao dịch nhiều mặt hàng đó không được biểu diễn tường minh. Bảng sự kiện chỉ lưu một hàng cho mỗi mặt hàng, và các sự kiện này tình cờ có cùng ID khách hàng, ID cửa hàng và dấu thời gian.
 
-有些数据仓库模式更进一步，完全省去维度表，把维度信息放进事实表的反规范化列中——实质上就是预先计算事实表与维度表的连接。这种方法称为 *一张大表*（OBT）；它虽然占用更多存储空间，有时却能让查询更快 [^13]。
+Một số schema của kho dữ liệu còn đi xa hơn: bỏ hẳn các bảng chiều, đưa thông tin chiều vào các cột phi chuẩn hóa ngay trong bảng sự kiện — về thực chất là tính trước phép join giữa bảng sự kiện và các bảng chiều. Cách này gọi là *một bảng lớn* (OBT), tuy tốn thêm dung lượng lưu trữ, đôi khi nó giúp truy vấn nhanh hơn [^13].
 
-在分析场景中，这样反规范化通常不成问题，因为数据往往是一份不会再改变的历史记录（偶尔纠正错误除外）。反规范化在 OLTP 系统中带来的数据一致性问题和写入开销，在分析系统里没有那么紧迫。
+Trong ngữ cảnh phân tích, việc phi chuẩn hóa như vậy thường không thành vấn đề, vì dữ liệu thường là bản ghi lịch sử không bao giờ thay đổi (trừ khi sửa lỗi thỉnh thoảng). Các vấn đề về tính nhất quán dữ liệu và chi phí ghi mà phi chuẩn hóa gây ra trong hệ thống OLTP không cấp bách đến thế ở hệ thống phân tích.
 
-### 何时使用哪种模型 {#sec_datamodels_document_summary}
+### Khi nào dùng mô hình nào {#sec_datamodels_document_summary}
 
-支持文档数据模型的主要论据是模式灵活性、因局部性而拥有更好的性能，以及对于某些应用程序而言，它更接近应用程序使用的对象模型。关系模型则以更好地支持连接、多对一和多对多关系作为回应。下面逐一详细考察这些论点。
+Các lập luận chính ủng hộ mô hình dữ liệu tài liệu là tính linh hoạt của schema, hiệu năng tốt hơn nhờ tính cục bộ, và — với một số ứng dụng — việc nó gần với mô hình đối tượng mà ứng dụng sử dụng. Mô hình quan hệ đáp lại bằng khả năng hỗ trợ tốt hơn cho join, cũng như các quan hệ nhiều-một và nhiều-nhiều. Ta sẽ lần lượt xem xét chi tiết từng lập luận.
 
-如果应用程序中的数据具有类似文档的结构（即一对多关系树，通常一次性加载整棵树），那么使用文档模型可能是个好主意。把类似文档的结构 *拆散*（*shredding*）到多个表中（如 {{< xref fig="3-1" page="/ch3" anchor="fig_obama_relational" >}}图 3-1{{< /xref >}} 中的 `positions`、`education` 和 `contact_info`），可能导致繁琐的模式和不必要的复杂应用程序代码。
+Nếu dữ liệu trong ứng dụng có cấu trúc giống tài liệu (tức là một cây các quan hệ một-nhiều, thường được tải cả cây một lần), thì dùng mô hình tài liệu có thể là ý hay. Việc *shredding* cấu trúc kiểu tài liệu vào nhiều bảng (như `positions`, `education` và `contact_info` trong {{< xref fig="3-1" page="/ch3" anchor="fig_obama_relational" >}}Hình 3-1{{< /xref >}}) có thể dẫn đến schema rườm rà và mã ứng dụng phức tạp không cần thiết.
 
-文档模型有一定的局限性：例如，不能直接引用文档中的嵌套项目，而是需要说“用户 251 的职位列表中的第二项”。如果确实需要引用嵌套项目，关系模型更合适，因为任何项目都能通过自身 ID 被直接引用。
+Mô hình tài liệu có những hạn chế nhất định: chẳng hạn, bạn không thể tham chiếu trực tiếp một mục lồng bên trong tài liệu, mà phải nói kiểu “mục thứ hai trong danh sách vị trí công tác của người dùng 251”. Nếu thực sự cần tham chiếu các mục lồng nhau, mô hình quan hệ phù hợp hơn, vì mọi mục đều có thể được tham chiếu trực tiếp bằng ID của chính nó.
 
-有些应用允许用户自行安排项目顺序。例如，在待办事项清单或问题跟踪器中，用户可以拖放任务来重新排序。文档模型很适合这类应用，只需把项目（或项目 ID）按顺序存入 JSON 数组即可。关系数据库没有表示这种可重新排序列表的标准方式，只能借助各种技巧：按整数列排序（在中间插入时需要重新编号）、用 ID 构成链表，或者使用分数索引（fractional indexing）[^14] [^15] [^16]。
+Một số ứng dụng cho phép người dùng tự sắp xếp thứ tự các mục. Chẳng hạn, trong danh sách việc cần làm hoặc trình theo dõi issue, người dùng có thể kéo thả các tác vụ để đổi thứ tự. Mô hình tài liệu rất phù hợp với các ứng dụng này, chỉ cần lưu các mục (hoặc ID của chúng) theo thứ tự trong một mảng JSON. Cơ sở dữ liệu quan hệ không có cách chuẩn để biểu diễn loại danh sách có thể đổi thứ tự này, mà phải dùng nhiều mẹo: sắp xếp theo một cột số nguyên (chèn vào giữa thì phải đánh số lại), dùng danh sách liên kết các ID, hoặc dùng *fractional indexing* [^14] [^15] [^16].
 
-#### 文档模型中的模式灵活性 {#sec_datamodels_schema_flexibility}
+#### Tính linh hoạt của schema trong mô hình tài liệu {#sec_datamodels_schema_flexibility}
 
-大多数文档数据库以及关系数据库中的 JSON 支持，都不会强制文档中的数据采用何种模式。关系数据库的 XML 支持通常带有可选的模式验证。没有模式意味着可以向文档中添加任意键和值；读取时，客户端也无法确定文档究竟会包含哪些字段。
+Hầu hết cơ sở dữ liệu tài liệu, cũng như phần hỗ trợ JSON trong các cơ sở dữ liệu quan hệ, không ép dữ liệu trong tài liệu phải theo một schema nào. Phần hỗ trợ XML của cơ sở dữ liệu quan hệ thường đi kèm khả năng kiểm tra hợp lệ theo schema (tùy chọn). Không có schema nghĩa là có thể thêm khóa và giá trị tùy ý vào tài liệu, còn khi đọc, client không có gì đảm bảo về việc tài liệu chứa những trường nào.
 
-文档数据库有时称为 *无模式*（schemaless），但这具有误导性，因为读取数据的代码通常假定某种结构——即存在隐式模式，只是不由数据库强制执行 [^17]。一个更准确的术语是 *读时模式*（schema-on-read，数据结构是隐含的，只有读取时才会解释），与之相对的是 *写时模式*（schema-on-write，关系数据库的传统做法：模式是明确的，数据库确保写入的所有数据都符合模式）[^18]。
+Cơ sở dữ liệu tài liệu đôi khi được gọi là *không có schema* (*schemaless*), nhưng cách gọi này gây hiểu lầm, vì mã đọc dữ liệu thường giả định một cấu trúc nào đó — tức là có một schema ngầm định, chỉ là cơ sở dữ liệu không thực thi nó [^17]. Thuật ngữ chính xác hơn là *schema-on-read* (cấu trúc dữ liệu là ngầm định và chỉ được diễn giải khi đọc), đối lập với *schema-on-write* (cách làm truyền thống của cơ sở dữ liệu quan hệ: schema là tường minh và cơ sở dữ liệu đảm bảo mọi dữ liệu được ghi đều tuân theo nó) [^18].
 
-读时模式类似于编程语言中的动态（运行时）类型检查，而写时模式类似于静态（编译时）类型检查。就像静态与动态类型检查孰优孰劣一直争议不断 [^19]，数据库是否应该强制执行模式也是个见仁见智的问题，通常并没有绝对的对错。
+Schema-on-read giống với kiểm tra kiểu động (lúc chạy) trong ngôn ngữ lập trình, còn schema-on-write giống với kiểm tra kiểu tĩnh (lúc biên dịch). Cũng như việc kiểu tĩnh hay kiểu động tốt hơn là chủ đề tranh cãi dai dẳng [^19], việc cơ sở dữ liệu có nên thực thi schema hay không cũng là vấn đề quan điểm, và nhìn chung không có đúng sai tuyệt đối.
 
-当应用程序想要改变数据格式时，两种方法的区别尤其明显。例如，假设原先把每位用户的全名存储在一个字段中，现在想把名和姓分开存储 [^20]。在文档数据库中，只需开始写入带有新字段的文档，并在应用程序中加入代码来处理旧文档即可。例如：
+Sự khác biệt giữa hai cách tiếp cận đặc biệt rõ khi ứng dụng muốn thay đổi định dạng dữ liệu. Chẳng hạn, giả sử trước đây bạn lưu họ tên đầy đủ của mỗi người dùng trong một trường, nay muốn lưu tên và họ riêng [^20]. Trong cơ sở dữ liệu tài liệu, bạn chỉ cần bắt đầu ghi các tài liệu có trường mới, rồi thêm mã trong ứng dụng để xử lý các tài liệu cũ. Ví dụ:
 
 ```mongodb-json
 if (user && user.name && !user.first_name) {
-    // 2023 年 12 月 8 日之前写入的文档没有 first_name
+    // Các tài liệu được ghi trước ngày 8 tháng 12 năm 2023 không có first_name
     user.first_name = user.name.split(" ")[0];
 }
 ```
 
-这种方法的缺点是，应用中每个读取数据库的部分，从此都必须处理可能在很久以前写入的旧格式文档。另一方面，在写时模式数据库中，通常会执行下面这样的 *迁移*（*migration*）：
+Nhược điểm của cách này là mọi phần của ứng dụng đọc từ cơ sở dữ liệu từ nay đều phải xử lý được các tài liệu định dạng cũ, có thể đã được ghi từ rất lâu. Ngược lại, trong cơ sở dữ liệu schema-on-write, thường sẽ thực hiện một *migration* như sau:
 
 ```sql
 ALTER TABLE users ADD COLUMN first_name text DEFAULT NULL;
@@ -301,34 +299,34 @@ UPDATE users SET first_name = split_part(name, ' ', 1); -- PostgreSQL
 UPDATE users SET first_name = substring_index(name, ' ', 1); -- MySQL
 ```
 
-在大多数关系数据库中，即使面对大表，添加带默认值的列也又快又稳妥。不过，在大表上执行 `UPDATE` 可能很慢，因为每一行都必须重写；其他模式操作（例如修改某列的数据类型）通常也需要复制整张表。
+Trong hầu hết cơ sở dữ liệu quan hệ, việc thêm một cột có giá trị mặc định là nhanh và an toàn, ngay cả với bảng lớn. Tuy nhiên, chạy `UPDATE` trên bảng lớn có thể rất chậm, vì mọi hàng đều phải được ghi lại. Các thao tác schema khác (chẳng hạn đổi kiểu dữ liệu của một cột) cũng thường yêu cầu sao chép (*replication*) toàn bộ bảng.
 
-有多种工具可以在后台完成这类模式变更而无须停机 [^21] [^22] [^23] [^24]，但在大型数据库上进行这种迁移，运维起来依然颇具挑战。要避开复杂迁移，可以只快速添加一个默认值为 `NULL` 的 `first_name` 列，然后在读取时填充它，就像使用文档数据库那样。
+Có nhiều công cụ cho phép thực hiện các thay đổi schema như vậy ở chế độ nền mà không cần dừng hệ thống [^21] [^22] [^23] [^24], nhưng vận hành migration kiểu này trên cơ sở dữ liệu lớn vẫn là thách thức. Để tránh migration phức tạp, bạn có thể chỉ thêm nhanh một cột `first_name` với giá trị mặc định `NULL`, rồi điền giá trị lúc đọc, giống như khi dùng cơ sở dữ liệu tài liệu.
 
-如果集合中的项目因为某种原因并不都具有相同结构（即数据是异构的），读时模式更具优势。例如：
+Schema-on-read có lợi thế hơn khi các mục trong một tập hợp, vì lý do nào đó, không có cùng cấu trúc (tức dữ liệu không đồng nhất). Chẳng hạn khi:
 
-* 存在许多不同类型的对象，将每种对象分别放进一张表并不现实。
-* 数据结构由你无法控制、且随时可能改变的外部系统决定。
+* Có nhiều loại đối tượng khác nhau, và việc đưa mỗi loại vào một bảng riêng là không thực tế.
+* Cấu trúc dữ liệu do các hệ thống bên ngoài quyết định, bạn không kiểm soát được và chúng có thể thay đổi bất cứ lúc nào.
 
-在上述情况下，模式可能弊大于利，无模式文档反而是更自然的数据模型。但是，如果所有记录都应具有相同结构，那么模式就是记录并强制这种结构的有效机制。我们将在 [第 5 章](/ch5#ch_encoding) 更详细地讨论模式和模式演化。
+Trong những trường hợp đó, schema có thể hại nhiều hơn lợi, và tài liệu không có schema có thể là mô hình dữ liệu tự nhiên hơn. Nhưng nếu mọi bản ghi đều phải có cùng cấu trúc, schema là cơ chế hữu hiệu để ghi lại và thực thi cấu trúc đó. Ta sẽ bàn kỹ hơn về schema và sự tiến hóa của schema ở [Chương 5](/ch5#ch_encoding).
 
-#### 读写的数据局部性 {#sec_datamodels_document_locality}
+#### Tính cục bộ của dữ liệu khi đọc và ghi {#sec_datamodels_document_locality}
 
-文档通常以单个连续字符串的形式存储，编码为 JSON、XML 或其二进制变体（如 MongoDB 的 BSON）。如果应用程序经常需要访问整个文档（例如把它渲染到网页上），这种 *存储局部性*（*storage locality*）会带来性能优势。如果数据像 {{< xref fig="3-1" page="/ch3" anchor="fig_obama_relational" >}}图 3-1{{< /xref >}} 那样分散在多张表中，就需要多次查找索引才能检索完整，可能产生更多磁盘寻道并花费更长时间。
+Tài liệu thường được lưu dưới dạng một chuỗi liên tục duy nhất, mã hóa thành JSON, XML hoặc biến thể nhị phân của chúng (như BSON của MongoDB). Nếu ứng dụng thường xuyên cần truy cập toàn bộ tài liệu (ví dụ để hiển thị lên trang web), *tính cục bộ của lưu trữ* (*storage locality*) này mang lại lợi thế về hiệu năng. Nếu dữ liệu bị phân tán trên nhiều bảng như trong {{< xref fig="3-1" page="/ch3" anchor="fig_obama_relational" >}}Hình 3-1{{< /xref >}}, thì cần nhiều lần tra cứu chỉ mục (*index*) mới lấy đủ dữ liệu, có thể gây thêm nhiều lần seek trên đĩa và tốn thời gian hơn.
 
-局部性优势只适用于同时需要文档中相当一部分内容的情况。即使只访问大型文档的一小部分，数据库通常也要加载整个文档，这会造成浪费；更新时一般还要重写整个文档。因此，通常建议让文档保持较小，并避免频繁地对文档做小幅更新。
+Lợi thế về tính cục bộ chỉ áp dụng khi bạn cần một phần đáng kể của tài liệu cùng lúc. Ngay cả khi chỉ truy cập một phần nhỏ của tài liệu lớn, cơ sở dữ liệu thường vẫn phải tải toàn bộ tài liệu, gây lãng phí. Khi cập nhật thì thường phải ghi lại cả tài liệu. Vì vậy, thường nên giữ tài liệu nhỏ và tránh cập nhật nhỏ lẻ thường xuyên lên tài liệu.
 
-不过，为了局部性而把相关数据存储在一起，并非文档模型的专利。例如，Google 的 Spanner 数据库在关系模型中也提供同样的局部性属性，允许模式声明某张表的行应交错（嵌套）在父表之中 [^25]。Oracle 也用名为 *多表索引集群表*（*multi-table index cluster table*）的功能提供类似能力 [^26]。由 Google Bigtable 推广、并被 HBase 和 Accumulo 等系统采用的 *宽列*（*wide-column*）数据模型，则以 *列族*（*column family*）概念达到相似的局部性管理目的 [^27]。
+Tuy nhiên, việc lưu dữ liệu liên quan cạnh nhau vì mục đích cục bộ không phải đặc quyền của mô hình tài liệu. Chẳng hạn, cơ sở dữ liệu Spanner của Google cũng cung cấp thuộc tính cục bộ tương tự trong mô hình quan hệ, cho phép schema khai báo rằng các hàng của một bảng được xen kẽ (lồng) trong bảng cha [^25]. Oracle cũng cung cấp khả năng tương tự qua tính năng *multi-table index cluster table* [^26]. Mô hình dữ liệu *wide-column*, do Google Bigtable phổ biến và được các hệ thống như HBase và Accumulo áp dụng, dùng khái niệm *column family* để đạt mục tiêu quản lý tính cục bộ tương tự [^27].
 
-#### 文档的查询语言 {#query-languages-for-documents}
+#### Ngôn ngữ truy vấn cho tài liệu {#query-languages-for-documents}
 
-关系数据库和文档数据库的另一个区别，在于查询所用的语言或 API。大多数关系数据库使用 SQL，文档数据库则五花八门：有些只允许按主键进行键值访问，有些还提供二级索引来查询文档内部的值，还有些配有功能丰富的查询语言。
+Một điểm khác biệt nữa giữa cơ sở dữ liệu quan hệ và cơ sở dữ liệu tài liệu là ngôn ngữ hoặc API dùng để truy vấn. Hầu hết cơ sở dữ liệu quan hệ dùng SQL, còn cơ sở dữ liệu tài liệu thì muôn hình muôn vẻ: có loại chỉ cho truy cập khóa-giá trị theo khóa chính, có loại còn cung cấp chỉ mục phụ (*secondary index*) để truy vấn các giá trị bên trong tài liệu, và có loại có ngôn ngữ truy vấn phong phú.
 
-XML 数据库通常使用 XQuery 和 XPath；它们支持包括跨文档连接在内的复杂查询，还能把结果格式化为 XML [^28]。JSON Pointer [^29] 和 JSONPath [^30] 则为 JSON 提供了与 XPath 相当的功能。
+Cơ sở dữ liệu XML thường dùng XQuery và XPath. Chúng hỗ trợ truy vấn phức tạp, kể cả join giữa các tài liệu, và có thể định dạng kết quả thành XML [^28]. JSON Pointer [^29] và JSONPath [^30] cung cấp cho JSON các chức năng tương đương XPath.
 
-MongoDB 的聚合管道就是一种面向 JSON 文档集合的查询语言；我们在 [“规范化、反规范化与连接”](/ch3#sec_datamodels_normalization) 中已经见过它用于连接的 `$lookup` 算子。
+Aggregation pipeline của MongoDB là một ngôn ngữ truy vấn cho các tập hợp tài liệu JSON. Ta đã thấy toán tử `$lookup` của nó dùng cho join trong [“Chuẩn hóa, phi chuẩn hóa và phép nối”](/ch3#sec_datamodels_normalization).
 
-再看一个例子来体会这种语言，这次考察分析中尤为常见的聚合。假设你是一名海洋生物学家，每当在海中看到动物，就向数据库添加一条观察记录。现在你想生成一份报告，说明每个月观察到多少条鲨鱼。在 PostgreSQL 中，可以像这样表述查询：
+Hãy xem thêm một ví dụ để cảm nhận loại ngôn ngữ này, lần này là phép tổng hợp (aggregation), vốn đặc biệt phổ biến trong phân tích. Giả sử bạn là nhà sinh vật biển, mỗi lần thấy một loài động vật ngoài biển lại thêm một bản ghi quan sát vào cơ sở dữ liệu. Bây giờ bạn muốn lập báo cáo cho biết mỗi tháng đã quan sát được bao nhiêu con cá mập. Trong PostgreSQL, có thể diễn đạt truy vấn như sau:
 
 ```sql
 SELECT date_trunc('month', observation_timestamp) AS observation_month, ❶ 
@@ -338,9 +336,9 @@ WHERE family = 'Sharks'
 GROUP BY observation_month;
 ```
 
-❶：`date_trunc('month', timestamp)` 函数确定 `timestamp` 所在的日历月份，并返回代表该月起点的另一个时间戳。换句话说，它把时间戳向下舍入到最近的月份。
+❶: Hàm `date_trunc('month', timestamp)` xác định tháng dương lịch chứa `timestamp`, rồi trả về một dấu thời gian khác biểu diễn thời điểm bắt đầu của tháng đó. Nói cách khác, nó làm tròn xuống dấu thời gian về tháng gần nhất.
 
-这个查询首先过滤观察记录，只保留鲨鱼科的物种；然后按观察发生的日历月份分组；最后，把该月所有观察记录中的动物数量相加。同一个查询可以用 MongoDB 的聚合管道表示如下：
+Truy vấn này trước hết lọc các bản ghi quan sát để chỉ giữ các loài thuộc họ cá mập, rồi nhóm theo tháng dương lịch của lần quan sát, và cuối cùng cộng số lượng động vật trong mọi bản ghi quan sát của tháng đó. Cùng truy vấn này có thể được biểu diễn bằng aggregation pipeline của MongoDB như sau:
 
 ```mongodb-json
 db.observations.aggregate([
@@ -355,75 +353,75 @@ db.observations.aggregate([
 ]);
 ```
 
-聚合管道语言的表达能力与 SQL 的一个子集相当，不过它采用基于 JSON 的语法，而不是 SQL 那种接近英语句式的语法；这种差异或许只是口味问题。
+Ngôn ngữ aggregation pipeline có sức biểu đạt tương đương một tập con của SQL, nhưng dùng cú pháp dựa trên JSON thay vì kiểu câu gần với tiếng Anh của SQL. Sự khác biệt này có lẽ chỉ là vấn đề sở thích.
 
-#### 文档和关系数据库的融合 {#convergence-of-document-and-relational-databases}
+#### Sự hội tụ của cơ sở dữ liệu tài liệu và quan hệ {#convergence-of-document-and-relational-databases}
 
-文档数据库和关系数据库最初采用截然不同的数据管理方法，但随着时间推移，两者变得越来越相似 [^31]。关系数据库增加了对 JSON 类型和查询算子的支持，也能够为文档内部的属性建立索引；MongoDB、Couchbase、RethinkDB 等文档数据库，则增加了连接、二级索引和声明式查询语言。
+Cơ sở dữ liệu tài liệu và cơ sở dữ liệu quan hệ ban đầu có cách quản lý dữ liệu rất khác nhau, nhưng theo thời gian chúng ngày càng giống nhau [^31]. Cơ sở dữ liệu quan hệ đã bổ sung hỗ trợ kiểu JSON và các toán tử truy vấn, cũng như khả năng lập chỉ mục (*index*) trên thuộc tính bên trong tài liệu, còn các cơ sở dữ liệu tài liệu như MongoDB, Couchbase và RethinkDB đã bổ sung join, chỉ mục phụ (*secondary index*) và ngôn ngữ truy vấn khai báo.
 
-这种融合对应用程序开发人员来说是件好事，因为关系模型和文档模型能够在同一个数据库中结合使用时，最能发挥各自所长。许多文档数据库需要以关系模型的方式引用其他文档，许多关系数据库也有些部分会受益于模式灵活性。关系模型与文档模型的混合是一种强大的组合。
+Sự hội tụ này có lợi cho lập trình viên ứng dụng, vì mô hình quan hệ và mô hình tài liệu phát huy tốt nhất khi có thể kết hợp trong cùng một cơ sở dữ liệu. Nhiều cơ sở dữ liệu tài liệu cần tham chiếu các tài liệu khác theo kiểu quan hệ, và nhiều cơ sở dữ liệu quan hệ cũng có những phần được hưởng lợi từ tính linh hoạt của schema. Sự kết hợp giữa mô hình quan hệ và mô hình tài liệu là một tổ hợp mạnh mẽ.
 
 
 > [!NOTE]
-> Codd 对关系模型的原始描述 [^3] 实际上允许关系模式中出现类似 JSON 的结构，他称之为 *非简单域*（*nonsimple domain*）。其思想是，一行中的值不一定只是数字或字符串之类的原始数据类型，也可以是嵌套的关系（表），因此可以把任意嵌套的树结构作为一个值。这与三十多年后加入 SQL 的 JSON 或 XML 支持非常相似。
+> Mô tả ban đầu của Codd về mô hình quan hệ [^3] thực ra cho phép các cấu trúc giống JSON xuất hiện trong schema quan hệ, mà ông gọi là *miền không đơn giản* (*nonsimple domain*). Ý tưởng là giá trị trong một hàng không nhất thiết chỉ là kiểu dữ liệu nguyên thủy như số hay chuỗi, mà còn có thể là một quan hệ (bảng) lồng bên trong, nhờ đó có thể dùng cấu trúc cây lồng nhau tùy ý làm một giá trị. Điều này rất giống phần hỗ trợ JSON hoặc XML được thêm vào SQL hơn ba mươi năm sau.
 
 
 
-## 图数据模型 {#sec_datamodels_graph}
+## Mô hình dữ liệu đồ thị {#sec_datamodels_graph}
 
-如我们之前所见，关系的类型是区分不同数据模型的一项重要特征。如果应用程序中的关系大多是一对多关系（树状结构数据），而记录之间很少存在其他关系，那么文档模型是合适的。
+Như đã thấy, loại quan hệ là một đặc điểm quan trọng để phân biệt các mô hình dữ liệu. Nếu quan hệ trong ứng dụng chủ yếu là một-nhiều (dữ liệu có cấu trúc cây) và giữa các bản ghi hầu như không có quan hệ nào khác, thì mô hình tài liệu là phù hợp.
 
-但是，如果多对多关系在数据中十分常见呢？关系模型可以处理简单的多对多关系，但随着数据之间的连接变得越来越复杂，将数据建模为图就显得更加自然。
+Nhưng nếu quan hệ nhiều-nhiều rất phổ biến trong dữ liệu thì sao? Mô hình quan hệ xử lý được các quan hệ nhiều-nhiều đơn giản, nhưng khi các kết nối giữa dữ liệu ngày càng phức tạp, việc mô hình hóa dữ liệu dưới dạng đồ thị trở nên tự nhiên hơn.
 
-一个图由两种对象组成：*顶点*（vertices，也称为 *节点*，即 nodes，或 *实体*，即 entities）和 *边*（edges，也称为 *关系*，即 relationships，或 *弧*，即 arcs）。多种数据都可以建模为图，典型的例子包括：
+Một đồ thị gồm hai loại đối tượng: *đỉnh* (*vertices*, còn gọi là *nút* — *nodes* — hoặc *thực thể* — *entities*) và *cạnh* (*edges*, còn gọi là *quan hệ* — *relationships* — hoặc *cung* — *arcs*). Nhiều loại dữ liệu có thể được mô hình hóa thành đồ thị, ví dụ điển hình gồm:
 
-社交图
-: 顶点是人，边表示哪些人相互认识。
+Đồ thị xã hội
+: Đỉnh là con người, cạnh cho biết những ai quen biết nhau.
 
-网页图
-: 顶点是网页，边表示指向其他页面的 HTML 链接。
+Đồ thị web
+: Đỉnh là các trang web, cạnh là các liên kết HTML trỏ tới trang khác.
 
-道路或铁路网络
-: 顶点是交叉点，边表示它们之间的道路或铁路线。
+Mạng lưới đường bộ hoặc đường sắt
+: Đỉnh là các giao lộ, cạnh là các tuyến đường bộ hoặc đường sắt nối giữa chúng.
 
-可以把许多众所周知的算法运用到这些图上。例如，地图导航应用会搜索道路网络中两点之间的最短路径；PageRank 可以用在网页图上，判断网页的流行程度，进而决定它在搜索结果中的排名 [^32]。
+Nhiều thuật toán nổi tiếng có thể áp dụng trên các đồ thị này. Chẳng hạn, ứng dụng bản đồ tìm đường đi ngắn nhất giữa hai điểm trong mạng lưới đường bộ; PageRank có thể dùng trên đồ thị web để xác định mức độ phổ biến của một trang web, từ đó quyết định thứ hạng của nó trong kết quả tìm kiếm [^32].
 
-图可以用几种不同的方式表示。在 *邻接表*（*adjacency list*）模型中，每个顶点都保存与它相隔一条边的相邻顶点 ID。另一种方式是 *邻接矩阵*（*adjacency matrix*）：这是一个二维数组，每行、每列各对应一个顶点；行顶点与列顶点之间没有边时，值为 0，有边时则为 1。邻接表适合图遍历，邻接矩阵则适合机器学习（参见 [“数据框、矩阵与数组”](/ch3#sec_datamodels_dataframes)）。
+Đồ thị có thể được biểu diễn theo vài cách khác nhau. Trong mô hình *danh sách kề* (*adjacency list*), mỗi đỉnh lưu ID của các đỉnh lân cận cách nó một cạnh. Một cách khác là *ma trận kề* (*adjacency matrix*): một mảng hai chiều trong đó mỗi hàng và mỗi cột ứng với một đỉnh. Giá trị bằng 0 khi không có cạnh giữa đỉnh hàng và đỉnh cột, và bằng 1 khi có cạnh. Danh sách kề thích hợp cho việc duyệt đồ thị, còn ma trận kề thích hợp cho học máy (xem [“Dataframe, ma trận và mảng”](/ch3#sec_datamodels_dataframes)).
 
-在刚才给出的例子中，图里的所有顶点都表示同一种事物，分别是人、网页或道路交叉口。不过，图并不局限于这种 *同质*（*homogeneous*）数据：图还有一项同样强大的用途，就是以一致的方式在单个数据库中存储截然不同的对象。例如：
+Trong các ví dụ vừa nêu, mọi đỉnh trong đồ thị đều biểu diễn cùng một loại thứ: lần lượt là con người, trang web hoặc giao lộ. Tuy nhiên, đồ thị không giới hạn ở dữ liệu *đồng nhất* (*homogeneous*) như vậy: một công dụng mạnh mẽ không kém của đồ thị là lưu trữ các loại đối tượng hoàn toàn khác nhau một cách nhất quán trong cùng một cơ sở dữ liệu. Ví dụ:
 
-* Facebook 维护着一个包含许多不同类型顶点和边的图：顶点表示人、地点、事件、签到和用户评论；边表示哪些人是朋友、某次签到发生在哪里、谁评论了哪篇帖子、谁参加了哪场活动，等等 [^33]。
-* 搜索引擎用知识图谱来记录查询中经常出现的组织、人物、地点等实体的事实 [^34]。这些信息来自对网站的抓取与文本分析；Wikidata 等网站也会以结构化形式发布图数据。
+* Facebook duy trì một đồ thị với nhiều loại đỉnh và cạnh khác nhau: đỉnh biểu diễn con người, địa điểm, sự kiện, lượt check-in và bình luận của người dùng. Cạnh biểu diễn ai là bạn của ai, lượt check-in diễn ra ở đâu, ai đã bình luận bài đăng nào, ai tham dự sự kiện nào, v.v. [^33].
+* Công cụ tìm kiếm dùng đồ thị tri thức (knowledge graph) để ghi lại các sự kiện về những thực thể thường xuất hiện trong truy vấn, như tổ chức, con người, địa điểm [^34]. Thông tin này đến từ việc thu thập dữ liệu website và phân tích văn bản. Các trang như Wikidata cũng công bố dữ liệu đồ thị ở dạng có cấu trúc.
 
-有几种不同但彼此相关的方式，可以用来组织和查询图中的数据。本节将讨论 *属性图*（*property graph*）模型（由 Neo4j、Memgraph、KùzuDB [^35] 等系统实现 [^36]）和 *三元组存储*（*triple store*）模型（由 Datomic、AllegroGraph、Blazegraph 等系统实现）。两种模型的表达能力相当接近，Amazon Neptune 等图数据库还同时支持二者。
+Có vài cách khác nhau nhưng liên quan với nhau để tổ chức và truy vấn dữ liệu trong đồ thị. Phần này sẽ thảo luận mô hình *property graph* (được hiện thực trong các hệ thống như Neo4j, Memgraph, KùzuDB [^35] [^36]) và mô hình *triple store* (được hiện thực trong các hệ thống như Datomic, AllegroGraph, Blazegraph). Sức biểu đạt của hai mô hình khá gần nhau, và một số cơ sở dữ liệu đồ thị như Amazon Neptune hỗ trợ cả hai.
 
-我们还将介绍四种图查询语言（Cypher、SPARQL、Datalog 和 GraphQL），以及 SQL 对图查询的支持。其他图查询语言还有 Gremlin 等 [^37]，不过这里选取的几种已足以给出一幅有代表性的全景。
+Ta cũng sẽ giới thiệu bốn ngôn ngữ truy vấn đồ thị (Cypher, SPARQL, Datalog và GraphQL), cùng khả năng hỗ trợ truy vấn đồ thị của SQL. Còn có các ngôn ngữ truy vấn đồ thị khác như Gremlin [^37], nhưng mấy ngôn ngữ được chọn ở đây đã đủ cho một bức tranh toàn cảnh mang tính đại diện.
 
-为了说明这些语言和模型，本节将以 {{< xref fig="3-6" page="/ch3" anchor="fig_datamodels_graph" >}}图 3-6{{< /xref >}} 为贯穿全节的例子。它可以取自社交网络或家谱数据库：图中有两个人，来自爱达荷州的 Lucy 和来自法国圣洛的 Alain。他们已经结婚，现居伦敦。每个人和每个地点都表示为顶点，彼此之间的关系则表示为边。这个例子将展示一些在图数据库中很容易、在其他模型中却很难表达的查询。
+Để minh họa các ngôn ngữ và mô hình này, phần này dùng {{< xref fig="3-6" page="/ch3" anchor="fig_datamodels_graph" >}}Hình 3-6{{< /xref >}} làm ví dụ xuyên suốt. Nó có thể lấy từ một mạng xã hội hoặc cơ sở dữ liệu phả hệ: đồ thị có hai người, Lucy đến từ Idaho và Alain đến từ Saint-Lô, Pháp. Họ đã kết hôn và hiện sống ở London. Mỗi người và mỗi địa điểm được biểu diễn là một đỉnh, còn quan hệ giữa chúng là các cạnh. Ví dụ này sẽ cho thấy một số truy vấn dễ thực hiện trong cơ sở dữ liệu đồ thị nhưng khó diễn đạt trong các mô hình khác.
 
-{{< fig num="3-6" id="fig_datamodels_graph" src="/fig/ddia_0306.png" caption="图结构数据示例（框表示顶点，箭头表示边）。" class="ddia-figure ddia-figure--wide" width="1772" height="1065" />}}
+{{< fig num="3-6" id="fig_datamodels_graph" src="/fig/ddia_0306.png" caption="Ví dụ về dữ liệu có cấu trúc đồ thị (hình chữ nhật là đỉnh, mũi tên là cạnh)." class="ddia-figure ddia-figure--wide" width="1772" height="1065" />}}
 
-### 属性图 {#id56}
+### Property graph {#id56}
 
-在 *属性图*（也称 *带标签属性图*，*labeled property graph*）模型中，每个顶点包括：
+Trong mô hình *property graph* (còn gọi là *labeled property graph*, tức property graph có nhãn), mỗi đỉnh gồm:
 
-* 唯一标识符
-* 一个标签（字符串），描述该顶点所表示的对象类型
-* 一组出边
-* 一组入边
-* 一组属性（键值对）
+* Một định danh duy nhất
+* Một nhãn (chuỗi) mô tả loại đối tượng mà đỉnh biểu diễn
+* Một tập các cạnh đi ra
+* Một tập các cạnh đi vào
+* Một tập thuộc tính (các cặp khóa-giá trị)
 
-每条边包括：
+Mỗi cạnh gồm:
 
-* 唯一标识符
-* 边的起点（*尾部顶点*，即 tail vertex）
-* 边的终点（*头部顶点*，即 head vertex）
-* 一个标签，描述两个顶点之间的关系类型
-* 一组属性（键值对）
+* Một định danh duy nhất
+* Điểm bắt đầu của cạnh (*đỉnh đuôi*, tức *tail vertex*)
+* Điểm kết thúc của cạnh (*đỉnh đầu*, tức *head vertex*)
+* Một nhãn mô tả loại quan hệ giữa hai đỉnh
+* Một tập thuộc tính (các cặp khóa-giá trị)
 
-可以把图存储看成两个关系表：一张存储顶点，另一张存储边，如 {{< xref eg="3-3" page="/ch3" anchor="fig_graph_sql_schema" >}}示例 3-3{{< /xref >}} 所示（该模式使用 PostgreSQL 的 `jsonb` 数据类型存储每个顶点或每条边的属性）。每条边都保存头部顶点和尾部顶点；如果想找出某个顶点的所有入边或出边，可以分别按 `head_vertex` 或 `tail_vertex` 查询 `edges` 表。
+Có thể coi kho lưu trữ đồ thị gồm hai bảng quan hệ: một bảng lưu đỉnh, một bảng lưu cạnh, như trong {{< xref eg="3-3" page="/ch3" anchor="fig_graph_sql_schema" >}}Ví dụ 3-3{{< /xref >}} (schema này dùng kiểu dữ liệu `jsonb` của PostgreSQL để lưu thuộc tính của mỗi đỉnh hoặc mỗi cạnh). Mỗi cạnh lưu cả đỉnh đầu và đỉnh đuôi. Nếu muốn tìm mọi cạnh đi vào hay đi ra của một đỉnh, có thể truy vấn bảng `edges` theo `head_vertex` hoặc `tail_vertex` tương ứng.
 
-{{< eg num="3-3" id="fig_graph_sql_schema" caption="使用关系模式表示属性图" >}}
+{{< eg num="3-3" id="fig_graph_sql_schema" caption="Biểu diễn property graph bằng schema quan hệ" >}}
 ```sql
 CREATE TABLE vertices (
     vertex_id integer PRIMARY KEY,
@@ -444,30 +442,30 @@ CREATE INDEX edges_heads ON edges (head_vertex);
 ```
 {{< /eg >}}
 
-这个模型有几个重要特点：
+Mô hình này có một số đặc điểm quan trọng:
 
-1. 任何顶点都可以通过边连接到任何其他顶点。没有模式限制哪些事物可以关联，哪些不可以。
-2. 给定任意顶点，都能高效地找到它的入边和出边，从而双向 *遍历*（*traverse*）图——即沿着一系列顶点构成的路径前后移动。（这正是 {{< xref eg="3-3" page="/ch3" anchor="fig_graph_sql_schema" >}}示例 3-3{{< /xref >}} 同时为 `tail_vertex` 和 `head_vertex` 列建立索引的原因。）
-3. 为不同类型的顶点和关系使用不同的标签，就可以在一个图中存储多种不同的信息，同时仍保持清晰的数据模型。
+1. Bất kỳ đỉnh nào cũng có thể được nối bằng cạnh với bất kỳ đỉnh nào khác. Không có schema nào hạn chế những thứ nào được phép liên kết với nhau và những thứ nào thì không.
+2. Với một đỉnh bất kỳ, có thể tìm hiệu quả cả cạnh đi vào lẫn cạnh đi ra của nó, nhờ đó *duyệt* (*traverse*) đồ thị theo cả hai chiều — tức là đi tới và đi lui dọc một đường gồm chuỗi các đỉnh. (Đó chính là lý do {{< xref eg="3-3" page="/ch3" anchor="fig_graph_sql_schema" >}}Ví dụ 3-3{{< /xref >}} lập chỉ mục (*index*) cho cả hai cột `tail_vertex` và `head_vertex`.)
+3. Dùng nhãn khác nhau cho các loại đỉnh và quan hệ khác nhau, ta có thể lưu nhiều loại thông tin trong một đồ thị mà vẫn giữ mô hình dữ liệu rõ ràng.
 
-边表就像我们在 [“多对一与多对多关系”](/ch3#sec_datamodels_many_to_many) 看到的多对多关联表（连接表），只不过经过了泛化，可以在同一张表中存储许多不同类型的关系。标签和属性也可以建立索引，以便高效查找具有某种属性的顶点或边。
+Bảng cạnh giống như bảng liên kết nhiều-nhiều (bảng join) mà ta đã thấy trong [“Quan hệ nhiều-một và nhiều-nhiều”](/ch3#sec_datamodels_many_to_many), chỉ khác là được tổng quát hóa để lưu nhiều loại quan hệ khác nhau trong cùng một bảng. Nhãn và thuộc tính cũng có thể được lập chỉ mục (*index*), giúp tìm hiệu quả các đỉnh hoặc cạnh có một thuộc tính nhất định.
 
 
 > [!NOTE]
-> 图模型有一项局限：一条边只能关联两个顶点，而关系模型中的连接表可以在一行中保存多个外键引用，从而表示三元甚至更高元的关系。在图中，可以为连接表的每一行另建一个顶点，再用边把它与其他顶点相连；也可以使用 *超图*（*hypergraph*）来表示这类关系。
+> Mô hình đồ thị có một hạn chế: một cạnh chỉ có thể nối hai đỉnh, trong khi bảng join của mô hình quan hệ có thể chứa nhiều tham chiếu khóa ngoại trong một hàng, nhờ đó biểu diễn được quan hệ bậc ba hoặc cao hơn. Trong đồ thị, có thể tạo thêm một đỉnh cho mỗi hàng của bảng join rồi nối nó với các đỉnh khác bằng cạnh, hoặc dùng *siêu đồ thị* (*hypergraph*) để biểu diễn loại quan hệ này.
 
 
-这些特性为数据建模提供了很大的灵活性，如 {{< xref fig="3-6" page="/ch3" anchor="fig_datamodels_graph" >}}图 3-6{{< /xref >}} 所示。图中有一些传统关系模式难以表达的事物，例如不同国家采用不同的行政区划结构（法国有 *省* 和 *大区*，美国有 *县* 和 *州*）、国中之国这样的历史怪事（暂且忽略主权国家与民族错综复杂的关系），以及粒度不一的数据（Lucy 现在的住所具体到城市，而出生地只记录到州）。
+Những đặc điểm này mang lại sự linh hoạt lớn cho việc mô hình hóa dữ liệu, như thể hiện trong {{< xref fig="3-6" page="/ch3" anchor="fig_datamodels_graph" >}}Hình 3-6{{< /xref >}}. Đồ thị này có một số thứ khó diễn đạt trong schema quan hệ truyền thống, chẳng hạn các quốc gia khác nhau có cấu trúc phân chia hành chính khác nhau (Pháp có *département* và *région*, Mỹ có *county* và *state*), những điều kỳ lạ của lịch sử như một nước nằm trong một nước khác (tạm bỏ qua mối quan hệ rắc rối giữa quốc gia có chủ quyền và các dân tộc), và dữ liệu có độ chi tiết khác nhau (nơi ở hiện tại của Lucy được ghi đến cấp thành phố, còn nơi sinh chỉ ghi đến cấp bang).
 
-可以想象，这个图还能够扩展出关于 Lucy、Alain 或其他人的许多事实。例如，可以用它表示食物过敏：为每种过敏原增加一个顶点，用人与过敏原之间的边表示过敏，再把过敏原连接到一组说明哪些食物含有哪些物质的顶点。这样就能写一条查询，找出每个人可以安全食用的东西。图在可演化性方面很有优势：随着应用程序不断增加功能，可以轻松扩展图来适应数据结构的变化。
+Có thể hình dung đồ thị này còn mở rộng được thêm nhiều sự kiện về Lucy, Alain hoặc những người khác. Chẳng hạn, có thể dùng nó để biểu diễn dị ứng thực phẩm: thêm một đỉnh cho mỗi chất gây dị ứng, dùng cạnh giữa người và chất gây dị ứng để biểu diễn dị ứng, rồi nối các chất gây dị ứng với một tập đỉnh cho biết thực phẩm nào chứa chất nào. Khi đó có thể viết một truy vấn tìm ra những thứ mỗi người có thể ăn an toàn. Đồ thị có ưu thế về khả năng tiến hóa: khi ứng dụng được bổ sung tính năng, có thể dễ dàng mở rộng đồ thị để thích ứng với những thay đổi của cấu trúc dữ liệu.
 
-### Cypher 查询语言 {#id57}
+### Ngôn ngữ truy vấn Cypher {#id57}
 
-*Cypher* 是属性图的查询语言，最初为 Neo4j 图数据库而创，后来以 *openCypher* 之名发展为开放标准 [^38]。除了 Neo4j，Memgraph、KùzuDB [^35]、Amazon Neptune、Apache AGE（数据存储在 PostgreSQL 中）等系统也支持 Cypher。它以电影《黑客帝国》中的角色命名，与密码学中的密码并无关系 [^39]。
+*Cypher* là ngôn ngữ truy vấn cho property graph, ban đầu được tạo ra cho cơ sở dữ liệu đồ thị Neo4j, sau đó phát triển thành một chuẩn mở với tên *openCypher* [^38]. Ngoài Neo4j, Cypher còn được hỗ trợ bởi Memgraph, KùzuDB [^35], Amazon Neptune, Apache AGE (dữ liệu lưu trong PostgreSQL), v.v. Nó được đặt theo tên một nhân vật trong bộ phim *The Matrix*, và không liên quan gì đến mật mã (cipher) trong mật mã học [^39].
 
-{{< xref eg="3-4" page="/ch3" anchor="fig_cypher_create" >}}示例 3-4{{< /xref >}} 展示了把 {{< xref fig="3-6" page="/ch3" anchor="fig_datamodels_graph" >}}图 3-6{{< /xref >}} 左侧部分插入图数据库的 Cypher 查询，图的其余部分也可以用同样方式加入。每个顶点都有一个 `usa` 或 `idaho` 之类的符号名称。该名称不会存入数据库，只在查询内部用来创建顶点之间的边。箭头记法 `(idaho) -[:WITHIN]-> (usa)` 会创建一条标签为 `WITHIN` 的边，以 `idaho` 为尾节点、`usa` 为头节点。
+{{< xref eg="3-4" page="/ch3" anchor="fig_cypher_create" >}}Ví dụ 3-4{{< /xref >}} cho thấy truy vấn Cypher chèn phần bên trái của {{< xref fig="3-6" page="/ch3" anchor="fig_datamodels_graph" >}}Hình 3-6{{< /xref >}} vào cơ sở dữ liệu đồ thị; phần còn lại của đồ thị có thể được thêm theo cách tương tự. Mỗi đỉnh được đặt một tên ký hiệu như `usa` hoặc `idaho`. Tên này không được lưu vào cơ sở dữ liệu, mà chỉ dùng bên trong truy vấn để tạo cạnh giữa các đỉnh. Ký pháp mũi tên `(idaho) -[:WITHIN]-> (usa)` tạo một cạnh có nhãn `WITHIN`, với `idaho` là nút đuôi và `usa` là nút đầu.
 
-{{< eg num="3-4" id="fig_cypher_create" caption="图 3-6 中的一部分数据，以 Cypher 查询表示" >}}
+{{< eg num="3-4" id="fig_cypher_create" caption="Một phần dữ liệu của Hình 3-6, biểu diễn bằng truy vấn Cypher" >}}
 ```
 CREATE
     (namerica :Location {name:'North America', type:'continent'}),
@@ -479,11 +477,11 @@ CREATE
 ```
 {{< /eg >}}
 
-把 {{< xref fig="3-6" page="/ch3" anchor="fig_datamodels_graph" >}}图 3-6{{< /xref >}} 的所有顶点和边加入数据库后，就可以提出一些有趣的问题。例如：*找出所有从美国移居欧洲的人的姓名*。更确切地说，我们要找出同时具有一条指向美国境内某地的 `BORN_IN` 边，以及一条指向欧洲境内某地的 `LIVES_IN` 边的顶点，并返回这些顶点的 `name` 属性。
+Sau khi thêm mọi đỉnh và cạnh của {{< xref fig="3-6" page="/ch3" anchor="fig_datamodels_graph" >}}Hình 3-6{{< /xref >}} vào cơ sở dữ liệu, ta có thể đặt ra những câu hỏi thú vị. Chẳng hạn: *tìm tên của tất cả những người đã di cư từ Hoa Kỳ sang châu Âu*. Chính xác hơn, ta muốn tìm các đỉnh vừa có một cạnh `BORN_IN` trỏ tới một địa điểm nằm trong Hoa Kỳ, vừa có một cạnh `LIVES_IN` trỏ tới một địa điểm nằm trong châu Âu, rồi trả về thuộc tính `name` của các đỉnh đó.
 
-{{< xref eg="3-5" page="/ch3" anchor="fig_cypher_query" >}}示例 3-5{{< /xref >}} 展示了如何用 Cypher 表述这个查询。`MATCH` 子句使用同样的箭头记法在图中寻找模式：`(person) -[:BORN_IN]-> ()` 匹配由一条 `BORN_IN` 边相连的任意两个顶点；这条边的尾部顶点绑定到变量 `person`，头部顶点则不命名。
+{{< xref eg="3-5" page="/ch3" anchor="fig_cypher_query" >}}Ví dụ 3-5{{< /xref >}} cho thấy cách diễn đạt truy vấn này bằng Cypher. Mệnh đề `MATCH` dùng cùng ký pháp mũi tên để tìm mẫu trong đồ thị: `(person) -[:BORN_IN]-> ()` khớp với hai đỉnh bất kỳ được nối bằng một cạnh `BORN_IN`; đỉnh đuôi của cạnh này được gán cho biến `person`, còn đỉnh đầu thì không đặt tên.
 
-{{< eg num="3-5" id="fig_cypher_query" caption="查找从美国移居欧洲者的 Cypher 查询" >}}
+{{< eg num="3-5" id="fig_cypher_query" caption="Truy vấn Cypher tìm những người di cư từ Hoa Kỳ sang châu Âu" >}}
 ```
 MATCH
     (person) -[:BORN_IN]-> () -[:WITHIN*0..]-> (:Location {name:'United States'}),
@@ -492,36 +490,36 @@ RETURN person.name
 ```
 {{< /eg >}}
 
-这条查询可以这样解读：
+Truy vấn này có thể đọc như sau:
 
-> 找出满足以下 *两个* 条件的所有顶点（称为 `person`）：
+> Tìm mọi đỉnh (gọi là `person`) thỏa mãn *cả hai* điều kiện sau:
 >
-> 1. `person` 顶点有一条指向某个顶点的 `BORN_IN` 出边。从那里沿着一系列 `WITHIN` 出边前进，最终能到达一个类型为 `Location`、`name` 属性为 `"United States"` 的顶点。
-> 2. 同一个 `person` 顶点还有一条 `LIVES_IN` 出边。沿着该边，再沿一系列 `WITHIN` 出边前进，最终能到达一个类型为 `Location`、`name` 属性为 `"Europe"` 的顶点。
+> 1. Đỉnh `person` có một cạnh `BORN_IN` đi ra, trỏ tới một đỉnh nào đó. Từ đó, đi theo một chuỗi các cạnh `WITHIN` đi ra thì cuối cùng đến được một đỉnh thuộc loại `Location` có thuộc tính `name` là `"United States"`.
+> 2. Chính đỉnh `person` đó cũng có một cạnh `LIVES_IN` đi ra. Đi theo cạnh này, rồi đi theo một chuỗi các cạnh `WITHIN` đi ra, cuối cùng đến được một đỉnh thuộc loại `Location` có thuộc tính `name` là `"Europe"`.
 >
-> 对每个这样的 `person` 顶点，返回其 `name` 属性。
+> Với mỗi đỉnh `person` như vậy, trả về thuộc tính `name` của nó.
 
-执行这条查询有几种可行的方式。上面的描述暗示，可以先扫描数据库中的所有人，逐一检查出生地和居住地，只返回符合条件的人。
+Có nhiều cách khả thi để thực thi truy vấn này. Mô tả ở trên gợi ý rằng ta có thể quét toàn bộ những người trong cơ sở dữ liệu, kiểm tra từng người về nơi sinh và nơi cư trú, và chỉ trả về những người phù hợp.
 
-等价地，也可以从两个 `Location` 顶点开始反向查找。如果 `name` 属性建有索引，就能高效找到代表美国和欧洲的两个顶点。然后沿着所有 `WITHIN` 入边，分别找出美国和欧洲境内的所有地点（州、地区、城市等）。最后，再沿这些地点顶点的 `BORN_IN` 或 `LIVES_IN` 入边找到相应的人。
+Tương đương, cũng có thể bắt đầu từ hai đỉnh `Location` và tìm ngược lại. Nếu thuộc tính `name` được lập chỉ mục (*index*), có thể tìm hiệu quả hai đỉnh đại diện cho Hoa Kỳ và châu Âu. Sau đó đi theo mọi cạnh `WITHIN` đi vào để tìm tất cả địa điểm (bang, vùng, thành phố, v.v.) nằm trong Hoa Kỳ và châu Âu. Cuối cùng, đi theo các cạnh `BORN_IN` hoặc `LIVES_IN` đi vào của các đỉnh địa điểm đó để tìm những người tương ứng.
 
-### SQL 中的图查询 {#id58}
+### Truy vấn đồ thị trong SQL {#id58}
 
-{{< xref eg="3-3" page="/ch3" anchor="fig_graph_sql_schema" >}}示例 3-3{{< /xref >}} 表明，可以在关系数据库中表示图数据。但是，如果图数据采用关系结构存储，还能使用 SQL 查询它吗？
+{{< xref eg="3-3" page="/ch3" anchor="fig_graph_sql_schema" >}}Ví dụ 3-3{{< /xref >}} cho thấy có thể biểu diễn dữ liệu đồ thị trong cơ sở dữ liệu quan hệ. Nhưng nếu dữ liệu đồ thị được lưu theo cấu trúc quan hệ, ta có thể truy vấn nó bằng SQL không?
 
-答案是肯定的，但有些困难。图查询每遍历一条边，实际上都相当于与 `edges` 表连接一次。在关系数据库中，通常事先就知道查询需要哪些连接；而在图查询中，找到目标顶点之前可能要遍历数量不定的边，也就是说，连接次数无法预先确定。
+Câu trả lời là có, nhưng khá khó khăn. Mỗi lần đi qua một cạnh trong truy vấn đồ thị thực chất tương đương với một lần join với bảng `edges`. Trong cơ sở dữ liệu quan hệ, thường biết trước truy vấn cần những phép join nào, còn trong truy vấn đồ thị, có thể phải đi qua một số lượng cạnh không cố định trước khi tìm thấy đỉnh cần tìm, nghĩa là không thể biết trước số phép join.
 
-在我们的例子中，Cypher 查询里的 `() -[:WITHIN*0..]-> ()` 模式便是如此。一个人的 `LIVES_IN` 边可能指向任何层级的地点：街道、城市、区、地区、州，等等。城市可能 `WITHIN` 某个地区，地区又 `WITHIN` 某个州，州再 `WITHIN` 某个国家。`LIVES_IN` 边可能直接指向待查地点，也可能还隔着好几层地点层次。
+Trong ví dụ của ta, mẫu `() -[:WITHIN*0..]-> ()` trong truy vấn Cypher chính là trường hợp như vậy. Cạnh `LIVES_IN` của một người có thể trỏ tới địa điểm ở bất kỳ cấp nào: đường phố, thành phố, quận, vùng, bang, v.v. Một thành phố có thể nằm `WITHIN` một vùng, vùng nằm `WITHIN` một bang, bang lại nằm `WITHIN` một quốc gia. Cạnh `LIVES_IN` có thể trỏ thẳng tới địa điểm cần tìm, hoặc còn cách nó vài tầng trong hệ thống phân cấp địa điểm.
 
-Cypher 用 `:WITHIN*0..` 非常简洁地表达了这一点：“沿着 `WITHIN` 边走零次或多次”。它类似于正则表达式中的 `*` 运算符。
+Cypher diễn đạt điều này rất gọn bằng `:WITHIN*0..`: “đi theo cạnh `WITHIN` không hoặc nhiều lần”. Nó giống toán tử `*` trong biểu thức chính quy.
 
-从 SQL:1999 开始，可以用所谓的 *递归公用表表达式*（*recursive common table expression*，`WITH RECURSIVE` 语法）在查询中表示长度可变的遍历路径。{{< xref eg="3-6" page="/ch3" anchor="fig_graph_sql_query" >}}示例 3-6{{< /xref >}} 用这种技术在 SQL 中写出了同一个查询——查找从美国移居欧洲者的姓名。只不过，与 Cypher 相比，它的语法十分笨拙。
+Từ SQL:1999, có thể biểu diễn các đường duyệt có độ dài thay đổi trong truy vấn bằng cái gọi là *biểu thức bảng chung đệ quy* (*recursive common table expression*, cú pháp `WITH RECURSIVE`). {{< xref eg="3-6" page="/ch3" anchor="fig_graph_sql_query" >}}Ví dụ 3-6{{< /xref >}} dùng kỹ thuật này để viết lại cùng truy vấn đó trong SQL — tìm tên những người di cư từ Hoa Kỳ sang châu Âu. Có điều, so với Cypher thì cú pháp của nó rất vụng về.
 
-{{< eg num="3-6" id="fig_graph_sql_query" caption="使用递归公用表表达式，以 SQL 写出与示例 3-5 相同的查询" >}}
+{{< eg num="3-6" id="fig_graph_sql_query" caption="Cùng truy vấn như Ví dụ 3-5, viết bằng SQL với biểu thức bảng chung đệ quy" >}}
 ```sql
 WITH RECURSIVE
 
-    -- in_usa 是美国境内所有位置的顶点 ID 集合
+    -- in_usa là tập ID đỉnh của mọi địa điểm nằm trong Hoa Kỳ
     in_usa(vertex_id) AS (
         SELECT vertex_id FROM vertices
             WHERE label = 'Location' AND properties->>'name' = 'United States' ❶ 
@@ -531,7 +529,7 @@ WITH RECURSIVE
             WHERE edges.label = 'within'
     ),
     
-    -- in_europe 是欧洲境内所有位置的顶点 ID 集合
+    -- in_europe là tập ID đỉnh của mọi địa điểm nằm trong châu Âu
     in_europe(vertex_id) AS (
         SELECT vertex_id FROM vertices
             WHERE label = 'location' AND properties->>'name' = 'Europe' ❸
@@ -541,14 +539,14 @@ WITH RECURSIVE
             WHERE edges.label = 'within'
     ),
     
-    -- born_in_usa 是所有在美国出生的人的顶点 ID 集合
+    -- born_in_usa là tập ID đỉnh của mọi người sinh ra ở Hoa Kỳ
     born_in_usa(vertex_id) AS ( ❹
         SELECT edges.tail_vertex FROM edges
             JOIN in_usa ON edges.head_vertex = in_usa.vertex_id
             WHERE edges.label = 'born_in'
     ),
     
-    -- lives_in_europe 是所有居住在欧洲的人的顶点 ID 集合
+    -- lives_in_europe là tập ID đỉnh của mọi người đang sống ở châu Âu
     lives_in_europe(vertex_id) AS ( ❺
         SELECT edges.tail_vertex FROM edges
             JOIN in_europe ON edges.head_vertex = in_europe.vertex_id
@@ -557,47 +555,47 @@ WITH RECURSIVE
     
     SELECT vertices.properties->>'name'
     FROM vertices
-    -- 连接以找到那些既在美国出生 *又* 居住在欧洲的人
+    -- join để tìm những người vừa sinh ra ở Hoa Kỳ *và* đang sống ở châu Âu
     JOIN born_in_usa ON vertices.vertex_id = born_in_usa.vertex_id ❻
     JOIN lives_in_europe ON vertices.vertex_id = lives_in_europe.vertex_id;
 ```
 {{< /eg >}}
 
-❶：首先找到 `name` 属性为 `"United States"` 的顶点，把它作为 `in_usa` 顶点集的第一个元素。
+❶: Trước hết tìm đỉnh có thuộc tính `name` là `"United States"`, và coi nó là phần tử đầu tiên của tập đỉnh `in_usa`.
 
-❷：从 `in_usa` 集合中的顶点出发，沿所有 `within` 入边反向前进，把到达的顶点加入同一集合，直到所有 `within` 入边都被访问。
+❷: Từ các đỉnh trong tập `in_usa`, đi ngược theo mọi cạnh `within` đi vào, thêm các đỉnh đến được vào cùng tập đó, cho đến khi mọi cạnh `within` đi vào đều đã được duyệt.
 
-❸：从 `name` 属性为 `"Europe"` 的顶点出发，执行同样的操作，建立 `in_europe` 顶点集。
+❸: Làm tương tự bắt đầu từ đỉnh có thuộc tính `name` là `"Europe"`, để xây dựng tập đỉnh `in_europe`.
 
-❹：对 `in_usa` 集合中的每个顶点，沿 `born_in` 入边找到出生在美国境内某地的人。
+❹: Với mỗi đỉnh trong tập `in_usa`, đi theo các cạnh `born_in` đi vào để tìm những người sinh ra ở một nơi nào đó trong Hoa Kỳ.
 
-❺：同理，对 `in_europe` 集合中的每个顶点，沿 `lives_in` 入边找到居住在欧洲的人。
+❺: Tương tự, với mỗi đỉnh trong tập `in_europe`, đi theo các cạnh `lives_in` đi vào để tìm những người đang sống ở châu Âu.
 
-❻：最后，通过连接让“出生在美国的人”与“居住在欧洲的人”两个集合取交集。
+❻: Cuối cùng, dùng join để lấy giao của hai tập “người sinh ra ở Hoa Kỳ” và “người sống ở châu Âu”.
 
-同一个查询用 Cypher 只需 4 行，用 SQL 却要写 31 行，这恰恰说明选对数据模型和查询语言会带来多大差别。而这还只是开始；还有更多细节需要考虑，例如如何处理环，以及选择广度优先还是深度优先遍历 [^40]。
+Cùng một truy vấn, Cypher chỉ cần 4 dòng còn SQL phải viết tới 31 dòng, điều này cho thấy việc chọn đúng mô hình dữ liệu và ngôn ngữ truy vấn tạo ra khác biệt lớn đến mức nào. Và đây mới chỉ là khởi đầu, còn nhiều chi tiết khác cần cân nhắc, chẳng hạn cách xử lý chu trình, và chọn duyệt theo chiều rộng hay chiều sâu [^40].
 
-Oracle 为递归查询提供了另一套 SQL 扩展，称为 *层次查询*（*hierarchical query*）[^41]。
+Oracle cung cấp một bộ mở rộng SQL khác cho truy vấn đệ quy, gọi là *truy vấn phân cấp* (*hierarchical query*) [^41].
 
-不过，情况可能正在改善：在本书写作时，已有计划把一种名为 GQL 的图查询语言加入 SQL 标准 [^42] [^43]，其语法借鉴了 Cypher、GSQL [^44] 和 PGQL [^45]。
+Tuy nhiên, tình hình có thể đang cải thiện: tại thời điểm viết sách này, đã có kế hoạch đưa một ngôn ngữ truy vấn đồ thị tên là GQL vào chuẩn SQL [^42] [^43]. Cú pháp của nó mượn từ Cypher, GSQL [^44] và PGQL [^45].
 
-### 三元组存储与 SPARQL {#id59}
+### Triple store và SPARQL {#id59}
 
-三元组存储模型大体上与属性图模型相同，只是用不同的词汇描述同样的思想。不过它仍然值得单独讨论，因为三元组存储有许多现成的工具和语言，可以成为构建应用程序时的宝贵补充。
+Mô hình triple store về cơ bản giống mô hình property graph, chỉ là dùng từ vựng khác để diễn tả cùng một ý tưởng. Dù vậy nó vẫn đáng được bàn riêng, vì triple store có nhiều công cụ và ngôn ngữ sẵn có, có thể là phần bổ sung quý giá khi xây dựng ứng dụng.
 
-在三元组存储中，所有信息都以非常简单的三部分陈述来存储：（*主语*，*subject*；*谓语*，*predicate*；*宾语*，*object*）。例如，在三元组（*Jim*、*喜欢*、*香蕉*）中，*Jim* 是主语，*喜欢* 是谓语（动词），*香蕉* 是宾语。
+Trong triple store, mọi thông tin được lưu dưới dạng các phát biểu ba phần rất đơn giản: (*chủ ngữ*, *subject*; *vị ngữ*, *predicate*; *tân ngữ*, *object*). Ví dụ, trong bộ ba (*Jim*, *thích*, *chuối*), *Jim* là chủ ngữ, *thích* là vị ngữ (động từ) và *chuối* là tân ngữ.
 
-三元组的主语相当于图中的一个顶点，宾语则是以下两者之一：
+Chủ ngữ của một bộ ba tương đương một đỉnh trong đồ thị, còn tân ngữ là một trong hai loại sau:
 
-1. 字符串、数字等原始数据类型的值。这时，三元组的谓语和宾语相当于主语顶点上某项属性的键和值。例如，沿用 {{< xref fig="3-6" page="/ch3" anchor="fig_datamodels_graph" >}}图 3-6{{< /xref >}} 的例子，三元组（*lucy*、*birthYear*、*1989*）相当于顶点 `lucy` 拥有属性 `{"birthYear": 1989}`。
-2. 图中的另一个顶点。这时，谓语相当于图中的边，主语是尾部顶点，宾语是头部顶点。例如，在（*lucy*、*marriedTo*、*alain*）中，*lucy* 和 *alain* 都是顶点，谓语 *marriedTo* 则是连接二者的边标签。
+1. Giá trị thuộc kiểu dữ liệu nguyên thủy như chuỗi hay số. Khi đó, vị ngữ và tân ngữ của bộ ba tương đương khóa và giá trị của một thuộc tính trên đỉnh chủ ngữ. Ví dụ, theo ví dụ ở {{< xref fig="3-6" page="/ch3" anchor="fig_datamodels_graph" >}}Hình 3-6{{< /xref >}}, bộ ba (*lucy*, *birthYear*, *1989*) tương đương đỉnh `lucy` có thuộc tính `{"birthYear": 1989}`.
+2. Một đỉnh khác trong đồ thị. Khi đó, vị ngữ tương đương cạnh của đồ thị, chủ ngữ là đỉnh đuôi và tân ngữ là đỉnh đầu. Ví dụ, trong (*lucy*, *marriedTo*, *alain*), *lucy* và *alain* đều là đỉnh, còn vị ngữ *marriedTo* là nhãn của cạnh nối hai đỉnh này.
 
 > [!NOTE]
-> 严格来说，提供类似三元组数据模型的数据库，通常还要为每个元组存储一些额外元数据。例如，AWS Neptune 使用四元组（4-tuple），即为每个三元组增加一个图 ID [^46]；Datomic 使用五元组，为每个三元组再加上事务 ID 和一个表示删除的布尔值 [^47]。这些数据库仍然保留着上文所述的基本 *主语—谓语—宾语* 结构，因此本书仍将它们统称为三元组存储。
+> Nói chặt chẽ, các cơ sở dữ liệu cung cấp mô hình dữ liệu kiểu bộ ba thường còn lưu thêm một số siêu dữ liệu cho mỗi bộ. Ví dụ, AWS Neptune dùng bộ bốn (4-tuple), tức thêm một ID đồ thị vào mỗi bộ ba [^46]; Datomic dùng bộ năm, thêm vào mỗi bộ ba một ID giao dịch và một giá trị boolean biểu thị việc xóa [^47]. Các cơ sở dữ liệu này vẫn giữ cấu trúc cơ bản *chủ ngữ — vị ngữ — tân ngữ* như trên, nên sách này vẫn gọi chung chúng là triple store.
 
-{{< xref eg="3-7" page="/ch3" anchor="fig_graph_n3_triples" >}}示例 3-7{{< /xref >}} 把 {{< xref eg="3-4" page="/ch3" anchor="fig_cypher_create" >}}示例 3-4{{< /xref >}} 中的同一份数据写成了三元组，使用的格式称为 *Turtle*，它是 *Notation3*（*N3*）的一个子集 [^48]。
+{{< xref eg="3-7" page="/ch3" anchor="fig_graph_n3_triples" >}}Ví dụ 3-7{{< /xref >}} viết lại cùng dữ liệu trong {{< xref eg="3-4" page="/ch3" anchor="fig_cypher_create" >}}Ví dụ 3-4{{< /xref >}} dưới dạng bộ ba, theo định dạng gọi là *Turtle*, một tập con của *Notation3* (*N3*) [^48].
 
-{{< eg num="3-7" id="fig_graph_n3_triples" caption="图 3-6 中的一部分数据，以 Turtle 三元组表示" >}}
+{{< eg num="3-7" id="fig_graph_n3_triples" caption="Một phần dữ liệu của Hình 3-6, biểu diễn dưới dạng bộ ba Turtle" >}}
 ```
 @prefix : <urn:example:>.
 _:lucy a :Person.
@@ -617,11 +615,11 @@ _:namerica :type "continent".
 ```
 {{< /eg >}}
 
-在这个例子中，图的顶点写成 `_:someName`。名称在当前文件之外没有任何意义；之所以需要它，只是为了分辨哪些三元组引用了同一个顶点。当谓语表示边时，宾语是另一个顶点，如 `_:idaho :within _:usa`；当谓语表示属性时，宾语则是字符串字面量，如 `_:usa :name "United States"`。
+Trong ví dụ này, các đỉnh của đồ thị được viết là `_:someName`. Tên này không có ý nghĩa bên ngoài tệp hiện tại. Nó chỉ cần thiết để phân biệt những bộ ba nào tham chiếu đến cùng một đỉnh. Khi vị ngữ biểu thị cạnh, tân ngữ là một đỉnh khác, như `_:idaho :within _:usa`. Khi vị ngữ biểu thị thuộc tính, tân ngữ là một chuỗi literal, như `_:usa :name "United States"`.
 
-一遍遍重复同一个主语显得相当啰嗦，好在可以用分号连续陈述关于同一主语的多件事。这使 Turtle 格式颇为清晰易读，如 {{< xref eg="3-8" page="/ch3" anchor="fig_graph_n3_shorthand" >}}示例 3-8{{< /xref >}} 所示。
+Lặp đi lặp lại cùng một chủ ngữ khá dài dòng, may là có thể dùng dấu chấm phẩy để nêu liên tiếp nhiều điều về cùng một chủ ngữ. Điều này làm định dạng Turtle khá rõ ràng và dễ đọc, như trong {{< xref eg="3-8" page="/ch3" anchor="fig_graph_n3_shorthand" >}}Ví dụ 3-8{{< /xref >}}.
 
-{{< eg num="3-8" id="fig_graph_n3_shorthand" caption="示例 3-7 中数据的简洁写法" >}}
+{{< eg num="3-8" id="fig_graph_n3_shorthand" caption="Cách viết gọn hơn cho dữ liệu trong Ví dụ 3-7" >}}
 ```
 @prefix : <urn:example:>.
 _:lucy a :Person; :name "Lucy"; :bornIn _:idaho.
@@ -631,17 +629,17 @@ _:namerica a :Location; :name "North America"; :type "continent".
 ```
 {{< /eg >}}
 
-> [!TIP] 语义网
+> [!TIP] Semantic Web
 >
-> 三元组存储的一部分研究与开发，源于 *语义网*（*Semantic Web*）的推动。这项始于 21 世纪初的尝试，希望数据不仅以供人阅读的网页发布，也以标准化、机器可读的格式发布，从而促进整个互联网范围内的数据交换。最初设想的语义网并未成功 [^49] [^50]，但这个项目仍留下了若干具体技术：JSON-LD 等 *链接数据*（*linked data*）标准 [^51]、生物医学中使用的 *本体*（*ontology*）[^52]、Facebook 的 Open Graph 协议 [^53]（用于展开链接预览 [^54]）、Wikidata 等知识图谱，以及由 [`schema.org`](https://schema.org/) 维护的结构化数据标准词汇表。
+> Một phần nghiên cứu và phát triển về triple store bắt nguồn từ sự thúc đẩy của *Semantic Web*. Nỗ lực này bắt đầu từ đầu những năm 2000, với mong muốn dữ liệu không chỉ được công bố dưới dạng trang web cho con người đọc mà còn dưới dạng chuẩn hóa, máy đọc được, nhờ đó thúc đẩy trao đổi dữ liệu trên toàn Internet. Semantic Web như ban đầu hình dung đã không thành công [^49] [^50], nhưng dự án vẫn để lại một số công nghệ cụ thể: các chuẩn *linked data* như JSON-LD [^51], các *ontology* dùng trong y sinh [^52], giao thức Open Graph của Facebook [^53] (dùng để hiển thị bản xem trước liên kết [^54]), các knowledge graph như Wikidata, và bộ từ vựng chuẩn cho dữ liệu có cấu trúc do [`schema.org`](https://schema.org/) duy trì.
 >
-> 三元组存储也是一项走出语义网原始场景、在别处找到用武之地的技术：即使你对语义网毫无兴趣，三元组仍可以成为很好的应用内部数据模型。
+> Triple store cũng là một công nghệ đã vượt ra khỏi bối cảnh gốc của Semantic Web và tìm được chỗ dùng ở nơi khác: ngay cả khi bạn không hứng thú gì với Semantic Web, bộ ba vẫn có thể là một mô hình dữ liệu nội bộ tốt cho ứng dụng.
 
-#### RDF 数据模型 {#the-rdf-data-model}
+#### Mô hình dữ liệu RDF {#the-rdf-data-model}
 
-{{< xref eg="3-8" page="/ch3" anchor="fig_graph_n3_shorthand" >}}示例 3-8{{< /xref >}} 使用的 Turtle 语言，实际上是对 *资源描述框架*（RDF，*Resource Description Framework*）数据进行编码的一种方式 [^55]；RDF 是专为 *语义网* 设计的数据模型。RDF 数据也可以采用其他编码，例如用更为冗长的 XML 表示，如 {{< xref eg="3-9" page="/ch3" anchor="fig_graph_rdf_xml" >}}示例 3-9{{< /xref >}} 所示。Apache Jena 等工具可以在不同 RDF 编码之间自动转换。
+Ngôn ngữ Turtle dùng trong {{< xref eg="3-8" page="/ch3" anchor="fig_graph_n3_shorthand" >}}Ví dụ 3-8{{< /xref >}} thực ra là một cách mã hóa dữ liệu *Resource Description Framework* (RDF) [^55]; RDF là mô hình dữ liệu được thiết kế riêng cho *Semantic Web*. Dữ liệu RDF cũng có thể dùng các cách mã hóa khác, chẳng hạn XML dài dòng hơn, như trong {{< xref eg="3-9" page="/ch3" anchor="fig_graph_rdf_xml" >}}Ví dụ 3-9{{< /xref >}}. Các công cụ như Apache Jena có thể tự động chuyển đổi giữa các cách mã hóa RDF.
 
-{{< eg num="3-9" id="fig_graph_rdf_xml" caption="使用 RDF/XML 语法表示示例 3-8 中的数据" >}}
+{{< eg num="3-9" id="fig_graph_rdf_xml" caption="Biểu diễn dữ liệu của Ví dụ 3-8 bằng cú pháp RDF/XML" >}}
 ```xml
 <rdf:RDF xmlns="urn:example:"
          xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
@@ -671,17 +669,17 @@ _:namerica a :Location; :name "North America"; :type "continent".
 ```
 {{< /eg >}}
 
-RDF 有一些奇特之处，因为它是为互联网范围的数据交换而设计的。三元组的主语、谓语和宾语通常都是 URI。例如，谓语可能写成 `<http://my-company.com/namespace#within>` 或 `<http://my-company.com/namespace#lives_in>`，而不只是 `WITHIN` 或 `LIVES_IN`。这样设计是为了让不同来源的数据可以合并：即使别人赋予 `within` 或 `lives_in` 不同含义，也不会发生冲突，因为对方的谓语实际是 `<http://other.org/foo#within>` 和 `<http://other.org/foo#lives_in>`。
+RDF có vài điểm kỳ lạ vì nó được thiết kế cho việc trao đổi dữ liệu trên phạm vi Internet. Chủ ngữ, vị ngữ và tân ngữ của một bộ ba thường đều là URI. Ví dụ, vị ngữ có thể được viết là `<http://my-company.com/namespace#within>` hoặc `<http://my-company.com/namespace#lives_in>` thay vì chỉ `WITHIN` hay `LIVES_IN`. Thiết kế này nhằm cho phép gộp dữ liệu từ các nguồn khác nhau: ngay cả khi người khác gán cho `within` hay `lives_in` một ý nghĩa khác, hai bên cũng không xung đột, vì vị ngữ của họ thực ra là `<http://other.org/foo#within>` và `<http://other.org/foo#lives_in>`.
 
-从 RDF 的角度看，URL `<http://my-company.com/namespace>` 不一定真能解析出什么内容，它不过是个命名空间。为避免与 `http://` URL 混淆，本节示例使用 `urn:example:within` 之类不可解析的 URI。好在只须在文件开头声明一次前缀，后面便不必再操心。
+Theo quan điểm của RDF, URL `<http://my-company.com/namespace>` không nhất thiết phải phân giải ra nội dung nào. Nó chỉ là một namespace. Để tránh nhầm với URL `http://`, các ví dụ trong mục này dùng URI không phân giải được như `urn:example:within`. May là chỉ cần khai báo tiền tố một lần ở đầu tệp, về sau không phải bận tâm nữa.
 
-#### SPARQL 查询语言 {#the-sparql-query-language}
+#### Ngôn ngữ truy vấn SPARQL {#the-sparql-query-language}
 
-*SPARQL* 是一种面向 RDF 数据模型的三元组存储查询语言 [^56]。（它是 *SPARQL Protocol and RDF Query Language* 的缩写，读作 “sparkle”。）SPARQL 早于 Cypher；Cypher 的模式匹配借鉴了 SPARQL，因此两者看起来十分相似。
+*SPARQL* là ngôn ngữ truy vấn triple store dành cho mô hình dữ liệu RDF [^56]. (Đây là viết tắt của *SPARQL Protocol and RDF Query Language*, đọc là “sparkle”.) SPARQL ra đời trước Cypher. Việc khớp mẫu của Cypher mượn từ SPARQL nên hai ngôn ngữ trông rất giống nhau.
 
-之前那条查找从美国移居欧洲者的查询，用 SPARQL 表示时和用 Cypher 一样简洁（见 {{< xref eg="3-10" page="/ch3" anchor="fig_sparql_query" >}}示例 3-10{{< /xref >}}）。
+Truy vấn tìm người di cư từ Hoa Kỳ sang châu Âu ở trên, khi viết bằng SPARQL cũng ngắn gọn như bằng Cypher (xem {{< xref eg="3-10" page="/ch3" anchor="fig_sparql_query" >}}Ví dụ 3-10{{< /xref >}}).
 
-{{< eg num="3-10" id="fig_sparql_query" caption="与示例 3-5 相同的查询，用 SPARQL 表示" >}}
+{{< eg num="3-10" id="fig_sparql_query" caption="Cùng truy vấn như Ví dụ 3-5, biểu diễn bằng SPARQL" >}}
 ```
 PREFIX : <urn:example:>
 
@@ -693,7 +691,7 @@ SELECT ?personName WHERE {
 ```
 {{< /eg >}}
 
-二者结构十分相似。下面两个表达式是等价的（SPARQL 中的变量以问号开头）：
+Hai cấu trúc rất giống nhau. Hai biểu thức dưới đây tương đương (biến trong SPARQL bắt đầu bằng dấu hỏi):
 
 ```
 (person) -[:BORN_IN]-> () -[:WITHIN*0..]-> (location) # Cypher
@@ -701,7 +699,7 @@ SELECT ?personName WHERE {
 ?person :bornIn / :within* ?location. # SPARQL
 ```
 
-因为 RDF 不区分属性与边，而是把二者都当作谓语，所以匹配属性也可以使用同一种语法。在下面的表达式中，变量 `usa` 会绑定到任意 `name` 属性为字符串 `"United States"` 的顶点：
+Vì RDF không phân biệt thuộc tính với cạnh mà coi cả hai là vị ngữ, nên việc khớp thuộc tính cũng dùng được cùng một cú pháp. Trong biểu thức dưới đây, biến `usa` sẽ được gán cho bất kỳ đỉnh nào có thuộc tính `name` là chuỗi `"United States"`:
 
 ```
 (usa {name:'United States'}) # Cypher
@@ -709,83 +707,83 @@ SELECT ?personName WHERE {
 ?usa :name "United States". # SPARQL
 ```
 
-Amazon Neptune、AllegroGraph、Blazegraph、OpenLink Virtuoso、Apache Jena 以及其他多种三元组存储都支持 SPARQL [^36]。
+Amazon Neptune, AllegroGraph, Blazegraph, OpenLink Virtuoso, Apache Jena và nhiều triple store khác đều hỗ trợ SPARQL [^36].
 
-### Datalog：递归关系查询 {#id62}
+### Datalog: truy vấn quan hệ đệ quy {#id62}
 
-Datalog 是比 SPARQL 和 Cypher 更古老的语言，源自 20 世纪 80 年代的学术研究 [^57] [^58] [^59]。它在软件工程师中不太知名，主流数据库也很少支持；但它表达能力很强，尤其擅长复杂查询，理应得到更多关注。Datomic、LogicBlox、CozoDB 以及 LinkedIn 的 LIquid [^60] 等几种小众数据库，都使用 Datalog 作为查询语言。
+Datalog là ngôn ngữ cổ hơn SPARQL và Cypher, bắt nguồn từ nghiên cứu học thuật thập niên 1980 [^57] [^58] [^59]. Nó ít được kỹ sư phần mềm biết đến, và các cơ sở dữ liệu phổ biến cũng hiếm khi hỗ trợ, nhưng nó có sức biểu đạt rất mạnh, đặc biệt giỏi các truy vấn phức tạp, và xứng đáng được chú ý hơn. Một số cơ sở dữ liệu ngách như Datomic, LogicBlox, CozoDB và LIquid của LinkedIn [^60] đều dùng Datalog làm ngôn ngữ truy vấn.
 
-Datalog 实际上基于关系数据模型，而不是图模型；之所以把它放在图数据库一节，是因为 Datalog 尤其擅长对图进行递归查询。
+Datalog thực chất dựa trên mô hình dữ liệu quan hệ chứ không phải mô hình đồ thị. Sở dĩ đặt nó vào mục cơ sở dữ liệu đồ thị là vì Datalog đặc biệt giỏi truy vấn đệ quy trên đồ thị.
 
-Datalog 数据库由 *事实*（*fact*）组成，每项事实对应关系表中的一行。假设有一张存储地点的 *location* 表，包含 *ID*、*name* 和 *type* 三列；“美国是一个国家”这项事实就可以写成 `location(2, "United States", "country")`，其中 `2` 是美国的 ID。一般来说，`table(val1, val2, …​)` 表示 `table` 中有这样一行：第一列为 `val1`，第二列为 `val2`，依此类推。
+Cơ sở dữ liệu Datalog gồm các *dữ kiện* (*fact*), mỗi dữ kiện tương ứng một hàng trong bảng quan hệ. Giả sử có bảng *location* lưu các địa điểm với ba cột *ID*, *name* và *type*. Dữ kiện “Hoa Kỳ là một quốc gia” có thể viết là `location(2, "United States", "country")`, trong đó `2` là ID của Hoa Kỳ. Nói chung, `table(val1, val2, …​)` nghĩa là trong `table` có một hàng mà cột thứ nhất là `val1`, cột thứ hai là `val2`, và cứ thế.
 
-{{< xref eg="3-11" page="/ch3" anchor="fig_datalog_triples" >}}示例 3-11{{< /xref >}} 展示了如何用 Datalog 写出 {{< xref fig="3-6" page="/ch3" anchor="fig_datamodels_graph" >}}图 3-6{{< /xref >}} 左侧的数据。图中的边（`within`、`born_in` 和 `lives_in`）表示为两列的连接表。例如，Lucy 的 ID 是 100，爱达荷州的 ID 是 3，因此“Lucy 出生在爱达荷州”这项关系表示为 `born_in(100, 3)`。
+{{< xref eg="3-11" page="/ch3" anchor="fig_datalog_triples" >}}Ví dụ 3-11{{< /xref >}} cho thấy cách viết dữ liệu ở phía trái {{< xref fig="3-6" page="/ch3" anchor="fig_datamodels_graph" >}}Hình 3-6{{< /xref >}} bằng Datalog. Các cạnh của đồ thị (`within`, `born_in` và `lives_in`) được biểu diễn thành bảng nối hai cột. Ví dụ, ID của Lucy là 100 và ID của bang Idaho là 3, nên quan hệ “Lucy sinh ra ở Idaho” được biểu diễn là `born_in(100, 3)`.
 
-{{< eg num="3-11" id="fig_datalog_triples" caption="图 3-6 中数据的子集，表示为 Datalog 事实" >}}
+{{< eg num="3-11" id="fig_datalog_triples" caption="Một tập con dữ liệu của Hình 3-6, biểu diễn dưới dạng dữ kiện Datalog" >}}
 ```
 location(1, "North America", "continent").
 location(2, "United States", "country").
 location(3, "Idaho", "state").
 
-within(2, 1). /* 美国在北美 */
-within(3, 2). /* 爱达荷州在美国 */
+within(2, 1). /* Hoa Kỳ nằm trong Bắc Mỹ */
+within(3, 2). /* Idaho nằm trong Hoa Kỳ */
 
 person(100, "Lucy").
-born_in(100, 3). /* Lucy 出生在爱达荷州 */
+born_in(100, 3). /* Lucy sinh ra ở Idaho */
 ```
 {{< /eg >}}
 
-定义好数据之后，就可以写出与之前相同的查询，如 {{< xref eg="3-12" page="/ch3" anchor="fig_datalog_query" >}}示例 3-12{{< /xref >}} 所示。它看起来与 Cypher 或 SPARQL 中的等价查询颇为不同，但不必因此望而却步。Datalog 是 Prolog 的一个子集；如果学过计算机科学，你或许见过这种编程语言。
+Khi đã định nghĩa xong dữ liệu, ta có thể viết truy vấn giống như trước, như trong {{< xref eg="3-12" page="/ch3" anchor="fig_datalog_query" >}}Ví dụ 3-12{{< /xref >}}. Nó trông khá khác truy vấn tương đương trong Cypher hay SPARQL, nhưng đừng vì thế mà chùn bước. Datalog là một tập con của Prolog. Nếu từng học khoa học máy tính, có thể bạn đã gặp ngôn ngữ lập trình này.
 
-{{< eg num="3-12" id="fig_datalog_query" caption="与示例 3-5 相同的查询，用 Datalog 表示" >}}
+{{< eg num="3-12" id="fig_datalog_query" caption="Cùng truy vấn như Ví dụ 3-5, biểu diễn bằng Datalog" >}}
 ```sql
-within_recursive(LocID, PlaceName) :- location(LocID, PlaceName, _). /* 规则 1 */
+within_recursive(LocID, PlaceName) :- location(LocID, PlaceName, _). /* quy tắc 1 */
 
-within_recursive(LocID, PlaceName) :- within(LocID, ViaID), /* 规则 2 */
+within_recursive(LocID, PlaceName) :- within(LocID, ViaID), /* quy tắc 2 */
  within_recursive(ViaID, PlaceName).
 
-migrated(PName, BornIn, LivingIn) :- person(PersonID, PName), /* 规则 3 */
+migrated(PName, BornIn, LivingIn) :- person(PersonID, PName), /* quy tắc 3 */
  born_in(PersonID, BornID),
  within_recursive(BornID, BornIn),
  lives_in(PersonID, LivingID),
  within_recursive(LivingID, LivingIn).
 
-us_to_europe(Person) :- migrated(Person, "United States", "Europe"). /* 规则 4 */
-/* us_to_europe 包含行 "Lucy"。 */
+us_to_europe(Person) :- migrated(Person, "United States", "Europe"). /* quy tắc 4 */
+/* us_to_europe chứa hàng "Lucy". */
 ```
 {{< /eg >}}
 
-Cypher 和 SPARQL 一上来便使用 `SELECT`，Datalog 却每次只向前迈一小步。我们通过定义 *规则*（*rule*），从底层事实派生出新的虚拟表。这些派生表类似于（虚拟的）SQL 视图：它们并不存储在数据库中，却可以像保存事实的表一样接受查询。
+Cypher và SPARQL lao vào `SELECT` ngay, còn Datalog mỗi lần chỉ tiến một bước nhỏ. Ta định nghĩa các *quy tắc* (*rule*) để từ các dữ kiện nền suy ra những bảng ảo mới. Các bảng suy diễn này giống view (ảo) của SQL: chúng không được lưu trong cơ sở dữ liệu, nhưng vẫn có thể được truy vấn như các bảng chứa dữ kiện.
 
-{{< xref eg="3-12" page="/ch3" anchor="fig_datalog_query" >}}示例 3-12{{< /xref >}} 定义了三个派生表：`within_recursive`、`migrated` 和 `us_to_europe`。每条规则中 `:-` 符号之前的部分，定义了虚拟表的名称与各列。例如，`migrated(PName, BornIn, LivingIn)` 是一张三列表，分别包含姓名、出生地名称和居住地名称。
+{{< xref eg="3-12" page="/ch3" anchor="fig_datalog_query" >}}Ví dụ 3-12{{< /xref >}} định nghĩa ba bảng suy diễn: `within_recursive`, `migrated` và `us_to_europe`. Phần đứng trước ký hiệu `:-` trong mỗi quy tắc định nghĩa tên và các cột của bảng ảo. Ví dụ, `migrated(PName, BornIn, LivingIn)` là bảng ba cột, lần lượt chứa tên người, tên nơi sinh và tên nơi cư trú.
 
-虚拟表的内容由规则中 `:-` 符号之后的部分定义，它会尝试在各表中找出匹配特定模式的行。例如，`person(PersonID, PName)` 可以匹配 `person(100, "Lucy")` 这一行，此时变量 `PersonID` 绑定为 `100`，`PName` 绑定为 `"Lucy"`。只要系统能为 `:-` 右侧的 *所有* 模式找到匹配，规则便可以应用。应用规则的效果，就好像把 `:-` 左侧的内容加入数据库，并将其中的变量替换为各自匹配的值。
+Nội dung của bảng ảo được định nghĩa bởi phần đứng sau ký hiệu `:-`, phần này cố tìm trong các bảng những hàng khớp một mẫu nhất định. Ví dụ, `person(PersonID, PName)` có thể khớp hàng `person(100, "Lucy")`, khi đó biến `PersonID` được gán là `100` và `PName` là `"Lucy"`. Chỉ cần hệ thống tìm được khớp cho *tất cả* các mẫu ở vế phải `:-`, quy tắc có thể được áp dụng. Hiệu quả của việc áp dụng quy tắc giống như thêm vào cơ sở dữ liệu nội dung vế trái `:-`, với các biến được thay bằng giá trị chúng khớp.
 
-因此，可以按下面的方式应用规则（如 {{< xref fig="3-7" page="/ch3" anchor="fig_datalog_naive" >}}图 3-7{{< /xref >}} 所示）：
+Do đó, có thể áp dụng các quy tắc như sau (như trong {{< xref fig="3-7" page="/ch3" anchor="fig_datalog_naive" >}}Hình 3-7{{< /xref >}}):
 
-1. 数据库中存在 `location(1, "North America", "continent")`，所以规则 1 可以应用，生成 `within_recursive(1, "North America")`。
-2. 数据库中存在 `within(2, 1)`，上一步又生成了 `within_recursive(1, "North America")`，所以规则 2 可以应用，生成 `within_recursive(2, "North America")`。
-3. 数据库中存在 `within(3, 2)`，上一步又生成了 `within_recursive(2, "North America")`，所以再次应用规则 2，生成 `within_recursive(3, "North America")`。
+1. Cơ sở dữ liệu có `location(1, "North America", "continent")`, nên quy tắc 1 áp dụng được, sinh ra `within_recursive(1, "North America")`.
+2. Cơ sở dữ liệu có `within(2, 1)`, và bước trước đã sinh ra `within_recursive(1, "North America")`, nên quy tắc 2 áp dụng được, sinh ra `within_recursive(2, "North America")`.
+3. Cơ sở dữ liệu có `within(3, 2)`, và bước trước đã sinh ra `within_recursive(2, "North America")`, nên áp dụng quy tắc 2 lần nữa, sinh ra `within_recursive(3, "North America")`.
 
-反复应用规则 1 和规则 2，`within_recursive` 虚拟表就能告诉我们，数据库中的哪些地点位于北美（或任何其他地点）之内。
+Áp dụng lặp lại quy tắc 1 và quy tắc 2, bảng ảo `within_recursive` cho ta biết những địa điểm nào trong cơ sở dữ liệu nằm trong Bắc Mỹ (hoặc bất kỳ địa điểm nào khác).
 
-{{< fig num="3-7" id="fig_datalog_naive" src="/fig/ddia_0307.png" caption="使用示例 3-12 中的 Datalog 规则确定爱达荷州在北美。" link="#fig_datalog_query" class="ddia-figure ddia-figure--panorama" width="1772" height="585" />}}
+{{< fig num="3-7" id="fig_datalog_naive" src="/fig/ddia_0307.png" caption="Dùng các quy tắc Datalog trong Ví dụ 3-12 để xác định Idaho nằm trong Bắc Mỹ." link="#fig_datalog_query" class="ddia-figure ddia-figure--panorama" width="1772" height="585" />}}
 
 
 
-接下来，规则 3 可以找出出生在 `BornIn`、现居 `LivingIn` 的人。规则 4 以 `BornIn = 'United States'` 和 `LivingIn = 'Europe'` 调用规则 3，只返回符合条件者的姓名。最后查询虚拟表 `us_to_europe`，Datalog 系统便会给出与先前 Cypher 和 SPARQL 查询相同的答案。
+Tiếp theo, quy tắc 3 tìm ra những người sinh ở `BornIn` và hiện sống ở `LivingIn`. Quy tắc 4 gọi quy tắc 3 với `BornIn = 'United States'` và `LivingIn = 'Europe'`, chỉ trả về tên những người thỏa điều kiện. Cuối cùng truy vấn bảng ảo `us_to_europe`, hệ thống Datalog sẽ cho ra cùng đáp án như các truy vấn Cypher và SPARQL trước đó.
 
-Datalog 需要一种不同于本章其他查询语言的思维方式。它允许逐条规则地搭建复杂查询，让一条规则引用其他规则，就像把代码拆成彼此调用的函数。函数可以递归，Datalog 规则也同样可以调用自身；{{< xref eg="3-12" page="/ch3" anchor="fig_datalog_query" >}}示例 3-12{{< /xref >}} 的规则 2 正是如此，由此实现了 Datalog 查询中的图遍历。
+Datalog đòi hỏi một cách tư duy khác với các ngôn ngữ truy vấn khác trong chương này. Nó cho phép xây truy vấn phức tạp từng quy tắc một, để quy tắc này tham chiếu quy tắc khác, giống như tách mã thành các hàm gọi lẫn nhau. Hàm có thể đệ quy, quy tắc Datalog cũng có thể tự gọi chính nó. Quy tắc 2 trong {{< xref eg="3-12" page="/ch3" anchor="fig_datalog_query" >}}Ví dụ 3-12{{< /xref >}} chính là như vậy, nhờ đó hiện thực hóa việc duyệt đồ thị trong truy vấn Datalog.
 
 ### GraphQL {#id63}
 
-GraphQL 也是一种查询语言，但它在设计上比本章介绍的其他语言限制更多。GraphQL 的用途，是让运行在用户设备上的客户端软件（例如移动应用或 JavaScript Web 应用的前端）请求一份特定结构的 JSON 文档，其中恰好包含渲染用户界面所需的字段。借助 GraphQL 接口，开发者可以迅速修改客户端代码中的查询，而无须改动服务端 API。
+GraphQL cũng là một ngôn ngữ truy vấn, nhưng được thiết kế hạn chế hơn các ngôn ngữ khác trong chương này. Mục đích của GraphQL là để phần mềm client chạy trên thiết bị của người dùng (chẳng hạn ứng dụng di động hoặc frontend của ứng dụng web JavaScript) yêu cầu một tài liệu JSON có cấu trúc cụ thể, chứa đúng các trường cần để render giao diện người dùng. Nhờ giao diện GraphQL, nhà phát triển có thể nhanh chóng sửa truy vấn trong mã client mà không cần đổi API phía server.
 
-GraphQL 的灵活性并非没有代价。采用 GraphQL 的组织通常需要一套工具，把 GraphQL 查询转换成对内部服务的请求，而这些内部服务往往使用 REST 或 gRPC（参见 [第 5 章](/ch5#ch_encoding)）。此外还要应对授权、限流和性能等问题 [^61]。GraphQL 查询来自不受信任的来源，因此查询语言本身也受到严格限制：它不允许任何执行成本可能很高的操作，否则用户就能大量提交昂贵查询，对服务器发动拒绝服务攻击。具体来说，GraphQL 不允许递归查询（Cypher、SPARQL、SQL 和 Datalog 都允许），也不能随意给出“查找出生在美国、现居欧洲的人”这样的搜索条件，除非服务所有者特意提供了相应搜索功能。
+Tính linh hoạt của GraphQL không phải không có giá. Các tổ chức dùng GraphQL thường cần một bộ công cụ để chuyển truy vấn GraphQL thành yêu cầu tới các dịch vụ nội bộ, vốn thường dùng REST hoặc gRPC (xem [Chương 5](/ch5#ch_encoding)). Ngoài ra còn phải xử lý các vấn đề như ủy quyền, giới hạn tốc độ và hiệu năng [^61]. Truy vấn GraphQL đến từ nguồn không đáng tin, nên bản thân ngôn ngữ truy vấn cũng bị hạn chế chặt: nó không cho phép bất kỳ thao tác nào có thể tốn kém khi thực thi, nếu không người dùng có thể gửi hàng loạt truy vấn đắt đỏ để tấn công từ chối dịch vụ vào server. Cụ thể, GraphQL không cho phép truy vấn đệ quy (Cypher, SPARQL, SQL và Datalog đều cho phép), cũng không cho phép đưa ra điều kiện tìm kiếm tùy ý như “tìm người sinh ở Hoa Kỳ và hiện sống ở châu Âu”, trừ khi chủ sở hữu dịch vụ cố ý cung cấp chức năng tìm kiếm đó.
 
-尽管如此，GraphQL 仍然很有用。{{< xref eg="3-13" page="/ch3" anchor="fig_graphql_query" >}}示例 3-13{{< /xref >}} 展示了如何用它实现 Discord 或 Slack 这类群聊应用。查询请求用户有权访问的所有频道，并取回每个频道的名称和最近 50 条消息。对每条消息，它请求时间戳、正文，以及发送者姓名和头像 URL。若某条消息是对另一条消息的回复，查询还会请求原消息的正文与发送者姓名；界面可以用较小字号把这些内容显示在回复上方，作为上下文。
+Dù vậy, GraphQL vẫn rất hữu ích. {{< xref eg="3-13" page="/ch3" anchor="fig_graphql_query" >}}Ví dụ 3-13{{< /xref >}} cho thấy cách dùng nó để hiện thực một ứng dụng chat nhóm như Discord hay Slack. Truy vấn yêu cầu tất cả kênh mà người dùng có quyền truy cập, và lấy về tên của từng kênh cùng 50 tin nhắn gần nhất. Với mỗi tin nhắn, nó yêu cầu dấu thời gian, nội dung, cùng tên và URL ảnh đại diện của người gửi. Nếu một tin nhắn là câu trả lời cho tin nhắn khác, truy vấn còn yêu cầu nội dung và tên người gửi của tin nhắn gốc. Giao diện có thể hiển thị những thông tin này bằng cỡ chữ nhỏ hơn phía trên câu trả lời, làm ngữ cảnh.
 
-{{< eg num="3-13" id="fig_graphql_query" caption="群聊应用的 GraphQL 查询示例" >}}
+{{< eg num="3-13" id="fig_graphql_query" caption="Ví dụ truy vấn GraphQL cho ứng dụng chat nhóm" >}}
 ```
 query ChatApp {
     channels {
@@ -809,9 +807,9 @@ query ChatApp {
 ```
 {{< /eg >}}
 
-{{< xref eg="3-14" page="/ch3" anchor="fig_graphql_response" >}}示例 3-14{{< /xref >}} 给出了 {{< xref eg="3-13" page="/ch3" anchor="fig_graphql_query" >}}示例 3-13{{< /xref >}} 中查询的一种可能响应。响应是一份与查询结构相呼应的 JSON 文档：请求了哪些属性，它就不多不少地返回哪些属性。这样一来，服务器无须预先知道客户端渲染界面需要什么；客户端直接提出所需内容即可。例如，这条查询没有请求 `replyTo` 消息发送者的头像 URL。若界面后来要显示该头像，客户端只需在查询中加入 `imageUrl` 属性，无须修改服务器。
+{{< xref eg="3-14" page="/ch3" anchor="fig_graphql_response" >}}Ví dụ 3-14{{< /xref >}} đưa ra một phản hồi có thể có cho truy vấn trong {{< xref eg="3-13" page="/ch3" anchor="fig_graphql_query" >}}Ví dụ 3-13{{< /xref >}}. Phản hồi là một tài liệu JSON có cấu trúc tương ứng với truy vấn: yêu cầu thuộc tính nào thì trả về đúng thuộc tính đó, không hơn không kém. Nhờ vậy server không cần biết trước client cần gì để render giao diện; client chỉ cần nêu thẳng thứ mình cần. Ví dụ, truy vấn này không yêu cầu URL ảnh đại diện của người gửi tin nhắn `replyTo`. Nếu sau này giao diện cần hiển thị ảnh đó, client chỉ cần thêm thuộc tính `imageUrl` vào truy vấn, không phải sửa server.
 
-{{< eg num="3-14" id="fig_graphql_response" caption="对示例 3-13 中查询的一种可能响应" >}}
+{{< eg num="3-14" id="fig_graphql_response" caption="Một phản hồi có thể có cho truy vấn trong Ví dụ 3-13" >}}
 ```json
 {
 "data": {
@@ -838,111 +836,111 @@ query ChatApp {
 ```
 {{< /eg >}}
 
-{{< xref eg="3-14" page="/ch3" anchor="fig_graphql_response" >}}示例 3-14{{< /xref >}} 把消息发送者的姓名和头像 URL 直接嵌入消息对象。同一个用户若发送多条消息，这些信息会在每条消息中重复。原则上当然可以减少这种重复，但 GraphQL 选择接受更大的响应，以换取根据数据渲染界面时更加简单。
+{{< xref eg="3-14" page="/ch3" anchor="fig_graphql_response" >}}Ví dụ 3-14{{< /xref >}} nhúng tên và URL ảnh đại diện của người gửi thẳng vào đối tượng tin nhắn. Nếu cùng một người dùng gửi nhiều tin nhắn, thông tin này bị lặp lại trong từng tin nhắn. Về nguyên tắc có thể giảm sự lặp lại này, nhưng GraphQL chọn chấp nhận phản hồi lớn hơn để đổi lấy việc render giao diện từ dữ liệu đơn giản hơn.
 
-`replyTo` 字段也是如此：{{< xref eg="3-14" page="/ch3" anchor="fig_graphql_response" >}}示例 3-14{{< /xref >}} 中的第二条消息回复了第一条，因此第一条消息的内容（“Hey!…”）和发送者 Aaliyah 又在 `replyTo` 下重复了一遍。也可以只返回被回复消息的 ID，但如果该 ID 不在这次返回的最近 50 条消息之中，客户端就得向服务器再发一次请求。直接复制内容，处理起来简单得多。
+Trường `replyTo` cũng vậy: tin nhắn thứ hai trong {{< xref eg="3-14" page="/ch3" anchor="fig_graphql_response" >}}Ví dụ 3-14{{< /xref >}} trả lời tin nhắn thứ nhất, nên nội dung tin nhắn thứ nhất (“Hey!…”) và người gửi Aaliyah lại được lặp lần nữa dưới `replyTo`. Cũng có thể chỉ trả về ID của tin nhắn được trả lời, nhưng nếu ID đó không nằm trong 50 tin nhắn gần nhất của lần trả về này, client sẽ phải gửi thêm một yêu cầu tới server. Sao chép (*replication*) thẳng nội dung thì xử lý đơn giản hơn nhiều.
 
-服务器端数据库可以用更加规范化的形式存储数据，并在处理查询时执行必要的连接。例如，服务器可以把消息正文与发送者的用户 ID、被回复消息的 ID 存在一起；收到上述查询时，再解析这些 ID，找出它们引用的记录。不过，客户端只能要求服务器执行 GraphQL 模式中明确开放的连接。
+Cơ sở dữ liệu phía server có thể lưu dữ liệu ở dạng chuẩn hóa hơn và thực hiện các phép nối cần thiết khi xử lý truy vấn. Ví dụ, server có thể lưu nội dung tin nhắn cùng ID người dùng của người gửi và ID của tin nhắn được trả lời. Khi nhận truy vấn như trên, nó mới phân giải các ID đó để tìm bản ghi chúng tham chiếu. Tuy nhiên, client chỉ có thể yêu cầu server thực hiện những phép nối được mở rõ ràng trong schema GraphQL.
 
-尽管 GraphQL 的响应看起来很像文档数据库返回的结果，而且名称中还带有 “graph”，它其实可以构建在任何数据库之上，无论是关系数据库、文档数据库还是图数据库。
-
-
-## 事件溯源与 CQRS {#sec_datamodels_events}
-
-在我们迄今讨论过的所有数据模型中，数据都以写入时的形式接受查询——无论它是 JSON 文档、表中的行，还是图中的顶点和边。然而在复杂应用中，有时很难找到一种数据表示，能够满足所有查询和展现数据的需求。在这种情况下，可以用一种形式写入数据，再从中派生出多种针对不同读取方式优化的表示。
-
-我们在 [“记录系统与衍生数据”](/ch1#sec_introduction_derived) 中已经见过这种思路，ETL（参见 [“数据仓库”](/ch1#sec_introduction_dwh)）就是一种派生过程。现在让我们再往前走一步。既然无论如何都要由一种数据表示派生出另一种，那就可以分别选用针对写入和读取优化的表示。如果只需优化数据写入，丝毫不必考虑查询效率，你会如何对数据建模？
-
-也许，写入数据最简单、最快且表意最清楚的方式，就是写入 *事件日志*（*event log*）：每次写入数据时，都将它编码成一个自包含的字符串（也许是 JSON），其中带有时间戳，再追加到事件序列中。日志中的事件是 *不可变的*（*immutable*）：你永远不会修改或删除它们，只会向日志追加更多事件（后来的事件可以取代早先事件的效力）。事件可以包含任意属性。
-
-{{< xref fig="3-8" page="/ch3" anchor="fig_event_sourcing" >}}图 3-8{{< /xref >}} 给出了一个可能来自会议管理系统的例子。会议管理是一个复杂的业务领域：不仅个人参会者可以报名并用信用卡付款，企业也可以批量预订座位，以发票结算，再把座位分配给个人。演讲者、赞助商和志愿者等人可能要占用一些预留座位。预订还可能取消；与此同时，会议组织者又可能因为更换场地，而改变活动的容量。这些事情叠加在一起，哪怕只是计算还有多少空余座位，也会变成一项颇具挑战的查询。
-
-{{< fig num="3-8" id="fig_event_sourcing" src="/fig/ddia_0308.png" caption="以不可变事件日志作为权威数据源，并从中派生物化视图。" class="ddia-figure ddia-figure--standard" width="1772" height="1321" />}}
-
-在 {{< xref fig="3-8" page="/ch3" anchor="fig_event_sourcing" >}}图 3-8{{< /xref >}} 中，会议状态的每次变化（例如组织者开放报名，或参会者报名和取消报名），首先都会被存储为事件。每当日志追加一个事件，几个 *物化视图*（*materialized view*，也称为 *投影*，*projection*，或 *读模型*，*read model*）也会随之更新，以反映该事件带来的影响。在这个会议示例中，可以有一个物化视图汇总每笔预订状态的所有相关信息，另一个计算会议组织者仪表盘所需的图表，第三个则为制作参会者胸牌的打印机生成文件。
-
-以事件作为权威数据源，并把每次状态变化都表达为事件，这种思路称为 *事件溯源*（*event sourcing*）[^62] [^63]。维护独立的读取优化表示，并从写入优化的表示中派生它们，这种原则称为 *命令查询责任分离*（*Command Query Responsibility Segregation*，CQRS）[^64]。这些术语源自领域驱动设计（DDD）社区，不过类似的思路由来已久，例如 *状态机复制*（*state machine replication*；参见 [“使用共享日志”](/ch10#sec_consistency_smr)）。
-
-当来自用户的请求刚到达时，它还是一个 *命令*（*command*），首先需要验证。只有在命令已经执行且确认有效之后（例如，请求的预订有足够的空余座位），它才会成为事实，相应的事件也才会追加到日志中。因此，事件日志中应当只有有效事件；消费事件日志来构建物化视图的组件，不允许拒绝事件。
-
-以事件溯源的方式对数据建模时，建议用过去时来命名事件（例如“座位已预订”），因为事件记录的是已经发生的事实。即使用户后来更改或取消预订，他们曾经预订过的事实依然成立；更改或取消是之后另行追加的事件。
-
-事件溯源与星型模式的事实表（参见 [“星型与雪花型：分析模式”](/ch3#sec_datamodels_analytics)）有一个相似之处：它们都是过去所发生事件的集合。不过，事实表中每一行的列都相同，事件溯源中则可以有许多类型不同、属性各异的事件。此外，事实表是无序集合，而事件溯源中事件的先后顺序很重要：如果一笔预订先成立、后取消，颠倒顺序处理这两个事件就毫无意义。
-
-事件溯源和 CQRS 有几个优点：
-
-* 对系统开发者来说，事件能更清楚地表达某件事 *为什么* 发生。例如，理解“预订已取消”这个事件，要比理解“`bookings` 表第 4001 行的 `active` 列已设为 `false`，`seat_assignments` 表中与该预订相关的三行已被删除，`payments` 表中又插入了一行表示退款”容易得多。物化视图处理取消事件时，依然可能会对这些行执行修改；但由事件驱动这些更新，其原因就清楚得多。
-* 事件溯源的一项关键原则，是物化视图应以可重现的方式从事件日志中派生：你应当随时能够删除物化视图，然后用同一套代码，按同样的顺序处理同样的事件，从而重新计算出视图。如果视图维护代码存在错误，只需删除视图，再用修正后的代码重算。错误也更容易查找，因为你可以反复重新运行视图维护代码，并检查它的行为。
-* 你可以维护多个物化视图，分别针对应用所需的特定查询进行优化。它们可以与事件保存在同一个数据库中，也可以根据需要存入不同的数据库。这些视图可以使用任何数据模型，也可以通过反规范化来加快读取。只要服务重启时可以从事件日志重算视图，甚至可以只把它保留在内存中，根本不做持久化。
-* 如果决定以新方式展现现有信息，可以很容易地根据现有事件日志构建新的物化视图。添加新的事件类型，或给现有事件类型添加新属性（旧事件保持不变），就能让系统演化并支持新功能。还可以在现有事件后触发新的行为，例如参会者取消预订后，将座位提供给等候名单中的下一个人。
-* 如果误写了某个事件，可以把它删除，再重建不包含该事件的视图。相比之下，在直接更新和删除数据的数据库中，已经提交的事务往往很难撤销。因此，事件溯源可以减少系统中不可逆操作的数量，让变更更容易（参见 [“可演化性：让变化更容易”](/ch2#sec_introduction_evolvability)）。
-* 事件日志还可以作为审计日志，记录系统中发生的一切。在必须提供审计能力的受监管行业中，这一点很有价值。
-
-然而，事件溯源和 CQRS 也有缺点：
-
-* 涉及外部信息时必须小心。例如，假设事件中有一个以某种货币计价的价格，而某个视图需要把它兑换成另一种货币。由于汇率会波动，处理事件时再从外部数据源获取汇率就有问题：换一天重新计算物化视图，得到的结果就可能不同。为了让事件处理逻辑具有确定性，要么把汇率写入事件本身，要么提供一种方法，能查询事件时间戳所对应的历史汇率，并确保同一时间戳始终返回同一结果。
-* 事件不可变这一要求，在事件包含用户个人数据时会带来问题，因为用户可能行使自己的权利（例如 GDPR 规定的权利），要求删除个人数据。如果每个用户各有一份事件日志，只需删除该用户的整份日志；但如果日志中的事件关系到多个用户，这种做法就行不通。可以尝试把个人数据存在事件之外，或者用一把密钥加密，以便日后删除密钥；但这也会让按需重算派生状态变得更困难。
-* 如果处理事件会带来外部可见的副作用，那么重新处理事件时必须小心。例如，你大概不会希望每次重建物化视图时，都再发一遍确认邮件。
-
-事件溯源可以构建在任何数据库之上，不过也有一些系统是专为这种模式设计的，例如 EventStoreDB、MartenDB（基于 PostgreSQL）和 Axon Framework。也可以使用 Apache Kafka 之类的消息代理来存储事件日志，并通过流处理器使物化视图保持最新；我们将在 [“变更数据捕获与事件溯源”](/ch12#sec_stream_event_sourcing) 中再次讨论这些主题。
-
-唯一一项重要要求是：事件存储系统必须保证，所有物化视图都以事件在日志中出现的顺序处理它们。正如我们将在 [第 10 章](/ch10#ch_consistency) 中看到的，这在分布式系统中并不总是一件容易的事。
+Dù phản hồi GraphQL trông rất giống kết quả do cơ sở dữ liệu tài liệu trả về, và tên gọi lại có chữ “graph”, thực ra nó có thể được xây trên bất kỳ cơ sở dữ liệu nào, dù là cơ sở dữ liệu quan hệ, tài liệu hay đồ thị.
 
 
-## 数据框、矩阵与数组 {#sec_datamodels_dataframes}
+## Event sourcing và CQRS {#sec_datamodels_events}
 
-本章迄今介绍的数据模型，通常既用于事务处理，也用于分析（参见 [“分析型与事务型系统”](/ch1#sec_introduction_analytics)）。还有一些数据模型常见于分析或科学场景，却很少出现在 OLTP 系统中：*数据框*（*dataframe*），以及矩阵等多维数值数组。
+Trong tất cả các mô hình dữ liệu đã bàn đến giờ, dữ liệu được truy vấn đúng ở dạng lúc nó được ghi — dù đó là tài liệu JSON, hàng trong bảng, hay đỉnh và cạnh trong đồ thị. Tuy nhiên, trong các ứng dụng phức tạp, đôi khi rất khó tìm được một cách biểu diễn dữ liệu đáp ứng được mọi nhu cầu truy vấn và trình bày dữ liệu. Khi đó, ta có thể ghi dữ liệu ở một dạng, rồi từ đó dẫn xuất ra nhiều cách biểu diễn, mỗi cách tối ưu cho một kiểu đọc khác nhau.
 
-R 语言、Python 的 pandas 库、Apache Spark、ArcticDB 和 Dask 等系统，都支持数据框这种数据模型。数据科学家经常用它为训练机器学习模型准备数据；它也广泛用于数据探索、统计分析和数据可视化等场景。
+Ta đã gặp ý tưởng này ở [“Hệ thống ghi nhận gốc và dữ liệu dẫn xuất”](/ch1#sec_introduction_derived), nơi ETL (xem [“Kho dữ liệu”](/ch1#sec_introduction_dwh)) là một quá trình dẫn xuất. Giờ hãy đi xa hơn một bước. Nếu dù sao cũng phải dẫn xuất cách biểu diễn này từ cách biểu diễn khác, ta có thể chọn riêng một cách biểu diễn tối ưu cho việc ghi và những cách khác tối ưu cho việc đọc. Bạn sẽ mô hình hóa dữ liệu thế nào nếu chỉ cần tối ưu việc ghi, hoàn toàn không phải bận tâm đến hiệu quả truy vấn?
 
-乍看之下，数据框很像关系数据库中的表，也像电子表格。它支持一系列类似关系运算符的批量操作：例如，对所有行应用某个函数，按条件筛选行，按某些列分组并聚合其他列，以及按某个键连接两个数据框中的行（关系数据库中的 *连接*，在数据框中通常称为 *合并*，*merge*）。
+Có lẽ cách ghi dữ liệu đơn giản, nhanh và diễn đạt rõ nghĩa nhất là một *event log* (nhật ký sự kiện): mỗi lần ghi dữ liệu, ta mã hóa nó thành một chuỗi tự chứa (có thể là JSON) kèm dấu thời gian, rồi nối vào dãy sự kiện. Các sự kiện trong log là *bất biến* (*immutable*): bạn không bao giờ sửa hay xóa chúng, mà chỉ nối thêm sự kiện mới vào log (sự kiện đến sau có thể vô hiệu hóa tác dụng của sự kiện trước). Sự kiện có thể chứa thuộc tính tùy ý.
 
-数据框通常不是通过 SQL 之类的声明式查询来操作，而是通过一系列命令逐步修改其结构和内容。这恰好符合数据科学家的典型工作流程：一点点地“整理”数据，直至它变成一种适合回答当前问题的形式。这些操作通常在数据科学家私有的数据集副本上进行，而且往往就在本机上；不过最终结果也可能会分享给其他用户。
+{{< xref fig="3-8" page="/ch3" anchor="fig_event_sourcing" >}}Hình 3-8{{< /xref >}} là một ví dụ có thể lấy từ hệ thống quản lý hội nghị. Quản lý hội nghị là một miền nghiệp vụ phức tạp: không chỉ từng người tham dự có thể đăng ký và trả bằng thẻ tín dụng, mà các công ty cũng có thể đặt chỗ hàng loạt, thanh toán bằng hóa đơn, rồi sau đó phân chỗ cho từng cá nhân. Diễn giả, nhà tài trợ, tình nguyện viên... có thể chiếm một số chỗ được giữ trước. Việc đặt chỗ còn có thể bị hủy; đồng thời, ban tổ chức có thể đổi sức chứa của sự kiện vì chuyển địa điểm. Khi các yếu tố này chồng lên nhau, ngay cả việc tính còn bao nhiêu chỗ trống cũng thành một truy vấn khá thách thức.
 
-数据框 API 提供的许多操作远远超出关系数据库的能力，其使用方式也往往与典型的关系数据建模大不相同 [^65]。例如，数据框的一种常见用途，是把数据从类似关系模型的表示转换为矩阵或多维数组，而许多机器学习算法期望的输入正是这种形式。
+{{< fig num="3-8" id="fig_event_sourcing" src="/fig/ddia_0308.png" caption="Dùng event log bất biến làm nguồn dữ liệu có thẩm quyền, và dẫn xuất các khung nhìn vật chất hóa từ đó." class="ddia-figure ddia-figure--standard" width="1772" height="1321" />}}
 
-{{< xref fig="3-9" page="/ch3" anchor="fig_dataframe_to_matrix" >}}图 3-9{{< /xref >}} 展示了一个简单的转换示例。左侧是一张关系表，记录不同用户给各种电影打出的分数（1 到 5 分）；右侧则把这些数据转换成了矩阵，每一列代表一部电影，每一行代表一位用户（类似电子表格中的 *数据透视表*，*pivot table*）。这个矩阵是 *稀疏*（*sparse*）的，也就是说，很多用户与电影的组合都没有数据，但这并不碍事。矩阵可能有成千上万列，不太适合放在关系数据库中；数据框以及 Python 的 NumPy 等支持稀疏数组的库，却能轻松处理这类数据。
+Trong {{< xref fig="3-8" page="/ch3" anchor="fig_event_sourcing" >}}Hình 3-8{{< /xref >}}, mỗi thay đổi trạng thái của hội nghị (ví dụ ban tổ chức mở đăng ký, hoặc người tham dự đăng ký và hủy đăng ký) trước hết được lưu thành một sự kiện. Mỗi khi một sự kiện được nối vào log, nhiều *khung nhìn vật chất hóa* (*materialized view*, còn gọi là *phép chiếu* (*projection*) hoặc *mô hình đọc* (*read model*)) cũng được cập nhật để phản ánh tác động của sự kiện đó. Trong ví dụ hội nghị này, có thể có một khung nhìn vật chất hóa tổng hợp mọi thông tin liên quan đến trạng thái của từng lượt đặt chỗ, một khung nhìn khác tính các biểu đồ cho bảng điều khiển của ban tổ chức, và khung nhìn thứ ba tạo tệp cho máy in huy hiệu của người tham dự.
 
-{{< fig num="3-9" id="fig_dataframe_to_matrix" src="/fig/ddia_0309.png" caption="将电影评分的关系数据库转换为矩阵表示。" class="ddia-figure ddia-figure--wide" width="1772" height="690" />}}
+Ý tưởng dùng sự kiện làm nguồn dữ liệu có thẩm quyền và biểu diễn mọi thay đổi trạng thái thành sự kiện được gọi là *event sourcing* [^62] [^63]. Nguyên tắc duy trì các cách biểu diễn riêng, tối ưu cho đọc, và dẫn xuất chúng từ cách biểu diễn tối ưu cho ghi được gọi là *Command Query Responsibility Segregation* (CQRS) [^64]. Các thuật ngữ này xuất phát từ cộng đồng domain-driven design (DDD), dù những ý tưởng tương tự đã có từ lâu, chẳng hạn *sao chép máy trạng thái* (*state machine replication*) (xem [“Dùng log chia sẻ”](/ch10#sec_consistency_smr)).
 
-矩阵只能包含数字，因此需要用各种技术把非数值数据转换为矩阵中的数字。例如：
+Khi một yêu cầu từ người dùng vừa đến, nó là một *command*, và trước hết phải được kiểm tra hợp lệ. Chỉ sau khi command đã được thực thi và xác nhận là hợp lệ (ví dụ lượt đặt chỗ được yêu cầu còn đủ chỗ trống) thì nó mới trở thành một sự thật, và sự kiện tương ứng mới được nối vào log. Do đó, event log chỉ nên chứa các sự kiện hợp lệ, và những thành phần tiêu thụ event log để xây dựng khung nhìn vật chất hóa không được phép từ chối sự kiện.
 
-* 日期（{{< xref fig="3-9" page="/ch3" anchor="fig_dataframe_to_matrix" >}}图 3-9{{< /xref >}} 的示例矩阵中省略了日期）可以按比例缩放为某个合适范围内的浮点数。
-* 对于只能从一小组固定值中取值的列（例如电影数据库中的电影类型），通常采用 *独热编码*（*one-hot encoding*）：为每个可能的值建立一列（“喜剧”一列、“剧情”一列、“恐怖”一列，依此类推）；对于代表某部电影的每一行，在对应其类型的列中填 1，其余列填 0。这种表示也很容易推广到同时属于多种类型的电影。
+Khi mô hình hóa dữ liệu theo kiểu event sourcing, nên đặt tên sự kiện ở thì quá khứ (ví dụ “chỗ đã được đặt”), vì sự kiện ghi lại một sự thật đã xảy ra. Ngay cả khi người dùng sau đó đổi hoặc hủy đặt chỗ, việc họ từng đặt chỗ vẫn là sự thật. Việc đổi hoặc hủy là một sự kiện khác được nối thêm về sau.
 
-数据一旦变成数值矩阵，就适合进行线性代数运算，而线性代数正是许多机器学习算法的基础。例如，{{< xref fig="3-9" page="/ch3" anchor="fig_dataframe_to_matrix" >}}图 3-9{{< /xref >}} 中的数据可以用在向用户推荐其可能喜欢的电影的系统中。数据框十分灵活，可以让数据从关系形式逐步演变为矩阵表示，同时让数据科学家自行掌控哪种表示最适合达成数据分析或模型训练的目标。
+Event sourcing có một điểm giống với bảng sự kiện trong star schema (xem [“Star schema và snowflake schema: các schema cho phân tích”](/ch3#sec_datamodels_analytics)): cả hai đều là tập hợp các sự kiện đã xảy ra trong quá khứ. Tuy nhiên, mỗi hàng của bảng sự kiện có cùng các cột, còn trong event sourcing có thể có nhiều loại sự kiện khác nhau với các thuộc tính khác nhau. Ngoài ra, bảng sự kiện là một tập không có thứ tự, trong khi ở event sourcing thứ tự trước sau của các sự kiện rất quan trọng: nếu một lượt đặt chỗ được tạo rồi sau đó bị hủy, xử lý hai sự kiện này theo thứ tự đảo ngược thì vô nghĩa.
 
-还有一些数据库专门存储大型多维数值数组，例如 TileDB [^66]。这类系统称为 *数组数据库*（*array database*），最常用于科学数据集，例如地理空间测量数据（规则间隔网格上的栅格数据）、医学影像或天文望远镜的观测结果 [^67]。金融行业也用数据框表示 *时间序列数据*（*time-series data*），例如资产价格以及按时间记录的交易 [^68]。
+Event sourcing và CQRS có một số ưu điểm:
 
-## 总结 {#summary}
+* Với nhà phát triển hệ thống, sự kiện thể hiện rõ hơn *vì sao* một việc xảy ra. Ví dụ, hiểu sự kiện “lượt đặt chỗ đã bị hủy” dễ hơn nhiều so với hiểu “cột `active` ở hàng 4001 của bảng `bookings` được đặt thành `false`, ba hàng trong bảng `seat_assignments` liên quan đến lượt đặt chỗ đó bị xóa, và một hàng biểu thị khoản hoàn tiền được chèn vào bảng `payments`”. Khi khung nhìn vật chất hóa xử lý sự kiện hủy, nó vẫn có thể sửa các hàng đó, nhưng khi các cập nhật do sự kiện thúc đẩy, lý do của chúng rõ ràng hơn nhiều.
+* Một nguyên tắc then chốt của event sourcing là khung nhìn vật chất hóa phải được dẫn xuất từ event log theo cách có thể tái tạo: bạn luôn có thể xóa khung nhìn, rồi tính lại bằng cách xử lý cùng các sự kiện theo cùng thứ tự, với cùng đoạn mã. Nếu mã duy trì khung nhìn có lỗi, bạn chỉ cần xóa khung nhìn rồi tính lại bằng mã đã sửa. Lỗi cũng dễ tìm hơn, vì bạn có thể chạy đi chạy lại mã duy trì khung nhìn và kiểm tra hành vi của nó.
+* Bạn có thể duy trì nhiều khung nhìn vật chất hóa, mỗi khung nhìn tối ưu cho một truy vấn cụ thể mà ứng dụng cần. Chúng có thể nằm cùng cơ sở dữ liệu với các sự kiện, hoặc trong các cơ sở dữ liệu khác nhau tùy nhu cầu. Chúng có thể dùng bất kỳ mô hình dữ liệu nào, và có thể được phi chuẩn hóa để đọc nhanh. Thậm chí bạn có thể chỉ giữ khung nhìn trong bộ nhớ và không lưu bền, miễn là khi dịch vụ khởi động lại vẫn có thể tính lại từ event log.
+* Nếu quyết định trình bày thông tin hiện có theo cách mới, bạn có thể dễ dàng xây một khung nhìn vật chất hóa mới từ event log sẵn có. Hệ thống cũng có thể tiến hóa để hỗ trợ tính năng mới bằng cách thêm loại sự kiện mới, hoặc thêm thuộc tính mới vào loại sự kiện hiện có (các sự kiện cũ giữ nguyên). Bạn cũng có thể kích hoạt hành vi mới sau các sự kiện hiện có, ví dụ khi người tham dự hủy đặt chỗ thì mời chỗ đó cho người kế tiếp trong danh sách chờ.
+* Nếu ghi nhầm một sự kiện, bạn có thể xóa nó rồi dựng lại các khung nhìn mà không có sự kiện đó. Ngược lại, trong cơ sở dữ liệu cập nhật và xóa dữ liệu trực tiếp, một giao dịch đã commit thường rất khó hoàn tác. Vì vậy, event sourcing giúp giảm số thao tác không thể đảo ngược trong hệ thống, khiến việc thay đổi dễ dàng hơn (xem [“Khả năng tiến hóa: giúp thay đổi dễ dàng hơn”](/ch2#sec_introduction_evolvability)).
+* Event log còn có thể làm nhật ký kiểm toán, ghi lại mọi việc xảy ra trong hệ thống. Điều này có giá trị trong các ngành chịu quản lý, nơi bắt buộc phải có khả năng kiểm toán.
 
-数据模型是一个巨大的课题，本章只是快速浏览了各种不同的模型。我们没有足够的篇幅详述每个模型，但希望这份概览足以引起你的兴趣，促使你进一步了解最适合应用需求的模型。
+Tuy nhiên, event sourcing và CQRS cũng có nhược điểm:
 
-*关系模型* 尽管已有半个多世纪的历史，但对许多应用来说仍然是一种重要的数据模型——尤其是在数据仓库和商业分析领域，关系型星型或雪花型模式与 SQL 查询无处不在。不过，关系数据的几种替代方案也在其他领域流行起来：
+* Phải cẩn thận khi có thông tin bên ngoài. Ví dụ, giả sử một sự kiện có giá tính bằng một loại tiền tệ, và một khung nhìn cần quy đổi nó sang loại khác. Vì tỷ giá dao động, việc lấy tỷ giá từ nguồn bên ngoài khi xử lý sự kiện sẽ có vấn đề: tính lại khung nhìn vào ngày khác có thể cho kết quả khác. Để logic xử lý sự kiện mang tính *tất định*, hoặc ghi tỷ giá vào chính sự kiện, hoặc cung cấp cách tra tỷ giá lịch sử tại dấu thời gian của sự kiện và bảo đảm cùng một dấu thời gian luôn trả về cùng một kết quả.
+* Yêu cầu sự kiện bất biến gây rắc rối khi sự kiện chứa dữ liệu cá nhân của người dùng, vì người dùng có thể thực thi quyền của mình (ví dụ theo GDPR) để yêu cầu xóa dữ liệu cá nhân. Nếu mỗi người dùng có event log riêng, bạn chỉ cần xóa toàn bộ log của họ, nhưng cách này không dùng được nếu sự kiện trong log liên quan đến nhiều người dùng. Có thể thử lưu dữ liệu cá nhân bên ngoài sự kiện, hoặc mã hóa bằng một khóa để sau này xóa khóa, nhưng như vậy cũng làm việc tính lại trạng thái dẫn xuất theo yêu cầu khó hơn.
+* Nếu việc xử lý sự kiện gây ra tác dụng phụ nhìn thấy được từ bên ngoài thì phải cẩn thận khi xử lý lại sự kiện. Ví dụ, có lẽ bạn không muốn gửi lại email xác nhận mỗi lần dựng lại khung nhìn vật chất hóa.
 
-* *文档模型* 主要关注自包含的 JSON 数据文档，而且文档之间的关系非常稀少。
-* *图数据模型* 用于相反的场景：任意事物都可能与其他一切事物相关，查询可能需要跨越多跳才能找到感兴趣的数据（这类查询可以用 Cypher、SPARQL 或 Datalog 中的递归查询来表达）。
-* *数据框* 把关系数据推广到拥有大量列的情形，在数据库与多维数组之间架起了桥梁；而多维数组正是许多机器学习、统计分析和科学计算的基础。
+Event sourcing có thể xây trên bất kỳ cơ sở dữ liệu nào, nhưng cũng có một số hệ thống được thiết kế riêng cho mẫu này, chẳng hạn EventStoreDB, MartenDB (dựa trên PostgreSQL) và Axon Framework. Bạn cũng có thể dùng message broker như Apache Kafka để lưu event log, và dùng stream processor giữ các khung nhìn vật chất hóa luôn cập nhật. Ta sẽ quay lại các chủ đề này ở [“Change data capture và event sourcing”](/ch12#sec_stream_event_sourcing).
 
-在一定程度上，一个模型可以用另一个模型来模拟——例如，图数据可以在关系数据库中表示——但结果可能很别扭，正如 SQL 对递归查询的支持所表明的那样。
-
-因此，人们为每种数据模型开发了各式各样的专用数据库，提供针对该模型优化的查询语言和存储引擎。另一方面，数据库也在不断加入对其他数据模型的支持，向相邻领域扩展：例如，关系数据库通过 JSON 列支持文档数据，文档数据库加入类似关系模型的连接，而 SQL 对图数据的支持也在逐步改善。
-
-我们还讨论了 *事件溯源*：它把数据表示为不可变事件的仅追加日志，这种形式可能很适合为复杂业务领域中的活动建模。仅追加日志有利于数据写入（正如我们将在 [第 4 章](/ch4#ch_storage) 中看到的）；为了支持高效查询，CQRS 会把事件日志转换为针对读取优化的物化视图。
-
-非关系数据模型的一个共同点是，它们通常不会将存储的数据强制约束为特定模式，这可以使应用更容易适应不断变化的需求。但是应用很可能仍会假定数据具有一定的结构；区别仅在于模式是 *明确的*（写入时强制）还是 *隐含的*（读取时假定）。
-
-虽然我们已经覆盖了很多层面，但仍有一些数据模型没有提到。举几个简单的例子：
-
-* 研究基因组数据的研究人员通常需要执行 *序列相似性搜索*（*sequence-similarity search*），这意味着取一个很长的字符串（代表一个 DNA 分子），在一个包含大量相似但不完全相同的字符串的数据库中寻找匹配。这里描述的数据库都不能处理这种用法，这就是研究人员编写了 GenBank [^69] 等专用基因组数据库软件的原因。
-* 许多金融系统以采用复式记账法的 *账本*（*ledger*）作为数据模型。这类数据可以用关系数据库表示，但也有 TigerBeetle 这样专攻此类数据模型的数据库。加密货币和区块链通常基于分布式账本，并把价值转移也内置在数据模型之中。
-* *全文检索*（*full-text search*）可以说是一种经常与数据库配合使用的数据模型。信息检索是一个很大的专业课题，本书不会深入介绍，但我们将在 [“全文检索”](/ch4#sec_storage_full_text) 中谈到搜索索引与向量搜索。
-
-我们暂且说到这里。在下一章中，我们将讨论在 *实现* 本章描述的数据模型时会遇到的一些权衡。
+Yêu cầu quan trọng duy nhất là hệ thống lưu trữ sự kiện phải bảo đảm mọi khung nhìn vật chất hóa xử lý các sự kiện theo đúng thứ tự chúng xuất hiện trong log. Như ta sẽ thấy ở [Chương 10](/ch10#ch_consistency), điều này không phải lúc nào cũng dễ trong hệ thống phân tán.
 
 
+## Dataframe, ma trận và mảng {#sec_datamodels_dataframes}
 
-### 参考文献
+Các mô hình dữ liệu giới thiệu trong chương này cho đến giờ thường được dùng cho cả xử lý giao dịch lẫn phân tích (xem [“Hệ thống phân tích và hệ thống tác nghiệp”](/ch1#sec_introduction_analytics)). Còn có những mô hình dữ liệu hay gặp trong bối cảnh phân tích hoặc khoa học nhưng hiếm khi xuất hiện trong hệ thống OLTP: *dataframe* và các mảng số nhiều chiều như ma trận.
+
+Dataframe được hỗ trợ trong R, thư viện pandas của Python, Apache Spark, ArcticDB, Dask và nhiều hệ thống khác. Các nhà khoa học dữ liệu thường dùng chúng để chuẩn bị dữ liệu huấn luyện mô hình học máy. Chúng cũng được dùng rộng rãi trong khám phá dữ liệu, phân tích thống kê và trực quan hóa dữ liệu.
+
+Thoạt nhìn, dataframe khá giống một bảng trong cơ sở dữ liệu quan hệ, hay một bảng tính. Nó hỗ trợ một loạt thao tác hàng loạt tương tự các toán tử quan hệ: chẳng hạn áp dụng một hàm lên mọi hàng, lọc hàng theo điều kiện, nhóm theo một số cột và tổng hợp các cột khác, và nối các hàng của hai dataframe theo một khóa (trong cơ sở dữ liệu quan hệ gọi là *phép nối*, còn ở dataframe thường gọi là *merge*).
+
+Dataframe thường không được thao tác bằng truy vấn khai báo như SQL, mà bằng một chuỗi lệnh lần lượt sửa đổi cấu trúc và nội dung của nó. Điều này khớp với quy trình làm việc điển hình của nhà khoa học dữ liệu: từng chút “nắn” dữ liệu cho đến khi nó có dạng phù hợp để trả lời câu hỏi đang xét. Những thao tác này thường chạy trên bản sao riêng của tập dữ liệu, và thường ngay trên máy cục bộ. Dù kết quả cuối cùng có thể được chia sẻ với người dùng khác.
+
+API dataframe cung cấp nhiều thao tác vượt xa khả năng của cơ sở dữ liệu quan hệ, và cách dùng chúng thường rất khác với mô hình hóa dữ liệu quan hệ điển hình [^65]. Ví dụ, một cách dùng phổ biến của dataframe là chuyển dữ liệu từ biểu diễn kiểu mô hình quan hệ sang ma trận hoặc mảng nhiều chiều, đúng dạng đầu vào mà nhiều thuật toán học máy mong đợi.
+
+{{< xref fig="3-9" page="/ch3" anchor="fig_dataframe_to_matrix" >}}Hình 3-9{{< /xref >}} cho một ví dụ chuyển đổi đơn giản. Bên trái là một bảng quan hệ ghi điểm (từ 1 đến 5) mà nhiều người dùng chấm cho các bộ phim; bên phải, dữ liệu được chuyển thành ma trận trong đó mỗi cột là một bộ phim và mỗi hàng là một người dùng (tương tự *bảng tổng hợp xoay* (*pivot table*) trong bảng tính). Ma trận này *thưa* (*sparse*), nghĩa là nhiều tổ hợp người dùng và phim không có dữ liệu, nhưng điều đó không sao. Ma trận có thể có hàng chục nghìn cột nên không phù hợp để đặt trong cơ sở dữ liệu quan hệ; còn dataframe và các thư viện hỗ trợ mảng thưa như NumPy của Python xử lý loại dữ liệu này dễ dàng.
+
+{{< fig num="3-9" id="fig_dataframe_to_matrix" src="/fig/ddia_0309.png" caption="Chuyển cơ sở dữ liệu quan hệ về điểm đánh giá phim thành biểu diễn ma trận." class="ddia-figure ddia-figure--wide" width="1772" height="690" />}}
+
+Ma trận chỉ có thể chứa số, nên cần nhiều kỹ thuật để chuyển dữ liệu phi số thành số trong ma trận. Ví dụ:
+
+* Ngày tháng (bị lược khỏi ma trận ví dụ ở {{< xref fig="3-9" page="/ch3" anchor="fig_dataframe_to_matrix" >}}Hình 3-9{{< /xref >}}) có thể được co giãn tỷ lệ thành số thực trong một khoảng phù hợp.
+* Với các cột chỉ nhận giá trị từ một tập nhỏ cố định (ví dụ thể loại phim trong cơ sở dữ liệu phim), thường dùng *mã hóa one-hot* (*one-hot encoding*): tạo một cột cho mỗi giá trị có thể có (một cột cho “hài”, một cho “chính kịch”, một cho “kinh dị”, v.v.). Với mỗi hàng đại diện cho một bộ phim, điền 1 vào cột ứng với thể loại của nó và 0 vào các cột còn lại. Cách biểu diễn này cũng dễ mở rộng cho phim thuộc nhiều thể loại.
+
+Khi dữ liệu đã thành ma trận số, nó phù hợp cho các phép đại số tuyến tính, nền tảng của nhiều thuật toán học máy. Ví dụ, dữ liệu trong {{< xref fig="3-9" page="/ch3" anchor="fig_dataframe_to_matrix" >}}Hình 3-9{{< /xref >}} có thể dùng trong hệ thống gợi ý cho người dùng những bộ phim họ có thể thích. Dataframe đủ linh hoạt để dữ liệu dần chuyển từ dạng quan hệ sang biểu diễn ma trận, đồng thời để nhà khoa học dữ liệu tự kiểm soát cách biểu diễn nào phù hợp nhất với mục tiêu phân tích dữ liệu hoặc huấn luyện mô hình.
+
+Cũng có những cơ sở dữ liệu chuyên lưu các mảng số nhiều chiều cỡ lớn, như TileDB [^66]. Chúng được gọi là *cơ sở dữ liệu mảng* (*array database*) và thường dùng nhất cho các tập dữ liệu khoa học, như số liệu đo địa không gian (dữ liệu raster trên lưới cách đều), ảnh y khoa hay quan sát từ kính thiên văn [^67]. Ngành tài chính cũng dùng dataframe để biểu diễn *dữ liệu chuỗi thời gian* (*time-series data*), như giá tài sản và các giao dịch theo thời gian [^68].
+
+## Tóm tắt {#summary}
+
+Mô hình dữ liệu là một chủ đề khổng lồ, và chương này chỉ lướt nhanh qua nhiều mô hình khác nhau. Chúng ta không đủ chỗ để đi sâu từng mô hình, nhưng hy vọng bản tổng quan này đủ gợi sự tò mò để bạn tìm hiểu thêm về mô hình phù hợp nhất với yêu cầu ứng dụng của mình.
+
+*Mô hình quan hệ*, dù đã hơn nửa thế kỷ tuổi, vẫn là một mô hình dữ liệu quan trọng với nhiều ứng dụng — đặc biệt trong kho dữ liệu và phân tích kinh doanh, nơi star schema hay snowflake schema quan hệ và truy vấn SQL có mặt khắp nơi. Tuy nhiên, vài lựa chọn thay thế cho dữ liệu quan hệ cũng đã phổ biến ở các lĩnh vực khác:
+
+* *Mô hình tài liệu* nhắm đến trường hợp dữ liệu là các tài liệu JSON tự chứa, và quan hệ giữa các tài liệu rất hiếm.
+* *Mô hình dữ liệu đồ thị* đi theo hướng ngược lại: mọi thứ đều có thể liên quan đến mọi thứ khác, và truy vấn có thể phải đi qua nhiều bước nhảy mới tìm được dữ liệu cần quan tâm (có thể diễn đạt các truy vấn này bằng truy vấn đệ quy trong Cypher, SPARQL hoặc Datalog).
+* *Dataframe* khái quát dữ liệu quan hệ cho trường hợp có rất nhiều cột, và bắc cầu giữa cơ sở dữ liệu với mảng nhiều chiều, vốn là nền tảng của nhiều tác vụ học máy, phân tích thống kê và tính toán khoa học.
+
+Ở một mức độ nào đó, một mô hình có thể mô phỏng bằng mô hình khác — ví dụ dữ liệu đồ thị có thể biểu diễn trong cơ sở dữ liệu quan hệ — nhưng kết quả có thể rất gượng gạo, như hỗ trợ truy vấn đệ quy trong SQL đã cho thấy.
+
+Vì vậy, người ta đã phát triển đủ loại cơ sở dữ liệu chuyên biệt cho từng mô hình dữ liệu, cung cấp ngôn ngữ truy vấn và storage engine tối ưu cho mô hình đó. Mặt khác, cơ sở dữ liệu cũng liên tục bổ sung hỗ trợ các mô hình dữ liệu khác để mở rộng sang các lĩnh vực lân cận: ví dụ, cơ sở dữ liệu quan hệ hỗ trợ dữ liệu tài liệu qua cột JSON, cơ sở dữ liệu tài liệu thêm phép nối giống mô hình quan hệ, còn hỗ trợ dữ liệu đồ thị trong SQL cũng đang dần được cải thiện.
+
+Ta cũng đã bàn về *event sourcing*: biểu diễn dữ liệu thành append-only log gồm các sự kiện bất biến, một dạng có thể rất phù hợp để mô hình hóa hoạt động trong các miền nghiệp vụ phức tạp. Append-only log tốt cho việc ghi dữ liệu (như ta sẽ thấy ở [Chương 4](/ch4#ch_storage)). Để hỗ trợ truy vấn hiệu quả, CQRS chuyển event log thành các khung nhìn vật chất hóa tối ưu cho đọc.
+
+Một điểm chung của các mô hình dữ liệu phi quan hệ là chúng thường không ép dữ liệu lưu trữ phải theo một schema cụ thể, nhờ đó ứng dụng dễ thích nghi hơn với yêu cầu thay đổi. Nhưng ứng dụng nhiều khả năng vẫn giả định dữ liệu có một cấu trúc nhất định. Khác biệt chỉ là schema là *tường minh* (được ép khi ghi) hay *ngầm định* (được giả định khi đọc).
+
+Dù đã bao quát khá nhiều, vẫn còn những mô hình dữ liệu chưa được nhắc tới. Xin nêu vài ví dụ ngắn:
+
+* Các nhà nghiên cứu bộ gen thường cần thực hiện *tìm kiếm tương đồng chuỗi* (*sequence-similarity search*), nghĩa là lấy một chuỗi rất dài (đại diện cho một phân tử DNA) và tìm các chuỗi khớp trong cơ sở dữ liệu gồm rất nhiều chuỗi tương tự nhưng không hoàn toàn giống nhau. Không cơ sở dữ liệu nào được mô tả ở đây xử lý được cách dùng này, đó là lý do các nhà nghiên cứu viết phần mềm cơ sở dữ liệu bộ gen chuyên dụng như GenBank [^69].
+* Nhiều hệ thống tài chính dùng *sổ cái* (*ledger*) với kế toán ghi sổ kép làm mô hình dữ liệu. Loại dữ liệu này có thể biểu diễn trong cơ sở dữ liệu quan hệ, nhưng cũng có những cơ sở dữ liệu như TigerBeetle chuyên về mô hình này. Tiền mã hóa và blockchain thường dựa trên sổ cái phân tán, với việc chuyển giá trị được tích hợp ngay trong mô hình dữ liệu.
+* *Tìm kiếm toàn văn* (*full-text search*) có thể coi là một mô hình dữ liệu thường được dùng cùng cơ sở dữ liệu. Truy xuất thông tin là một chuyên ngành lớn mà cuốn sách này sẽ không đi sâu, nhưng ta sẽ đề cập đến chỉ mục tìm kiếm (*search index*) và tìm kiếm vector ở [“Tìm kiếm toàn văn”](/ch4#sec_storage_full_text).
+
+Tạm dừng ở đây. Ở chương tiếp theo, ta sẽ bàn một số đánh đổi khi *triển khai* các mô hình dữ liệu được mô tả trong chương này.
+
+
+
+### Tài liệu tham khảo
 
 [^1]: Jamie Brandon. [Unexplanations: query optimization works because sql is declarative](https://www.scattered-thoughts.net/writing/unexplanations-sql-declarative/). *scattered-thoughts.net*, February 2024. Archived at [perma.cc/P6W2-WMFZ](https://perma.cc/P6W2-WMFZ)
 [^2]: Joseph M. Hellerstein. [The Declarative Imperative: Experiences and Conjectures in Distributed Logic](https://www2.eecs.berkeley.edu/Pubs/TechRpts/2010/EECS-2010-90.pdf). Tech report UCB/EECS-2010-90, Electrical Engineering and Computer Sciences, University of California at Berkeley, June 2010. Archived at [perma.cc/K56R-VVQM](https://perma.cc/K56R-VVQM)
