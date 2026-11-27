@@ -78,7 +78,6 @@ Với một cài đặt đơn giản như vậy, hàm `db_set` có hiệu năng 
 > Từ *log* thường được dùng để chỉ log của ứng dụng: đoạn văn bản mà ứng dụng xuất ra để mô tả những gì đang diễn ra. Trong cuốn sách này, *log* được dùng theo nghĩa rộng hơn: một chuỗi bản ghi chỉ ghi nối trên đĩa. Người đọc không nhất thiết phải đọc được nó. Nó có thể ở định dạng nhị phân và chỉ dành cho nội bộ hệ thống cơ sở dữ liệu.
 
 
-
 Mặt khác, hàm `db_get` có hiệu năng rất tệ nếu cơ sở dữ liệu có nhiều bản ghi. Mỗi lần bạn tra một khóa, `db_get` phải quét toàn bộ file cơ sở dữ liệu từ đầu đến cuối để tìm các lần xuất hiện của khóa. Theo ngôn ngữ thuật toán, chi phí tìm kiếm là *O*(*n*): nếu số bản ghi *n* trong cơ sở dữ liệu tăng gấp đôi thì thời gian tìm kiếm cũng tăng gấp đôi. Như vậy là không tốt.
 
 Để tìm hiệu quả giá trị của một khóa cụ thể trong cơ sở dữ liệu, ta cần một cấu trúc dữ liệu khác: *chỉ mục* (*index*). Chương này sẽ giới thiệu một loạt cấu trúc chỉ mục (*index*) và so sánh chúng. Ý tưởng chung là tổ chức dữ liệu theo một cách nhất định (ví dụ sắp xếp theo một khóa nào đó) để định vị dữ liệu mong muốn nhanh hơn. Nếu muốn tìm kiếm cùng một dữ liệu theo nhiều cách khác nhau, bạn có thể cần nhiều chỉ mục (*index*) khác nhau trên những phần khác nhau của dữ liệu.
@@ -586,7 +585,6 @@ Là lập trình viên ứng dụng, nếu nắm được cơ chế bên trong c
 Dù chương này không thể biến bạn thành chuyên gia tinh chỉnh một storage engine cụ thể, hy vọng nó đã cung cấp đủ khái niệm và từ vựng để bạn đọc hiểu tài liệu của cơ sở dữ liệu mình chọn.
 
 
-
 ### Tài liệu tham khảo
 
 [^1]: Nikolay Samokhvalov. [How partial, covering, and multicolumn indexes may slow down UPDATEs in PostgreSQL](https://postgres.ai/blog/20211029-how-partial-and-covering-indexes-affect-update-performance-in-postgresql). *postgres.ai*, October 2021. Archived at [perma.cc/PBK3-F4G9](https://perma.cc/PBK3-F4G9)
@@ -692,4 +690,4 @@ Dù chương này không thể biến bạn thành chuyên gia tinh chỉnh mộ
 [^101]: Matthijs Douze, Maria Lomeli, and Lucas Hosseini. [Faiss indexes](https://github.com/facebookresearch/faiss/wiki/Faiss-indexes). *github.com*, August 2024. Archived at [perma.cc/2EWG-FPBS](https://perma.cc/2EWG-FPBS)
 [^102]: Varik Matevosyan. [Understanding pgvector’s HNSW Index Storage in Postgres](https://lantern.dev/blog/pgvector-storage). *lantern.dev*, August 2024. Archived at [perma.cc/B2YB-JB59](https://perma.cc/B2YB-JB59)
 [^103]: Dmitry Baranchuk, Artem Babenko, and Yury Malkov. [Revisiting the Inverted Indices for Billion-Scale Approximate Nearest Neighbors](https://arxiv.org/pdf/1802.02422). At *European Conference on Computer Vision* (ECCV), pages 202–216, September 2018. [doi:10.1007/978-3-030-01258-8\_13](https://doi.org/10.1007/978-3-030-01258-8_13)
-[^104]: Yury A. Malkov and Dmitry A. Yashunin. [Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs](https://arxiv.org/pdf/1603.09320). *IEEE Transactions on Pattern Analysis and Machine Intelligence*, volume 42, issue 4, pages 824–836, April 2020. [doi:10.1109/TPAMI.2018.2889473](https://doi.org/10.1109/TPAMI.2018.2889473) 
+[^104]: Yury A. Malkov and Dmitry A. Yashunin. [Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs](https://arxiv.org/pdf/1603.09320). *IEEE Transactions on Pattern Analysis and Machine Intelligence*, volume 42, issue 4, pages 824–836, April 2020. [doi:10.1109/TPAMI.2018.2889473](https://doi.org/10.1109/TPAMI.2018.2889473)

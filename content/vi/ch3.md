@@ -366,7 +366,6 @@ Sự hội tụ này có lợi cho lập trình viên ứng dụng, vì mô hìn
 > Mô tả ban đầu của Codd về mô hình quan hệ [^3] thực ra cho phép các cấu trúc giống JSON xuất hiện trong schema quan hệ, mà ông gọi là *miền không đơn giản* (*nonsimple domain*). Ý tưởng là giá trị trong một hàng không nhất thiết chỉ là kiểu dữ liệu nguyên thủy như số hay chuỗi, mà còn có thể là một quan hệ (bảng) lồng bên trong, nhờ đó có thể dùng cấu trúc cây lồng nhau tùy ý làm một giá trị. Điều này rất giống phần hỗ trợ JSON hoặc XML được thêm vào SQL hơn ba mươi năm sau.
 
 
-
 ## Mô hình dữ liệu đồ thị {#sec_datamodels_graph}
 
 Như đã thấy, loại quan hệ là một đặc điểm quan trọng để phân biệt các mô hình dữ liệu. Nếu quan hệ trong ứng dụng chủ yếu là một-nhiều (dữ liệu có cấu trúc cây) và giữa các bản ghi hầu như không có quan hệ nào khác, thì mô hình tài liệu là phù hợp.
@@ -770,7 +769,6 @@ Do đó, có thể áp dụng các quy tắc như sau (như trong {{< xref fig="
 {{< fig num="3-7" id="fig_datalog_naive" src="/fig/ddia_0307.png" caption="Dùng các quy tắc Datalog trong Ví dụ 3-12 để xác định Idaho nằm trong Bắc Mỹ." link="#fig_datalog_query" class="ddia-figure ddia-figure--panorama" width="1772" height="585" />}}
 
 
-
 Tiếp theo, quy tắc 3 tìm ra những người sinh ở `BornIn` và hiện sống ở `LivingIn`. Quy tắc 4 gọi quy tắc 3 với `BornIn = 'United States'` và `LivingIn = 'Europe'`, chỉ trả về tên những người thỏa điều kiện. Cuối cùng truy vấn bảng ảo `us_to_europe`, hệ thống Datalog sẽ cho ra cùng đáp án như các truy vấn Cypher và SPARQL trước đó.
 
 Datalog đòi hỏi một cách tư duy khác với các ngôn ngữ truy vấn khác trong chương này. Nó cho phép xây truy vấn phức tạp từng quy tắc một, để quy tắc này tham chiếu quy tắc khác, giống như tách mã thành các hàm gọi lẫn nhau. Hàm có thể đệ quy, quy tắc Datalog cũng có thể tự gọi chính nó. Quy tắc 2 trong {{< xref eg="3-12" page="/ch3" anchor="fig_datalog_query" >}}Ví dụ 3-12{{< /xref >}} chính là như vậy, nhờ đó hiện thực hóa việc duyệt đồ thị trong truy vấn Datalog.
@@ -939,7 +937,6 @@ Dù đã bao quát khá nhiều, vẫn còn những mô hình dữ liệu chưa 
 Tạm dừng ở đây. Ở chương tiếp theo, ta sẽ bàn một số đánh đổi khi *triển khai* các mô hình dữ liệu được mô tả trong chương này.
 
 
-
 ### Tài liệu tham khảo
 
 [^1]: Jamie Brandon. [Unexplanations: query optimization works because sql is declarative](https://www.scattered-thoughts.net/writing/unexplanations-sql-declarative/). *scattered-thoughts.net*, February 2024. Archived at [perma.cc/P6W2-WMFZ](https://perma.cc/P6W2-WMFZ)
@@ -1010,4 +1007,4 @@ Tạm dừng ở đây. Ở chương tiếp theo, ta sẽ bàn một số đánh
 [^66]: Stavros Papadopoulos, Kushal Datta, Samuel Madden, and Timothy Mattson. [The TileDB Array Data Storage Manager](https://www.vldb.org/pvldb/vol10/p349-papadopoulos.pdf). *Proceedings of the VLDB Endowment*, volume 10, issue 4, pages 349–360, November 2016. [doi:10.14778/3025111.3025117](https://doi.org/10.14778/3025111.3025117)
 [^67]: Florin Rusu. [Multidimensional Array Data Management](https://faculty.ucmerced.edu/frusu/Papers/Report/2022-09-fntdb-arrays.pdf). *Foundations and Trends in Databases*, volume 12, numbers 2–3, pages 69–220, February 2023. [doi:10.1561/1900000069](https://doi.org/10.1561/1900000069)
 [^68]: Ed Targett. [Bloomberg, Man Group team up to develop open source “ArcticDB” database](https://www.thestack.technology/bloomberg-man-group-arcticdb-database-dataframe/). *thestack.technology*, March 2023. Archived at [perma.cc/M5YD-QQYV](https://perma.cc/M5YD-QQYV)
-[^69]: Dennis A. Benson, Ilene Karsch-Mizrachi, David J. Lipman, James Ostell, and David L. Wheeler. [GenBank](https://academic.oup.com/nar/article/36/suppl_1/D25/2507746). *Nucleic Acids Research*, volume 36, database issue, pages D25–D30, December 2007. [doi:10.1093/nar/gkm929](https://doi.org/10.1093/nar/gkm929) 
+[^69]: Dennis A. Benson, Ilene Karsch-Mizrachi, David J. Lipman, James Ostell, and David L. Wheeler. [GenBank](https://academic.oup.com/nar/article/36/suppl_1/D25/2507746). *Nucleic Acids Research*, volume 36, database issue, pages D25–D30, December 2007. [doi:10.1093/nar/gkm929](https://doi.org/10.1093/nar/gkm929)

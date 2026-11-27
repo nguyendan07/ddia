@@ -1092,6 +1092,53 @@ en = "schema evolution"
 vi = "tiến hóa schema"
 
 [[term]]
+en = "encoding"
+vi = "mã hóa"
+
+[[term]]
+en = "decoding"
+vi = "giải mã"
+
+[[term]]
+en = "serialization"
+vi = "tuần tự hóa"
+note = "Khác nghĩa 'serializability' của giao dịch (ch8); chương 5 dùng 'mã hóa' làm thuật ngữ chính."
+
+[[term]]
+en = "deserialization"
+vi = "giải tuần tự hóa"
+
+[[term]]
+en = "parsing"
+vi = "phân tích cú pháp"
+
+[[term]]
+en = "marshalling"
+vi = "marshalling"
+keep = true
+note = "Đồng nghĩa với encoding trong ngữ cảnh chương 5; giữ nguyên."
+
+[[term]]
+en = "unmarshalling"
+vi = "unmarshalling"
+keep = true
+note = "Đồng nghĩa với decoding trong ngữ cảnh chương 5; giữ nguyên."
+
+[[term]]
+en = "staged rollout"
+vi = "staged rollout"
+keep = true
+note = "Đồng nghĩa với rolling upgrade."
+
+[[term]]
+en = "remote procedure call"
+vi = "lời gọi thủ tục từ xa"
+
+[[term]]
+en = "location transparency"
+vi = "tính trong suốt về vị trí"
+
+[[term]]
 en = "writer’s schema"
 vi = "schema của bên ghi"
 
