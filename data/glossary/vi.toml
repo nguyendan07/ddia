@@ -1,0 +1,3492 @@
+# Bảng thuật ngữ Anh–Việt dùng chung — nguồn sự thật duy nhất.
+# Định dạng và ràng buộc: specs/002-glossary-en-vi/contracts/glossary-file.md
+# Trường: en, vi, keep, ctx, note, abbr, def, status ("todo" | "ok").
+# Khởi tạo khung:  python3 bin/glossary-vi.py seed
+# Kiểm tra:        python3 bin/glossary-vi.py check [--release]
+
+[[term]]
+en = "asynchronous"
+vi = "bất đồng bộ"
+
+[[term]]
+en = "atomic"
+vi = "nguyên tử"
+ctx = "đồng thời"
+note = "Thao tác có vẻ diễn ra tại một thời điểm, không thấy trạng thái dở dang."
+
+[[term]]
+en = "atomic"
+vi = "nguyên tử"
+ctx = "giao dịch"
+note = "Nhóm thao tác ghi: hoặc tất cả commit, hoặc tất cả rollback."
+
+[[term]]
+en = "backpressure"
+vi = "backpressure"
+keep = true
+note = "Không có bản dịch Việt phổ biến; 'áp lực ngược' ít gặp trong tài liệu kỹ thuật."
+
+[[term]]
+en = "batch process"
+vi = "xử lý theo lô"
+
+[[term]]
+en = "bounded"
+vi = "có giới hạn"
+
+[[term]]
+en = "Byzantine fault"
+vi = "lỗi Byzantine"
+note = "Giữ tên riêng 'Byzantine' như trong tài liệu gốc; 'lỗi' dịch từ 'fault'."
+
+[[term]]
+en = "cache"
+vi = "cache"
+keep = true
+note = "Giới IT/DEV Việt Nam dùng nguyên từ gốc; 'bộ nhớ đệm' dài và ít được dùng khi nói."
+
+[[term]]
+en = "CAP theorem"
+vi = "định lý CAP"
+
+[[term]]
+en = "causality"
+vi = "quan hệ nhân quả"
+
+[[term]]
+en = "consensus"
+vi = "đồng thuận"
+
+[[term]]
+en = "data warehouse"
+vi = "kho dữ liệu"
+
+[[term]]
+en = "declarative"
+vi = "khai báo"
+
+[[term]]
+en = "denormalize"
+vi = "phi chuẩn hóa"
+
+[[term]]
+en = "derived data"
+vi = "dữ liệu dẫn xuất"
+
+[[term]]
+en = "deterministic"
+vi = "tất định"
+
+[[term]]
+en = "distributed"
+vi = "phân tán"
+
+[[term]]
+en = "durable"
+vi = "bền vững"
+
+[[term]]
+en = "ETL"
+vi = "ETL"
+keep = true
+abbr = "Extract–Transform–Load"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "failover"
+vi = "failover"
+keep = true
+note = "Thuật ngữ vận hành quen dùng nguyên gốc; 'chuyển đổi dự phòng' dài và ít được dùng."
+
+[[term]]
+en = "fault-tolerant"
+vi = "chịu lỗi"
+
+[[term]]
+en = "flow control"
+vi = "kiểm soát luồng"
+
+[[term]]
+en = "follower"
+vi = "follower"
+keep = true
+note = "Cặp với 'leader'; hai từ quen dùng nguyên gốc trong cộng đồng DB/hệ phân tán."
+
+[[term]]
+en = "full-text search"
+vi = "tìm kiếm toàn văn"
+
+[[term]]
+en = "graph"
+vi = "đồ thị"
+
+[[term]]
+en = "hash"
+vi = "hash"
+keep = true
+note = "'Băm' có dùng ('hàm băm') nhưng giới DEV nói 'hash' hơn trong 'hash của khóa', 'hash partition'."
+
+[[term]]
+en = "idempotent"
+vi = "idempotent"
+keep = true
+note = "'Lũy đẳng' ít được dùng trong giới IT; giữ nguyên để dễ tra tài liệu."
+
+[[term]]
+en = "index"
+vi = "chỉ mục"
+show_en = true
+
+[[term]]
+en = "isolation"
+vi = "cô lập"
+
+[[term]]
+en = "join"
+vi = "phép nối"
+
+[[term]]
+en = "leader"
+vi = "leader"
+keep = true
+note = "Cặp với 'follower'; quen dùng nguyên gốc."
+
+[[term]]
+en = "linearizable"
+vi = "linearizable"
+keep = true
+note = "Không có bản dịch phổ biến; giữ nguyên để tránh tự chế."
+
+[[term]]
+en = "locality"
+vi = "tính cục bộ"
+
+[[term]]
+en = "lock"
+vi = "khóa"
+
+[[term]]
+en = "log"
+vi = "log"
+keep = true
+note = "Nhất quán với các cụm giữ nguyên 'log-structured', 'write-ahead log', 'commit log'; nghĩa là tệp chỉ ghi thêm (append-only)."
+
+[[term]]
+en = "materialize"
+vi = "vật chất hóa"
+
+[[term]]
+en = "node"
+vi = "node"
+keep = true
+note = "Giới IT/DEV nói 'node' (worker node, data node); 'nút' ít dùng khi trao đổi và dễ lẫn với nút bấm."
+
+[[term]]
+en = "normalized"
+vi = "chuẩn hóa"
+
+[[term]]
+en = "OLAP"
+vi = "OLAP"
+keep = true
+abbr = "Online Analytical Processing"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "OLTP"
+vi = "OLTP"
+keep = true
+abbr = "Online Transaction Processing"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "sharding"
+vi = "sharding"
+keep = true
+note = "Quen dùng nguyên gốc cùng 'shard'; 'phân mảnh' dễ nhầm với partitioning."
+
+[[term]]
+en = "percentile"
+vi = "phân vị"
+
+[[term]]
+en = "primary key"
+vi = "khóa chính"
+
+[[term]]
+en = "quorum"
+vi = "quorum"
+keep = true
+note = "Không có bản dịch phổ biến ('số đại biểu' ít dùng); giữ nguyên."
+
+[[term]]
+en = "rebalance"
+vi = "cân bằng lại"
+
+[[term]]
+en = "replication"
+vi = "sao chép"
+show_en = true
+
+[[term]]
+en = "schema"
+vi = "schema"
+keep = true
+note = "Quen dùng nguyên gốc, xuất hiện nhiều trong cụm như 'schema-on-read'; 'lược đồ' làm các cụm ghép khó đọc."
+
+[[term]]
+en = "secondary index"
+vi = "chỉ mục phụ"
+show_en = true
+
+[[term]]
+en = "serializable"
+vi = "serializable"
+keep = true
+note = "Giữ nguyên cùng các mức cô lập khác (read committed, snapshot isolation, repeatable read)."
+
+[[term]]
+en = "shared-nothing"
+vi = "shared-nothing"
+keep = true
+note = "Tên kiến trúc, không có bản dịch phổ biến; giữ nguyên."
+
+[[term]]
+en = "skew"
+vi = "lệch tải"
+ctx = "phân bổ tải"
+note = "Tải không đều giữa các shard (hot spot)."
+
+[[term]]
+en = "skew"
+vi = "skew"
+keep = true
+ctx = "thời gian"
+note = "Dị thường về thời gian/thứ tự (read skew, write skew, clock skew); không có bản dịch phổ biến."
+
+[[term]]
+en = "split brain"
+vi = "split brain"
+keep = true
+note = "Tên hiện tượng, không có bản dịch phổ biến; giữ nguyên."
+
+[[term]]
+en = "stored procedure"
+vi = "thủ tục lưu trữ"
+
+[[term]]
+en = "stream process"
+vi = "xử lý luồng"
+
+[[term]]
+en = "synchronous"
+vi = "đồng bộ"
+
+[[term]]
+en = "system of record"
+vi = "hệ thống ghi nhận gốc"
+note = "Còn gọi là source of truth (nguồn sự thật); dữ liệu khác được dẫn xuất từ đây."
+
+[[term]]
+en = "timeout"
+vi = "timeout"
+keep = true
+note = "Quen dùng nguyên gốc trong giới IT/DEV; 'hết hạn chờ' ít được dùng."
+
+[[term]]
+en = "total order"
+vi = "thứ tự toàn phần"
+
+[[term]]
+en = "transaction"
+vi = "giao dịch"
+
+[[term]]
+en = "two-phase commit (2PC)"
+vi = "commit hai pha"
+abbr = "2PC"
+note = "Giữ 'commit' theo cách nói của giới DEV; 'pha' dịch từ 'phase'."
+
+[[term]]
+en = "two-phase locking (2PL)"
+vi = "khóa hai pha"
+abbr = "2PL"
+
+[[term]]
+en = "unbounded"
+vi = "không giới hạn"
+
+[[term]]
+en = "data-intensive"
+vi = "chuyên sâu về dữ liệu"
+
+[[term]]
+en = "compute-intensive"
+vi = "chuyên sâu về tính toán"
+
+[[term]]
+en = "enterprise software"
+vi = "phần mềm doanh nghiệp"
+
+[[term]]
+en = "backend development"
+vi = "phát triển backend"
+
+[[term]]
+en = "frontend"
+vi = "frontend"
+keep = true
+note = "Thuật ngữ phổ biến, giữ nguyên cùng 'backend'."
+
+[[term]]
+en = "backend"
+vi = "backend"
+keep = true
+note = "Thuật ngữ phổ biến, giữ nguyên cùng 'frontend'."
+
+[[term]]
+en = "data infrastructure"
+vi = "hạ tầng dữ liệu"
+
+[[term]]
+en = "stateless"
+vi = "stateless"
+keep = true
+note = "Quen dùng nguyên gốc; 'phi trạng thái' ít gặp khi trao đổi."
+
+[[term]]
+en = "backend engineer"
+vi = "kỹ sư backend"
+
+[[term]]
+en = "business analyst"
+vi = "chuyên viên phân tích nghiệp vụ"
+
+[[term]]
+en = "data scientist"
+vi = "nhà khoa học dữ liệu"
+
+[[term]]
+en = "analytics"
+vi = "phân tích dữ liệu"
+
+[[term]]
+en = "operational system"
+vi = "hệ thống tác nghiệp"
+
+[[term]]
+en = "analytical system"
+vi = "hệ thống phân tích"
+
+[[term]]
+en = "data engineer"
+vi = "kỹ sư dữ liệu"
+
+[[term]]
+en = "analytics engineer"
+vi = "analytics engineer"
+keep = true
+note = "Chức danh mới, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "product analytics"
+vi = "phân tích sản phẩm"
+
+[[term]]
+en = "real-time analytics"
+vi = "phân tích thời gian thực"
+
+[[term]]
+en = "data silo"
+vi = "silo dữ liệu"
+
+[[term]]
+en = "feature"
+vi = "đặc trưng"
+ctx = "machine learning"
+
+[[term]]
+en = "feature engineering"
+vi = "kỹ thuật đặc trưng"
+
+[[term]]
+en = "data lake"
+vi = "data lake"
+keep = true
+note = "Giới DEV nói 'data lake'; 'hồ dữ liệu' ít dùng."
+
+[[term]]
+en = "data pipeline"
+vi = "pipeline dữ liệu"
+
+[[term]]
+en = "sushi principle"
+vi = "nguyên tắc sushi"
+
+[[term]]
+en = "data lakehouse"
+vi = "data lakehouse"
+keep = true
+note = "Ghép từ data lake và data warehouse; chưa có bản dịch phổ biến."
+
+[[term]]
+en = "reverse ETL"
+vi = "reverse ETL"
+keep = true
+note = "Giữ nguyên cùng ETL."
+
+[[term]]
+en = "data product"
+vi = "sản phẩm dữ liệu"
+
+[[term]]
+en = "derived data system"
+vi = "hệ thống dữ liệu dẫn xuất"
+
+[[term]]
+en = "source of truth"
+vi = "nguồn sự thật"
+
+[[term]]
+en = "canonical"
+vi = "chuẩn"
+
+[[term]]
+en = "redundant"
+vi = "dư thừa"
+
+[[term]]
+en = "data integration"
+vi = "tích hợp dữ liệu"
+
+[[term]]
+en = "self-hosted"
+vi = "self-hosted"
+keep = true
+note = "Quen dùng nguyên gốc trong giới IT/DEV."
+
+[[term]]
+en = "on-premises"
+vi = "on-premises"
+keep = true
+note = "Quen dùng nguyên gốc ('tại chỗ' dễ hiểu sai)."
+
+[[term]]
+en = "cloud-native"
+vi = "cloud-native"
+keep = true
+note = "Tên khái niệm, giữ nguyên."
+
+[[term]]
+en = "object storage"
+vi = "lưu trữ đối tượng"
+
+[[term]]
+en = "block device"
+vi = "thiết bị khối"
+
+[[term]]
+en = "disaggregated"
+vi = "tách rời"
+
+[[term]]
+en = "multitenant"
+vi = "multitenant"
+keep = true
+note = "Quen dùng nguyên gốc ('đa người thuê' ít gặp)."
+
+[[term]]
+en = "metered billing"
+vi = "tính phí theo mức sử dụng"
+
+[[term]]
+en = "quota"
+vi = "hạn mức"
+
+[[term]]
+en = "distributed system"
+vi = "hệ thống phân tán"
+
+[[term]]
+en = "observability"
+vi = "observability"
+keep = true
+note = "Quen dùng nguyên gốc; 'khả năng quan sát' là phương án thay thế."
+
+[[term]]
+en = "tracing"
+vi = "tracing"
+keep = true
+note = "Quen dùng nguyên gốc trong ngữ cảnh observability."
+
+[[term]]
+en = "microservices"
+vi = "microservices"
+keep = true
+note = "Tên kiến trúc, giữ nguyên."
+
+[[term]]
+en = "orchestration"
+vi = "điều phối"
+
+[[term]]
+en = "supercomputing"
+vi = "siêu tính toán"
+
+[[term]]
+en = "right to be forgotten"
+vi = "quyền được lãng quên"
+
+[[term]]
+en = "data minimization"
+vi = "tối thiểu hóa dữ liệu"
+
+[[term]]
+en = "reliable"
+vi = "đáng tin cậy"
+
+[[term]]
+en = "maximum throughput"
+vi = "thông lượng tối đa"
+
+[[term]]
+en = "queueing"
+vi = "xếp hàng"
+
+[[term]]
+en = "circuit breaker"
+vi = "circuit breaker"
+keep = true
+note = "Tên mẫu thiết kế, giữ nguyên."
+
+[[term]]
+en = "token bucket"
+vi = "token bucket"
+keep = true
+note = "Tên thuật toán, giữ nguyên."
+
+[[term]]
+en = "response time"
+vi = "thời gian phản hồi"
+
+[[term]]
+en = "service time"
+vi = "thời gian phục vụ"
+
+[[term]]
+en = "queueing delay"
+vi = "độ trễ xếp hàng"
+
+[[term]]
+en = "latency"
+vi = "độ trễ"
+
+[[term]]
+en = "network latency"
+vi = "độ trễ mạng"
+
+[[term]]
+en = "network delay"
+vi = "độ trễ mạng"
+
+[[term]]
+en = "outlier"
+vi = "giá trị ngoại lai"
+
+[[term]]
+en = "mean"
+vi = "trung bình"
+
+[[term]]
+en = "arithmetic mean"
+vi = "trung bình cộng"
+
+[[term]]
+en = "median"
+vi = "trung vị"
+
+[[term]]
+en = "sociotechnical system"
+vi = "hệ thống xã hội–kỹ thuật"
+
+[[term]]
+en = "linear scalability"
+vi = "khả năng mở rộng tuyến tính"
+
+[[term]]
+en = "design pattern"
+vi = "mẫu thiết kế"
+
+[[term]]
+en = "relational model"
+vi = "mô hình quan hệ"
+
+[[term]]
+en = "document model"
+vi = "mô hình tài liệu"
+
+[[term]]
+en = "graph data model"
+vi = "mô hình dữ liệu đồ thị"
+
+[[term]]
+en = "event sourcing"
+vi = "event sourcing"
+keep = true
+note = "Tên mẫu kiến trúc, giữ nguyên."
+
+[[term]]
+en = "dataframe"
+vi = "dataframe"
+keep = true
+note = "Quen dùng nguyên gốc (pandas, Spark)."
+
+[[term]]
+en = "algorithm"
+vi = "thuật toán"
+
+[[term]]
+en = "network model"
+vi = "mô hình mạng"
+
+[[term]]
+en = "hierarchical model"
+vi = "mô hình phân cấp"
+
+[[term]]
+en = "impedance mismatch"
+vi = "impedance mismatch"
+keep = true
+note = "Thuật ngữ gốc từ điện học, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "N+1 query problem"
+vi = "vấn đề truy vấn N+1"
+
+[[term]]
+en = "one-to-many relationship"
+vi = "quan hệ một-nhiều"
+
+[[term]]
+en = "one-to-few"
+vi = "một-vài"
+
+[[term]]
+en = "normalization"
+vi = "chuẩn hóa"
+
+[[term]]
+en = "denormalized"
+vi = "phi chuẩn hóa"
+
+[[term]]
+en = "many-to-one"
+vi = "nhiều-một"
+
+[[term]]
+en = "many-to-many"
+vi = "nhiều-nhiều"
+
+[[term]]
+en = "star schema"
+vi = "star schema"
+keep = true
+note = "Giữ nguyên theo 'schema'."
+
+[[term]]
+en = "snowflake schema"
+vi = "snowflake schema"
+keep = true
+note = "Giữ nguyên theo 'schema'."
+
+[[term]]
+en = "dimensional modeling"
+vi = "mô hình hóa theo chiều"
+
+[[term]]
+en = "dimension table"
+vi = "bảng chiều"
+
+[[term]]
+en = "shredding"
+vi = "shredding"
+keep = true
+note = "Chưa có bản dịch phổ biến."
+
+[[term]]
+en = "migration"
+vi = "migration"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DB ('di trú dữ liệu' ít dùng)."
+
+[[term]]
+en = "storage locality"
+vi = "tính cục bộ của lưu trữ"
+
+[[term]]
+en = "multi-table index cluster table"
+vi = "multi-table index cluster table"
+keep = true
+note = "Tên tính năng của Oracle, giữ nguyên."
+
+[[term]]
+en = "wide-column"
+vi = "wide-column"
+keep = true
+note = "Tên loại cơ sở dữ liệu, giữ nguyên."
+
+[[term]]
+en = "column family"
+vi = "column family"
+keep = true
+note = "Tên khái niệm của Bigtable/HBase/Cassandra, giữ nguyên."
+
+[[term]]
+en = "nonsimple domain"
+vi = "miền không đơn giản"
+
+[[term]]
+en = "adjacency list"
+vi = "danh sách kề"
+
+[[term]]
+en = "adjacency matrix"
+vi = "ma trận kề"
+
+[[term]]
+en = "homogeneous"
+vi = "đồng nhất"
+
+[[term]]
+en = "property graph"
+vi = "property graph"
+keep = true
+note = "Tên mô hình dữ liệu; 'đồ thị thuộc tính' ít dùng."
+
+[[term]]
+en = "triple store"
+vi = "triple store"
+keep = true
+note = "Tên loại cơ sở dữ liệu, giữ nguyên."
+
+[[term]]
+en = "traverse"
+vi = "duyệt"
+
+[[term]]
+en = "hypergraph"
+vi = "siêu đồ thị"
+
+[[term]]
+en = "hierarchical query"
+vi = "truy vấn phân cấp"
+
+[[term]]
+en = "N3"
+vi = "N3"
+keep = true
+abbr = "Notation3"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "Semantic Web"
+vi = "Semantic Web"
+keep = true
+note = "Tên riêng của sáng kiến W3C, giữ nguyên."
+
+[[term]]
+en = "linked data"
+vi = "linked data"
+keep = true
+note = "Quen dùng nguyên gốc."
+
+[[term]]
+en = "ontology"
+vi = "ontology"
+keep = true
+note = "Quen dùng nguyên gốc."
+
+[[term]]
+en = "fact"
+vi = "dữ kiện"
+ctx = "Datalog"
+
+[[term]]
+en = "rule"
+vi = "quy tắc"
+ctx = "Datalog"
+
+[[term]]
+en = "event log"
+vi = "event log"
+keep = true
+note = "Nhất quán với 'log' giữ nguyên."
+
+[[term]]
+en = "immutable"
+vi = "bất biến"
+
+[[term]]
+en = "command"
+vi = "command"
+keep = true
+note = "Giữ nguyên trong ngữ cảnh event sourcing/CQRS."
+
+[[term]]
+en = "sparse"
+vi = "thưa"
+
+[[term]]
+en = "one-hot encoding"
+vi = "mã hóa one-hot"
+
+[[term]]
+en = "array database"
+vi = "cơ sở dữ liệu mảng"
+
+[[term]]
+en = "time-series data"
+vi = "dữ liệu chuỗi thời gian"
+
+[[term]]
+en = "sequence-similarity search"
+vi = "tìm kiếm tương đồng chuỗi"
+
+[[term]]
+en = "ledger"
+vi = "sổ cái"
+
+[[term]]
+en = "storage engine"
+vi = "storage engine"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DB."
+
+[[term]]
+en = "log-structured"
+vi = "log-structured"
+keep = true
+note = "Nhất quán với 'log' giữ nguyên."
+
+[[term]]
+en = "key-value store"
+vi = "key-value store"
+keep = true
+note = "Quen dùng nguyên gốc."
+
+[[term]]
+en = "block"
+vi = "khối"
+
+[[term]]
+en = "sparse index"
+vi = "chỉ mục thưa"
+show_en = true
+
+[[term]]
+en = "memtable"
+vi = "memtable"
+keep = true
+note = "Tên thành phần của LSM-tree, giữ nguyên."
+
+[[term]]
+en = "segment"
+vi = "segment"
+keep = true
+note = "Quen dùng nguyên gốc trong ngữ cảnh lưu trữ log."
+
+[[term]]
+en = "tombstone"
+vi = "tombstone"
+keep = true
+note = "Tên cơ chế đánh dấu xóa, giữ nguyên."
+
+[[term]]
+en = "Bloom filter"
+vi = "Bloom filter"
+keep = true
+note = "Tên cấu trúc dữ liệu (theo tên người), giữ nguyên."
+
+[[term]]
+en = "false positive"
+vi = "dương tính giả"
+
+[[term]]
+en = "embedded"
+vi = "nhúng"
+
+[[term]]
+en = "root"
+vi = "gốc"
+
+[[term]]
+en = "leaf page"
+vi = "trang lá"
+
+[[term]]
+en = "branching factor"
+vi = "hệ số phân nhánh"
+
+[[term]]
+en = "balanced"
+vi = "cân bằng"
+
+[[term]]
+en = "torn page"
+vi = "torn page"
+keep = true
+note = "Chưa có bản dịch phổ biến."
+
+[[term]]
+en = "journaling"
+vi = "journaling"
+keep = true
+note = "Quen dùng nguyên gốc ('ghi nhật ký' dễ lẫn với log)."
+
+[[term]]
+en = "random write"
+vi = "ghi ngẫu nhiên"
+
+[[term]]
+en = "sequential write"
+vi = "ghi tuần tự"
+
+[[term]]
+en = "write amplification"
+vi = "khuếch đại ghi"
+
+[[term]]
+en = "fragmented"
+vi = "phân mảnh"
+
+[[term]]
+en = "clustered index"
+vi = "chỉ mục cụm"
+show_en = true
+
+[[term]]
+en = "heap file"
+vi = "heap file"
+keep = true
+note = "Chưa có bản dịch phổ biến."
+
+[[term]]
+en = "covering index"
+vi = "chỉ mục bao phủ"
+show_en = true
+
+[[term]]
+en = "index with included columns"
+vi = "chỉ mục có cột bao gồm"
+show_en = true
+
+[[term]]
+en = "in-memory databases"
+vi = "cơ sở dữ liệu trong bộ nhớ"
+
+[[term]]
+en = "drill-down"
+vi = "drill-down"
+keep = true
+note = "Quen dùng nguyên gốc trong BI/OLAP."
+
+[[term]]
+en = "slicing and dicing"
+vi = "slicing and dicing"
+keep = true
+note = "Quen dùng nguyên gốc trong BI/OLAP."
+
+[[term]]
+en = "row-oriented"
+vi = "hướng hàng"
+
+[[term]]
+en = "striping"
+vi = "striping"
+keep = true
+note = "Chưa có bản dịch phổ biến."
+
+[[term]]
+en = "bitmap encoding"
+vi = "mã hóa bitmap"
+
+[[term]]
+en = "query plan"
+vi = "kế hoạch truy vấn"
+
+[[term]]
+en = "operator"
+vi = "toán tử"
+
+[[term]]
+en = "materialized view"
+vi = "khung nhìn vật chất hóa"
+
+[[term]]
+en = "materialized aggregate"
+vi = "tổng hợp vật chất hóa"
+
+[[term]]
+en = "concatenated index"
+vi = "chỉ mục ghép"
+show_en = true
+
+[[term]]
+en = "multidimensional index"
+vi = "chỉ mục đa chiều"
+show_en = true
+
+[[term]]
+en = "inverted index"
+vi = "chỉ mục đảo ngược"
+show_en = true
+
+[[term]]
+en = "postings list"
+vi = "postings list"
+keep = true
+note = "Thuật ngữ của công cụ tìm kiếm, giữ nguyên."
+
+[[term]]
+en = "trie"
+vi = "trie"
+keep = true
+note = "Tên cấu trúc dữ liệu, giữ nguyên."
+
+[[term]]
+en = "Levenshtein automaton"
+vi = "Levenshtein automaton"
+keep = true
+note = "Tên thuật toán (theo tên người), giữ nguyên."
+
+[[term]]
+en = "vector embedding"
+vi = "vector embedding"
+keep = true
+note = "Quen dùng nguyên gốc trong giới ML/DEV."
+
+[[term]]
+en = "multimodal"
+vi = "đa phương thức"
+
+[[term]]
+en = "centroid"
+vi = "tâm cụm"
+
+[[term]]
+en = "evolvability"
+vi = "khả năng tiến hóa"
+
+[[term]]
+en = "zero-copy"
+vi = "zero-copy"
+keep = true
+note = "Tên kỹ thuật, giữ nguyên."
+
+[[term]]
+en = "field tag"
+vi = "field tag"
+keep = true
+note = "Thuật ngữ của Protocol Buffers/Thrift, giữ nguyên."
+
+[[term]]
+en = "schema evolution"
+vi = "tiến hóa schema"
+
+[[term]]
+en = "writer’s schema"
+vi = "schema của bên ghi"
+
+[[term]]
+en = "reader’s schema"
+vi = "schema của bên đọc"
+
+[[term]]
+en = "union type"
+vi = "union type"
+keep = true
+note = "Tên kiểu dữ liệu, giữ nguyên."
+
+[[term]]
+en = "client"
+vi = "client"
+keep = true
+note = "Quen dùng nguyên gốc cùng 'server'."
+
+[[term]]
+en = "server"
+vi = "server"
+keep = true
+note = "Quen dùng nguyên gốc cùng 'client'."
+
+[[term]]
+en = "service"
+vi = "dịch vụ"
+
+[[term]]
+en = "Web service"
+vi = "dịch vụ Web"
+
+[[term]]
+en = "idempotence"
+vi = "idempotence"
+keep = true
+note = "Cùng gốc với 'idempotent', giữ nguyên."
+
+[[term]]
+en = "service discovery"
+vi = "service discovery"
+keep = true
+note = "Quen dùng nguyên gốc ('khám phá dịch vụ' ít dùng)."
+
+[[term]]
+en = "load balancing"
+vi = "cân bằng tải"
+
+[[term]]
+en = "hardware load balancer"
+vi = "bộ cân bằng tải phần cứng"
+
+[[term]]
+en = "software load balancer"
+vi = "bộ cân bằng tải phần mềm"
+
+[[term]]
+en = "service discovery system"
+vi = "hệ thống service discovery"
+
+[[term]]
+en = "service mesh"
+vi = "service mesh"
+keep = true
+note = "Tên kiến trúc, giữ nguyên."
+
+[[term]]
+en = "workflow"
+vi = "workflow"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "task"
+vi = "tác vụ"
+
+[[term]]
+en = "activity"
+vi = "activity"
+keep = true
+note = "Khái niệm của Temporal/Azure Durable Functions; 'hoạt động' quá chung chung."
+
+[[term]]
+en = "durable function"
+vi = "durable function"
+keep = true
+note = "Tên tính năng của Azure Durable Functions, giữ nguyên."
+
+[[term]]
+en = "workflow engine"
+vi = "workflow engine"
+keep = true
+note = "Giữ nguyên theo 'workflow'."
+
+[[term]]
+en = "durable execution"
+vi = "durable execution"
+keep = true
+note = "Tên khái niệm, giữ nguyên."
+
+[[term]]
+en = "exactly-once semantics"
+vi = "ngữ nghĩa exactly-once"
+
+[[term]]
+en = "event-driven architecture"
+vi = "kiến trúc hướng sự kiện"
+
+[[term]]
+en = "event"
+vi = "sự kiện"
+
+[[term]]
+en = "message"
+vi = "message"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "message broker"
+vi = "message broker"
+keep = true
+note = "Quen dùng nguyên gốc cùng 'broker'."
+
+[[term]]
+en = "event broker"
+vi = "event broker"
+keep = true
+note = "Giữ nguyên theo 'message broker'."
+
+[[term]]
+en = "message queue"
+vi = "message queue"
+keep = true
+note = "Quen dùng nguyên gốc."
+
+[[term]]
+en = "message-oriented middleware"
+vi = "middleware hướng message"
+
+[[term]]
+en = "queue"
+vi = "hàng đợi"
+
+[[term]]
+en = "consumer"
+vi = "consumer"
+keep = true
+note = "Quen dùng nguyên gốc cùng 'producer'."
+
+[[term]]
+en = "topic"
+vi = "topic"
+keep = true
+note = "Quen dùng nguyên gốc trong ngữ cảnh message broker."
+
+[[term]]
+en = "subscriber"
+vi = "subscriber"
+keep = true
+note = "Quen dùng nguyên gốc cùng 'publisher'."
+
+[[term]]
+en = "actor model"
+vi = "mô hình actor"
+
+[[term]]
+en = "distributed actor framework"
+vi = "framework actor phân tán"
+
+[[term]]
+en = "single-leader replication"
+vi = "sao chép đơn leader"
+show_en = true
+
+[[term]]
+en = "multi-leader replication"
+vi = "sao chép đa leader"
+show_en = true
+
+[[term]]
+en = "leaderless replication"
+vi = "sao chép không leader"
+show_en = true
+
+[[term]]
+en = "synchronous replication"
+vi = "sao chép đồng bộ"
+show_en = true
+
+[[term]]
+en = "asynchronous replication"
+vi = "sao chép bất đồng bộ"
+show_en = true
+
+[[term]]
+en = "eventual consistency"
+vi = "nhất quán cuối cùng"
+
+[[term]]
+en = "read-your-writes"
+vi = "read-your-writes"
+keep = true
+note = "Tên đảm bảo nhất quán, giữ nguyên."
+
+[[term]]
+en = "monotonic reads"
+vi = "monotonic reads"
+keep = true
+note = "Tên đảm bảo nhất quán, giữ nguyên."
+
+[[term]]
+en = "replica"
+vi = "replica"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DB/DEV."
+
+[[term]]
+en = "leader-based replication"
+vi = "sao chép dựa trên leader"
+show_en = true
+
+[[term]]
+en = "primary-backup"
+vi = "primary-backup"
+keep = true
+note = "Tên mô hình sao chép, giữ nguyên."
+
+[[term]]
+en = "active/passive"
+vi = "active/passive"
+keep = true
+note = "Tên mô hình sao chép, giữ nguyên."
+
+[[term]]
+en = "replication log"
+vi = "replication log"
+keep = true
+note = "Giữ nguyên theo 'log'."
+
+[[term]]
+en = "change stream"
+vi = "change stream"
+keep = true
+note = "Quen dùng nguyên gốc."
+
+[[term]]
+en = "semi-synchronous"
+vi = "bán đồng bộ"
+
+[[term]]
+en = "binlog coordinates"
+vi = "binlog coordinates"
+keep = true
+note = "Thuật ngữ của MySQL, giữ nguyên."
+
+[[term]]
+en = "conditional write"
+vi = "ghi có điều kiện"
+
+[[term]]
+en = "tiered storage"
+vi = "lưu trữ phân tầng"
+
+[[term]]
+en = "state machine replication"
+vi = "sao chép máy trạng thái"
+show_en = true
+
+[[term]]
+en = "logical log"
+vi = "logical log"
+keep = true
+note = "Giữ nguyên theo 'log'."
+
+[[term]]
+en = "read-scaling"
+vi = "mở rộng đọc"
+
+[[term]]
+en = "replication lag"
+vi = "replication lag"
+keep = true
+note = "Rất quen thuộc với dân DEV ở dạng tiếng Anh."
+
+[[term]]
+en = "read-after-write consistency"
+vi = "nhất quán read-after-write"
+
+[[term]]
+en = "read-your-writes consistency"
+vi = "nhất quán read-your-writes"
+
+[[term]]
+en = "consistent prefix reads"
+vi = "consistent prefix reads"
+keep = true
+note = "Tên đảm bảo nhất quán, giữ nguyên."
+
+[[term]]
+en = "active/active"
+vi = "active/active"
+keep = true
+note = "Tên mô hình sao chép, giữ nguyên."
+
+[[term]]
+en = "bidirectional replication"
+vi = "sao chép hai chiều"
+show_en = true
+
+[[term]]
+en = "geographically distributed"
+vi = "phân tán theo địa lý"
+
+[[term]]
+en = "geo-distributed"
+vi = "geo-distributed"
+keep = true
+note = "Quen dùng nguyên gốc."
+
+[[term]]
+en = "geo-replicated"
+vi = "geo-replicated"
+keep = true
+note = "Quen dùng nguyên gốc."
+
+[[term]]
+en = "replication topology"
+vi = "topology sao chép"
+show_en = true
+
+[[term]]
+en = "all-to-all"
+vi = "all-to-all"
+keep = true
+note = "Tên topology, giữ nguyên."
+
+[[term]]
+en = "circular topology"
+vi = "topology vòng"
+
+[[term]]
+en = "star topology"
+vi = "topology hình sao"
+
+[[term]]
+en = "sync engine"
+vi = "sync engine"
+keep = true
+note = "Chưa có bản dịch phổ biến."
+
+[[term]]
+en = "offline-first"
+vi = "offline-first"
+keep = true
+note = "Tên triết lý thiết kế, giữ nguyên."
+
+[[term]]
+en = "local-first software"
+vi = "phần mềm local-first"
+
+[[term]]
+en = "reactive programming"
+vi = "reactive programming"
+keep = true
+note = "Quen dùng nguyên gốc ('lập trình phản ứng' ít dùng)."
+
+[[term]]
+en = "concurrent writes"
+vi = "ghi đồng thời"
+
+[[term]]
+en = "logical clock"
+vi = "đồng hồ logic"
+
+[[term]]
+en = "siblings"
+vi = "siblings"
+keep = true
+note = "Khái niệm của Riak, giữ nguyên."
+
+[[term]]
+en = "converge"
+vi = "hội tụ"
+
+[[term]]
+en = "Dynamo-style"
+vi = "kiểu Dynamo"
+
+[[term]]
+en = "coordinator"
+vi = "coordinator"
+keep = true
+note = "Quen dùng nguyên gốc."
+
+[[term]]
+en = "anti-entropy process"
+vi = "quá trình anti-entropy"
+
+[[term]]
+en = "quorum read"
+vi = "đọc quorum"
+
+[[term]]
+en = "quorum write"
+vi = "ghi quorum"
+
+[[term]]
+en = "request hedging"
+vi = "request hedging"
+keep = true
+note = "Chưa có bản dịch phổ biến."
+
+[[term]]
+en = "gray failure"
+vi = "gray failure"
+keep = true
+note = "Chưa có bản dịch phổ biến."
+
+[[term]]
+en = "happens before"
+vi = "xảy ra trước"
+
+[[term]]
+en = "concurrent"
+vi = "đồng thời"
+
+[[term]]
+en = "dotted version vector"
+vi = "dotted version vector"
+keep = true
+note = "Tên cấu trúc dữ liệu, giữ nguyên."
+
+[[term]]
+en = "vector clock"
+vi = "vector clock"
+keep = true
+note = "Tên cấu trúc dữ liệu, giữ nguyên."
+
+[[term]]
+en = "scalability"
+vi = "khả năng mở rộng"
+
+[[term]]
+en = "partition key"
+vi = "partition key"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "distributed transaction"
+vi = "giao dịch phân tán"
+
+[[term]]
+en = "cell-based architecture"
+vi = "cell-based architecture"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "cell"
+vi = "cell"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "fault isolation"
+vi = "cô lập lỗi"
+
+[[term]]
+en = "hot shard"
+vi = "hot shard"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "hot spot"
+vi = "hot spot"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "hot key"
+vi = "hot key"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "key"
+vi = "khóa"
+
+[[term]]
+en = "consistent hashing"
+vi = "consistent hashing"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "jump consistent hash"
+vi = "jump consistent hash"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "heat management"
+vi = "heat management"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "adaptive capacity"
+vi = "adaptive capacity"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "request routing"
+vi = "định tuyến yêu cầu"
+
+[[term]]
+en = "config server"
+vi = "config server"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "gossip protocol"
+vi = "giao thức gossip"
+
+[[term]]
+en = "local index"
+vi = "chỉ mục cục bộ"
+show_en = true
+
+[[term]]
+en = "document-partitioned index"
+vi = "chỉ mục phân vùng theo tài liệu"
+show_en = true
+
+[[term]]
+en = "global index"
+vi = "chỉ mục toàn cục"
+show_en = true
+
+[[term]]
+en = "term-partitioned"
+vi = "phân vùng theo term"
+
+[[term]]
+en = "term"
+vi = "term"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "programming model"
+vi = "mô hình lập trình"
+
+[[term]]
+en = "concurrency control"
+vi = "kiểm soát đồng thời"
+
+[[term]]
+en = "read committed"
+vi = "read committed"
+keep = true
+note = "Tên mức cô lập/hiện tượng bất thường, giữ nguyên."
+
+[[term]]
+en = "snapshot isolation"
+vi = "snapshot isolation"
+keep = true
+note = "Tên mức cô lập/hiện tượng bất thường, giữ nguyên."
+
+[[term]]
+en = "abortability"
+vi = "khả năng hủy bỏ"
+
+[[term]]
+en = "constraint"
+vi = "ràng buộc"
+
+[[term]]
+en = "multi-object transaction"
+vi = "giao dịch đa đối tượng"
+
+[[term]]
+en = "atomic increment"
+vi = "tăng nguyên tử"
+
+[[term]]
+en = "isolated increment"
+vi = "tăng cô lập"
+
+[[term]]
+en = "serializable increment"
+vi = "tăng serializable"
+
+[[term]]
+en = "transaction isolation"
+vi = "cô lập giao dịch"
+
+[[term]]
+en = "read uncommitted"
+vi = "read uncommitted"
+keep = true
+note = "Tên mức cô lập/hiện tượng bất thường, giữ nguyên."
+
+[[term]]
+en = "cascading abort"
+vi = "hủy bỏ dây chuyền"
+
+[[term]]
+en = "read skew"
+vi = "read skew"
+keep = true
+note = "Tên mức cô lập/hiện tượng bất thường, giữ nguyên."
+
+[[term]]
+en = "nonrepeatable read"
+vi = "nonrepeatable read"
+keep = true
+note = "Tên mức cô lập/hiện tượng bất thường, giữ nguyên."
+
+[[term]]
+en = "lost update"
+vi = "lost update"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "read-modify-write cycle"
+vi = "chu trình read-modify-write"
+
+[[term]]
+en = "atomic write operation"
+vi = "thao tác ghi nguyên tử"
+
+[[term]]
+en = "exclusive lock"
+vi = "khóa độc quyền"
+
+[[term]]
+en = "explicit locking"
+vi = "khóa tường minh"
+
+[[term]]
+en = "compare-and-set"
+vi = "compare-and-set"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "optimistic locking"
+vi = "khóa lạc quan"
+
+[[term]]
+en = "write skew"
+vi = "write skew"
+keep = true
+note = "Tên mức cô lập/hiện tượng bất thường, giữ nguyên."
+
+[[term]]
+en = "phantom"
+vi = "phantom"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "materializing conflicts"
+vi = "vật chất hóa xung đột"
+
+[[term]]
+en = "shared mode"
+vi = "chế độ chia sẻ"
+
+[[term]]
+en = "exclusive mode"
+vi = "chế độ độc quyền"
+
+[[term]]
+en = "multi-reader single-writer"
+vi = "multi-reader single-writer"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "deadlock"
+vi = "deadlock"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "predicate lock"
+vi = "khóa vị từ"
+
+[[term]]
+en = "pessimistic"
+vi = "bi quan"
+
+[[term]]
+en = "mutual exclusion"
+vi = "loại trừ lẫn nhau"
+
+[[term]]
+en = "optimistic"
+vi = "lạc quan"
+
+[[term]]
+en = "atomic commitment"
+vi = "commit nguyên tử"
+show_en = true
+
+[[term]]
+en = "participant"
+vi = "participant"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "prepare"
+vi = "prepare"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "commit point"
+vi = "điểm commit"
+
+[[term]]
+en = "in doubt"
+vi = "in doubt"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "uncertain"
+vi = "uncertain"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "blocking"
+vi = "chặn"
+
+[[term]]
+en = "nonblocking"
+vi = "không chặn"
+
+[[term]]
+en = "orphaned"
+vi = "mồ côi"
+
+[[term]]
+en = "heuristic decision"
+vi = "quyết định heuristic"
+
+[[term]]
+en = "partial failure"
+vi = "hỏng hóc từng phần"
+
+[[term]]
+en = "nondeterministic"
+vi = "phi tất định"
+
+[[term]]
+en = "asynchronous packet network"
+vi = "mạng gói bất đồng bộ"
+
+[[term]]
+en = "connection"
+vi = "kết nối"
+
+[[term]]
+en = "congestion control"
+vi = "kiểm soát tắc nghẽn"
+
+[[term]]
+en = "network partition"
+vi = "network partition"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "netsplit"
+vi = "netsplit"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "network congestion"
+vi = "tắc nghẽn mạng"
+
+[[term]]
+en = "saturation"
+vi = "bão hòa"
+
+[[term]]
+en = "noisy neighbor"
+vi = "noisy neighbor"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "circuit"
+vi = "circuit"
+keep = true
+note = "Giữ nguyên: 'mạch' (chuyển mạch) lạ với dân DEV; chỉ kênh liên lạc chuyên dụng trong mạng chuyển mạch."
+
+[[term]]
+en = "bounded delay"
+vi = "độ trễ có giới hạn"
+
+[[term]]
+en = "bursty traffic"
+vi = "lưu lượng đột biến"
+
+[[term]]
+en = "time-of-day clock"
+vi = "đồng hồ giờ trong ngày"
+
+[[term]]
+en = "monotonic clock"
+vi = "đồng hồ đơn điệu"
+
+[[term]]
+en = "epoch"
+vi = "epoch"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "slewing"
+vi = "slewing"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "smearing"
+vi = "smearing"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "physical clock"
+vi = "đồng hồ vật lý"
+
+[[term]]
+en = "lease"
+vi = "lease"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "live migration"
+vi = "live migration"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "steal time"
+vi = "steal time"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "thrashing"
+vi = "thrashing"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "preempt"
+vi = "preempt"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "deadline"
+vi = "hạn chót"
+
+[[term]]
+en = "hard real-time"
+vi = "thời gian thực cứng"
+
+[[term]]
+en = "zombie"
+vi = "zombie"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "fencing"
+vi = "fencing"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "fencing token"
+vi = "fencing token"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "sequencer"
+vi = "sequencer"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "epoch number"
+vi = "số epoch"
+
+[[term]]
+en = "ballot number"
+vi = "số ballot"
+
+[[term]]
+en = "term number"
+vi = "số term"
+
+[[term]]
+en = "conditional header"
+vi = "header có điều kiện"
+
+[[term]]
+en = "request precondition"
+vi = "điều kiện tiên quyết của yêu cầu"
+
+[[term]]
+en = "Byzantine Generals Problem"
+vi = "bài toán các vị tướng Byzantine"
+
+[[term]]
+en = "Two Generals Problem"
+vi = "bài toán hai vị tướng"
+
+[[term]]
+en = "system model"
+vi = "mô hình hệ thống"
+
+[[term]]
+en = "limping node"
+vi = "limping node"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "fail-slow"
+vi = "fail-slow"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "safety"
+vi = "safety"
+keep = true
+note = "Cặp thuật ngữ chuẩn của hệ phân tán, giữ nguyên."
+
+[[term]]
+en = "liveness"
+vi = "liveness"
+keep = true
+note = "Cặp thuật ngữ chuẩn của hệ phân tán, giữ nguyên."
+
+[[term]]
+en = "model checker"
+vi = "model checker"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "fault injection"
+vi = "chèn lỗi"
+
+[[term]]
+en = "chaos engineering"
+vi = "chaos engineering"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "linearizability"
+vi = "linearizability"
+keep = true
+note = "Tên khái niệm/giao thức, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "recency guarantee"
+vi = "đảm bảo độ mới"
+
+[[term]]
+en = "register"
+vi = "register"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "strict serializability"
+vi = "strict serializability"
+keep = true
+note = "Tên khái niệm/giao thức, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "single-value consensus"
+vi = "đồng thuận đơn giá trị"
+
+[[term]]
+en = "append-only log"
+vi = "append-only log"
+keep = true
+note = "Tên khái niệm/giao thức, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "total order broadcast"
+vi = "total order broadcast"
+keep = true
+note = "Tên khái niệm/giao thức, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "log entry"
+vi = "log entry"
+keep = true
+note = "Tên khái niệm/giao thức, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "shared log"
+vi = "shared log"
+keep = true
+note = "Tên khái niệm/giao thức, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "atomic broadcast"
+vi = "atomic broadcast"
+keep = true
+note = "Tên khái niệm/giao thức, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "total order multicast"
+vi = "total order multicast"
+keep = true
+note = "Tên khái niệm/giao thức, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "consensus number"
+vi = "consensus number"
+keep = true
+note = "Tên khái niệm/giao thức, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "coordination service"
+vi = "dịch vụ điều phối"
+
+[[term]]
+en = "request"
+vi = "yêu cầu"
+
+[[term]]
+en = "query"
+vi = "truy vấn"
+
+[[term]]
+en = "response"
+vi = "phản hồi"
+
+[[term]]
+en = "result"
+vi = "kết quả"
+
+[[term]]
+en = "online system"
+vi = "hệ thống trực tuyến"
+
+[[term]]
+en = "batch processing"
+vi = "xử lý theo lô"
+
+[[term]]
+en = "offline system"
+vi = "hệ thống ngoại tuyến"
+
+[[term]]
+en = "derived"
+vi = "dẫn xuất"
+
+[[term]]
+en = "time travel"
+vi = "time travel"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "human fault tolerance"
+vi = "chịu lỗi do con người"
+
+[[term]]
+en = "minimizing irreversibility"
+vi = "giảm thiểu thao tác không thể đảo ngược"
+
+[[term]]
+en = "stream processing"
+vi = "xử lý luồng"
+
+[[term]]
+en = "distributed processing framework"
+vi = "framework xử lý phân tán"
+
+[[term]]
+en = "distributed filesystem"
+vi = "hệ thống tệp phân tán"
+
+[[term]]
+en = "data node"
+vi = "data node"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "erasure coding"
+vi = "erasure coding"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "starvation"
+vi = "starvation"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "record"
+vi = "bản ghi"
+
+[[term]]
+en = "dataflow engine"
+vi = "dataflow engine"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "grouping"
+vi = "gom nhóm"
+
+[[term]]
+en = "activity event"
+vi = "sự kiện hoạt động"
+
+[[term]]
+en = "clickstream data"
+vi = "dữ liệu clickstream"
+
+[[term]]
+en = "secondary sort"
+vi = "sắp xếp phụ"
+
+[[term]]
+en = "pre-aggregation query"
+vi = "truy vấn tổng hợp trước"
+
+[[term]]
+en = "model training"
+vi = "huấn luyện mô hình"
+
+[[term]]
+en = "batch inference"
+vi = "suy luận theo lô"
+
+[[term]]
+en = "publish/subscribe"
+vi = "publish/subscribe"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "dual write"
+vi = "dual write"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "source connector"
+vi = "source connector"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "window"
+vi = "cửa sổ"
+
+[[term]]
+en = "event time"
+vi = "thời gian sự kiện"
+
+[[term]]
+en = "correction"
+vi = "điều chỉnh"
+
+[[term]]
+en = "stream-stream join"
+vi = "phép nối luồng–luồng"
+
+[[term]]
+en = "stream-table join"
+vi = "phép nối luồng–bảng"
+
+[[term]]
+en = "table-table join"
+vi = "phép nối bảng–bảng"
+
+[[term]]
+en = "state"
+vi = "trạng thái"
+
+[[term]]
+en = "hash join"
+vi = "hash join"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "scalable"
+vi = "có khả năng mở rộng"
+
+[[term]]
+en = "maintainable"
+vi = "dễ bảo trì"
+
+[[term]]
+en = "determinism"
+vi = "tính tất định"
+
+[[term]]
+en = "pure function"
+vi = "hàm thuần túy"
+
+[[term]]
+en = "side effect"
+vi = "tác dụng phụ"
+
+[[term]]
+en = "federated database"
+vi = "cơ sở dữ liệu liên hợp"
+
+[[term]]
+en = "polystore"
+vi = "polystore"
+keep = true
+note = "Chưa có bản dịch phổ biến."
+
+[[term]]
+en = "foreign data wrapper"
+vi = "foreign data wrapper"
+keep = true
+note = "Tên tính năng của PostgreSQL, giữ nguyên."
+
+[[term]]
+en = "loose coupling"
+vi = "ghép nối lỏng"
+
+[[term]]
+en = "write path"
+vi = "write path"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "read path"
+vi = "read path"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "end-to-end argument"
+vi = "nguyên lý đầu cuối"
+
+[[term]]
+en = "consistency"
+vi = "nhất quán"
+
+[[term]]
+en = "exactly-once"
+vi = "exactly-once"
+keep = true
+note = "Giữ nguyên theo 'exactly-once semantics'."
+
+[[term]]
+en = "effectively-once"
+vi = "effectively-once"
+keep = true
+note = "Giữ nguyên theo 'exactly-once'."
+
+[[term]]
+en = "compensating transaction"
+vi = "giao dịch bù trừ"
+
+[[term]]
+en = "coordination-avoiding"
+vi = "tránh điều phối"
+
+[[term]]
+en = "auditing"
+vi = "kiểm toán"
+
+[[term]]
+en = "self-validating"
+vi = "tự xác thực"
+
+[[term]]
+en = "self-auditing"
+vi = "tự kiểm toán"
+
+[[term]]
+en = "data provenance"
+vi = "nguồn gốc dữ liệu"
+
+[[term]]
+en = "predictive analytics"
+vi = "phân tích dự đoán"
+
+[[term]]
+en = "algorithmic prison"
+vi = "nhà tù thuật toán"
+
+[[term]]
+en = "anti-discrimination law"
+vi = "luật chống phân biệt đối xử"
+
+[[term]]
+en = "protected characteristic"
+vi = "đặc điểm được bảo vệ"
+
+[[term]]
+en = "responsibility"
+vi = "trách nhiệm"
+
+[[term]]
+en = "accountability"
+vi = "trách nhiệm giải trình"
+
+[[term]]
+en = "feedback loop"
+vi = "vòng phản hồi"
+
+[[term]]
+en = "systems thinking"
+vi = "tư duy hệ thống"
+
+[[term]]
+en = "surveillance"
+vi = "giám sát"
+
+[[term]]
+en = "consent"
+vi = "sự đồng ý"
+
+[[term]]
+en = "legitimate interest"
+vi = "lợi ích hợp pháp"
+
+[[term]]
+en = "privacy"
+vi = "quyền riêng tư"
+
+[[term]]
+en = "functional requirements"
+vi = "yêu cầu chức năng"
+
+[[term]]
+en = "nonfunctional requirements"
+vi = "yêu cầu phi chức năng"
+
+[[term]]
+en = "materialization"
+vi = "vật chất hóa"
+
+[[term]]
+en = "throughput"
+vi = "thông lượng"
+
+[[term]]
+en = "latent"
+vi = "tiềm ẩn"
+
+[[term]]
+en = "distribution"
+vi = "phân bố"
+
+[[term]]
+en = "tail latencies"
+vi = "độ trễ đuôi"
+
+[[term]]
+en = "tail latency amplification"
+vi = "khuếch đại độ trễ đuôi"
+
+[[term]]
+en = "reliability"
+vi = "độ tin cậy"
+
+[[term]]
+en = "fault"
+vi = "lỗi"
+
+[[term]]
+en = "failure"
+vi = "hỏng hóc"
+
+[[term]]
+en = "blameless postmortem"
+vi = "postmortem không đổ lỗi"
+
+[[term]]
+en = "vertical scaling"
+vi = "mở rộng theo chiều dọc"
+
+[[term]]
+en = "horizontal scaling"
+vi = "mở rộng theo chiều ngang"
+
+[[term]]
+en = "shared-memory architecture"
+vi = "kiến trúc chia sẻ bộ nhớ"
+
+[[term]]
+en = "shared-disk architecture"
+vi = "kiến trúc chia sẻ đĩa"
+
+[[term]]
+en = "shared-nothing architecture"
+vi = "kiến trúc shared-nothing"
+
+[[term]]
+en = "operability"
+vi = "khả năng vận hành"
+
+[[term]]
+en = "simplicity"
+vi = "tính đơn giản"
+
+[[term]]
+en = "essential complexity"
+vi = "độ phức tạp thiết yếu"
+
+[[term]]
+en = "accidental complexity"
+vi = "độ phức tạp phát sinh"
+
+[[term]]
+en = "abstraction"
+vi = "trừu tượng hóa"
+
+[[term]]
+en = "home timeline"
+vi = "home timeline"
+keep = true
+note = "Tên tính năng trong ví dụ mạng xã hội, giữ nguyên."
+
+[[term]]
+en = "polling"
+vi = "polling"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "fan-out"
+vi = "fan-out"
+keep = true
+note = "Quen dùng nguyên gốc; 'phân tán ra' mất nghĩa."
+
+[[term]]
+en = "retry storm"
+vi = "retry storm"
+keep = true
+note = "Chưa có bản dịch phổ biến."
+
+[[term]]
+en = "metastable failure"
+vi = "metastable failure"
+keep = true
+note = "Chưa có bản dịch phổ biến."
+
+[[term]]
+en = "head-of-line blocking"
+vi = "head-of-line blocking"
+keep = true
+note = "Chưa có bản dịch phổ biến."
+
+[[term]]
+en = "jitter"
+vi = "jitter"
+keep = true
+note = "Quen dùng nguyên gốc."
+
+[[term]]
+en = "availability zone"
+vi = "availability zone"
+keep = true
+note = "Quen dùng nguyên gốc (tên khái niệm của cloud)."
+
+[[term]]
+en = "rolling upgrade"
+vi = "rolling upgrade"
+keep = true
+note = "Quen dùng nguyên gốc trong giới vận hành."
+
+[[term]]
+en = "scaling up"
+vi = "scaling up"
+keep = true
+note = "Cùng nghĩa vertical scaling; giữ nguyên cách nói của giới DEV."
+
+[[term]]
+en = "scaling out"
+vi = "scaling out"
+keep = true
+note = "Cùng nghĩa horizontal scaling; giữ nguyên cách nói của giới DEV."
+
+[[term]]
+en = "legacy"
+vi = "legacy"
+keep = true
+note = "Quen dùng nguyên gốc."
+
+[[term]]
+en = "big ball of mud"
+vi = "big ball of mud"
+keep = true
+note = "Tên mẫu phản thiết kế (anti-pattern), giữ nguyên."
+
+[[term]]
+en = "Agile"
+vi = "Agile"
+keep = true
+note = "Tên phương pháp luận, giữ nguyên."
+
+[[term]]
+en = "SLO"
+vi = "SLO"
+keep = true
+abbr = "Service Level Objective"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "SLA"
+vi = "SLA"
+keep = true
+abbr = "Service Level Agreement"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "SPOF"
+vi = "SPOF"
+keep = true
+abbr = "Single Point of Failure"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "SSD"
+vi = "SSD"
+keep = true
+abbr = "Solid-State Drive"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "ECC"
+vi = "ECC"
+keep = true
+abbr = "Error-Correcting Code"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "NAS"
+vi = "NAS"
+keep = true
+abbr = "Network-Attached Storage"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "SAN"
+vi = "SAN"
+keep = true
+abbr = "Storage Area Network"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "DDD"
+vi = "DDD"
+keep = true
+abbr = "Domain-Driven Design"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "TDD"
+vi = "TDD"
+keep = true
+abbr = "Test-Driven Development"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "fractional indexing"
+vi = "fractional indexing"
+keep = true
+note = "Tên kỹ thuật, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "compaction"
+vi = "compaction"
+keep = true
+note = "Quen dùng nguyên gốc trong LSM-tree."
+
+[[term]]
+en = "size-tiered compaction"
+vi = "size-tiered compaction"
+keep = true
+note = "Tên chiến lược compaction, giữ nguyên."
+
+[[term]]
+en = "leveled compaction"
+vi = "leveled compaction"
+keep = true
+note = "Tên chiến lược compaction, giữ nguyên."
+
+[[term]]
+en = "copy-on-write"
+vi = "copy-on-write"
+keep = true
+note = "Tên kỹ thuật, giữ nguyên."
+
+[[term]]
+en = "vacuum"
+vi = "vacuum"
+keep = true
+note = "Tên thao tác của PostgreSQL, giữ nguyên."
+
+[[term]]
+en = "query compilation"
+vi = "biên dịch truy vấn"
+
+[[term]]
+en = "vectorized processing"
+vi = "xử lý vector hóa"
+
+[[term]]
+en = "backward compatibility"
+vi = "tương thích ngược"
+
+[[term]]
+en = "forward compatibility"
+vi = "tương thích xuôi"
+
+[[term]]
+en = "read repair"
+vi = "read repair"
+keep = true
+note = "Tên cơ chế của Dynamo/Cassandra, giữ nguyên."
+
+[[term]]
+en = "hinted handoff"
+vi = "hinted handoff"
+keep = true
+note = "Tên cơ chế của Dynamo/Cassandra, giữ nguyên."
+
+[[term]]
+en = "anti-entropy"
+vi = "anti-entropy"
+keep = true
+note = "Tên cơ chế của Dynamo/Cassandra, giữ nguyên."
+
+[[term]]
+en = "shard"
+vi = "shard"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "partition"
+vi = "partition"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "range"
+vi = "range"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "region"
+vi = "region"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "tablet"
+vi = "tablet"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "vnode"
+vi = "vnode"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "pre-splitting"
+vi = "pre-splitting"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "cluster keys"
+vi = "cluster keys"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "happens-before relation"
+vi = "quan hệ xảy ra trước"
+
+[[term]]
+en = "repeatable read"
+vi = "repeatable read"
+keep = true
+note = "Tên mức cô lập/hiện tượng bất thường, giữ nguyên."
+
+[[term]]
+en = "synchronous model"
+vi = "mô hình đồng bộ"
+
+[[term]]
+en = "partially synchronous model"
+vi = "mô hình đồng bộ một phần"
+
+[[term]]
+en = "asynchronous model"
+vi = "mô hình bất đồng bộ"
+
+[[term]]
+en = "crash-stop fault"
+vi = "crash-stop fault"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "crash-recovery fault"
+vi = "crash-recovery fault"
+keep = true
+note = "Tên cơ chế/khái niệm, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "strong consistency"
+vi = "nhất quán mạnh"
+
+[[term]]
+en = "leader election"
+vi = "bầu leader"
+
+[[term]]
+en = "uniqueness constraint"
+vi = "ràng buộc duy nhất"
+
+[[term]]
+en = "race condition"
+vi = "race condition"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "quorum reads and writes"
+vi = "đọc và ghi quorum"
+
+[[term]]
+en = "asynchronous system model"
+vi = "mô hình hệ thống bất đồng bộ"
+
+[[term]]
+en = "uniform agreement"
+vi = "uniform agreement"
+keep = true
+note = "Tên thuộc tính chuẩn của bài toán đồng thuận, giữ nguyên."
+
+[[term]]
+en = "integrity"
+vi = "integrity"
+keep = true
+note = "Tên thuộc tính chuẩn của bài toán đồng thuận, giữ nguyên."
+
+[[term]]
+en = "validity"
+vi = "validity"
+keep = true
+note = "Tên thuộc tính chuẩn của bài toán đồng thuận, giữ nguyên."
+
+[[term]]
+en = "termination"
+vi = "termination"
+keep = true
+note = "Tên thuộc tính chuẩn của bài toán đồng thuận, giữ nguyên."
+
+[[term]]
+en = "liveness property"
+vi = "thuộc tính liveness"
+
+[[term]]
+en = "safety property"
+vi = "thuộc tính safety"
+
+[[term]]
+en = "asynchronous crash-stop model"
+vi = "mô hình bất đồng bộ crash-stop"
+
+[[term]]
+en = "eventual append"
+vi = "eventual append"
+keep = true
+note = "Tên thuộc tính chuẩn của bài toán đồng thuận, giữ nguyên."
+
+[[term]]
+en = "reliable delivery"
+vi = "reliable delivery"
+keep = true
+note = "Tên thuộc tính chuẩn của bài toán đồng thuận, giữ nguyên."
+
+[[term]]
+en = "agreement"
+vi = "agreement"
+keep = true
+note = "Tên thuộc tính chuẩn của bài toán đồng thuận, giữ nguyên."
+
+[[term]]
+en = "non-triviality"
+vi = "non-triviality"
+keep = true
+note = "Tên thuộc tính chuẩn của bài toán đồng thuận, giữ nguyên."
+
+[[term]]
+en = "failure detection"
+vi = "phát hiện hỏng hóc"
+
+[[term]]
+en = "change notification"
+vi = "thông báo thay đổi"
+
+[[term]]
+en = "service registry"
+vi = "service registry"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "bucket"
+vi = "bucket"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "map"
+vi = "map"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "reduce"
+vi = "reduce"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "shuffle"
+vi = "shuffle"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "event stream"
+vi = "luồng sự kiện"
+
+[[term]]
+en = "producer"
+vi = "producer"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "publisher"
+vi = "publisher"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "sender"
+vi = "bên gửi"
+
+[[term]]
+en = "recipient"
+vi = "bên nhận"
+
+[[term]]
+en = "stream"
+vi = "luồng"
+
+[[term]]
+en = "trigger"
+vi = "trigger"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "messaging system"
+vi = "hệ thống messaging"
+
+[[term]]
+en = "shared subscription"
+vi = "shared subscription"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "consumer group"
+vi = "consumer group"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "acknowledgment"
+vi = "xác nhận"
+
+[[term]]
+en = "log-based message broker"
+vi = "message broker dựa trên log"
+
+[[term]]
+en = "offset"
+vi = "offset"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "circular buffer"
+vi = "bộ đệm vòng"
+
+[[term]]
+en = "ring buffer"
+vi = "ring buffer"
+keep = true
+note = "Quen dùng nguyên gốc trong giới DEV."
+
+[[term]]
+en = "puncturable encryption"
+vi = "puncturable encryption"
+keep = true
+note = "Tên khái niệm/giao thức, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "tumbling window"
+vi = "tumbling window"
+keep = true
+note = "Tên khái niệm/giao thức, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "hopping window"
+vi = "hopping window"
+keep = true
+note = "Tên khái niệm/giao thức, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "sliding window"
+vi = "sliding window"
+keep = true
+note = "Tên khái niệm/giao thức, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "session window"
+vi = "session window"
+keep = true
+note = "Tên khái niệm/giao thức, chưa có bản dịch phổ biến."
+
+[[term]]
+en = "shell"
+vi = "shell"
+keep = true
+note = "Quen dùng nguyên gốc (Unix shell)."
+
+[[term]]
+en = "stateless service"
+vi = "dịch vụ stateless"
+
+[[term]]
+en = "stream operator"
+vi = "toán tử luồng"
+
+[[term]]
+en = "duplicate suppression"
+vi = "loại bỏ trùng lặp"
+
+[[term]]
+en = "at-least-once semantics"
+vi = "ngữ nghĩa at-least-once"
+
+[[term]]
+en = "timeliness"
+vi = "tính kịp thời"
+
+[[term]]
+en = "magic scaling sauce"
+vi = "công thức mở rộng thần kỳ"
+note = "Thành ngữ: giải pháp vạn năng cho mọi bài toán mở rộng; điền để seed không thêm lại."
+
+[[term]]
+en = "OBT"
+vi = "OBT"
+keep = true
+abbr = "One Big Table"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "ORM"
+vi = "ORM"
+keep = true
+abbr = "Object-Relational Mapping"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "RDBMS"
+vi = "RDBMS"
+keep = true
+abbr = "Relational Database Management System"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "RDF"
+vi = "RDF"
+keep = true
+abbr = "Resource Description Framework"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "SKU"
+vi = "SKU"
+keep = true
+abbr = "Stock Keeping Unit"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "HDD"
+vi = "HDD"
+keep = true
+abbr = "Hard Disk Drive"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "HNSW"
+vi = "HNSW"
+keep = true
+abbr = "Hierarchical Navigable Small World"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "HTAP"
+vi = "HTAP"
+keep = true
+abbr = "Hybrid Transactional/Analytical Processing"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "IVF"
+vi = "IVF"
+keep = true
+abbr = "Inverted File index"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "JIT"
+vi = "JIT"
+keep = true
+abbr = "Just-In-Time compilation"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "JVM"
+vi = "JVM"
+keep = true
+abbr = "Java Virtual Machine"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "GC"
+vi = "GC"
+keep = true
+abbr = "Garbage Collection"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "SIMD"
+vi = "SIMD"
+keep = true
+abbr = "Single Instruction, Multiple Data"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "B-tree"
+vi = "B-tree"
+keep = true
+note = "Tên cấu trúc dữ liệu (constitution III), giữ nguyên."
+
+[[term]]
+en = "SSTable"
+vi = "SSTable"
+keep = true
+note = "Tên cấu trúc dữ liệu (constitution III), giữ nguyên."
+
+[[term]]
+en = "LSM-tree"
+vi = "LSM-tree"
+keep = true
+note = "Log-Structured Merge-tree; tên cấu trúc dữ liệu, giữ nguyên."
+
+[[term]]
+en = "write-ahead log"
+vi = "write-ahead log"
+keep = true
+note = "Còn viết tắt WAL; giữ nguyên theo 'log'."
+
+[[term]]
+en = "BPEL"
+vi = "BPEL"
+keep = true
+abbr = "Business Process Execution Language"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "BPMN"
+vi = "BPMN"
+keep = true
+abbr = "Business Process Model and Notation"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "CORBA"
+vi = "CORBA"
+keep = true
+abbr = "Common Object Request Broker Architecture"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "CSV"
+vi = "CSV"
+keep = true
+abbr = "Comma-Separated Values"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "DCOM"
+vi = "DCOM"
+keep = true
+abbr = "Distributed Component Object Model"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "DNS"
+vi = "DNS"
+keep = true
+abbr = "Domain Name System"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "DSL"
+vi = "DSL"
+keep = true
+abbr = "Domain-Specific Language"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "EJB"
+vi = "EJB"
+keep = true
+abbr = "Enterprise JavaBeans"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "IDL"
+vi = "IDL"
+keep = true
+abbr = "Interface Definition Language"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "RMI"
+vi = "RMI"
+keep = true
+abbr = "Remote Method Invocation"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "RPC"
+vi = "RPC"
+keep = true
+abbr = "Remote Procedure Call"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "CAS"
+vi = "CAS"
+keep = true
+abbr = "Compare-And-Set"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "CRDT"
+vi = "CRDT"
+keep = true
+abbr = "Conflict-free Replicated Data Type"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "OT"
+vi = "OT"
+keep = true
+abbr = "Operational Transformation"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "FUSE"
+vi = "FUSE"
+keep = true
+abbr = "Filesystem in Userspace"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "SaaS"
+vi = "SaaS"
+keep = true
+abbr = "Software as a Service"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "NUMA"
+vi = "NUMA"
+keep = true
+abbr = "Non-Uniform Memory Access"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "SSI"
+vi = "SSI"
+keep = true
+abbr = "Serializable Snapshot Isolation"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "MVCC"
+vi = "MVCC"
+keep = true
+abbr = "Multi-Version Concurrency Control"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "LWW"
+vi = "LWW"
+keep = true
+abbr = "Last Write Wins"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "JMS"
+vi = "JMS"
+keep = true
+abbr = "Java Message Service"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "JDBC"
+vi = "JDBC"
+keep = true
+abbr = "Java Database Connectivity"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "JTA"
+vi = "JTA"
+keep = true
+abbr = "Java Transaction API"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "NTP"
+vi = "NTP"
+keep = true
+abbr = "Network Time Protocol"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "PTP"
+vi = "PTP"
+keep = true
+abbr = "Precision Time Protocol"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "BGP"
+vi = "BGP"
+keep = true
+abbr = "Border Gateway Protocol"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "RTOS"
+vi = "RTOS"
+keep = true
+abbr = "Real-Time Operating System"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "SCTP"
+vi = "SCTP"
+keep = true
+abbr = "Stream Control Transmission Protocol"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "NoSQL"
+vi = "NoSQL"
+keep = true
+note = "Tên nhóm cơ sở dữ liệu, giữ nguyên."
+
+[[term]]
+en = "GUID"
+vi = "GUID"
+keep = true
+abbr = "Globally Unique Identifier"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "UUID"
+vi = "UUID"
+keep = true
+abbr = "Universally Unique Identifier"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "BFT"
+vi = "BFT"
+keep = true
+abbr = "Byzantine Fault Tolerance"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "LLM"
+vi = "LLM"
+keep = true
+abbr = "Large Language Model"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "ML"
+vi = "ML"
+keep = true
+abbr = "Machine Learning"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "FIFO"
+vi = "FIFO"
+keep = true
+abbr = "First In, First Out"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "CBO"
+vi = "CBO"
+keep = true
+abbr = "Cost-Based Optimizer"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "NFS"
+vi = "NFS"
+keep = true
+abbr = "Network File System"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "GDPR"
+vi = "GDPR"
+keep = true
+abbr = "General Data Protection Regulation"
+note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "CDC"
+vi = "CDC"
+keep = true
+abbr = "Change Data Capture"
+note = "Từ viết tắt chuẩn, không dịch."
