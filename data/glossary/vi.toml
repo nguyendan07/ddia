@@ -3545,3 +3545,38 @@ vi = "mô hình đọc"
 [[term]]
 en = "pivot table"
 vi = "bảng tổng hợp xoay"
+
+[[term]]
+en = "Sorted String Table"
+vi = "Sorted String Table"
+keep = true
+note = "Tên cấu trúc dữ liệu (viết tắt SSTable), giữ nguyên."
+
+[[term]]
+en = "Log-Structured Merge-Tree"
+vi = "Log-Structured Merge-Tree"
+keep = true
+note = "Tên cấu trúc dữ liệu (viết tắt LSM-tree), giữ nguyên."
+
+[[term]]
+en = "column-oriented"
+vi = "hướng cột"
+note = "Đối xứng với 'hướng hàng' (row-oriented)."
+
+[[term]]
+en = "data cube"
+vi = "data cube"
+keep = true
+note = "Quen dùng nguyên gốc trong OLAP."
+
+[[term]]
+en = "orphan page"
+vi = "orphan page"
+keep = true
+note = "Trang không thuộc trang cha nào trong B-tree; giữ nguyên."
+
+[[term]]
+en = "garbage collection"
+vi = "garbage collection"
+keep = true
+note = "Quen dùng nguyên gốc (GC), cả trong SSD lẫn runtime."

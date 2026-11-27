@@ -1,6 +1,4 @@
 ---
-draft: true
-book_status: draft
 translationKey: ddia-v2-ch4
 title: Lưu trữ và truy xuất
 book_kind: chapter
@@ -14,24 +12,24 @@ breadcrumbs: false
 
 ![](/map/ch03.png)
 
-> *人生的苦恼之一，就是每个人给事物起的名字总有那么一点不对。于是，世上的一切都变得比换个名字时更难理解。计算机最主要的用途，并不是通常所谓做算术的“计算”。[……] 它们主要是档案系统。*
+> *Một trong những nỗi khổ của cuộc sống là ai cũng đặt tên cho sự vật hơi sai một chút. Vì thế mọi thứ trên đời trở nên khó hiểu hơn so với khi chúng được gọi bằng một cái tên khác. Công dụng chính của máy tính không phải là "tính toán" theo nghĩa làm số học. […] Chúng chủ yếu là các hệ thống lưu trữ hồ sơ.*
 >
-> [理查德・费曼](https://www.youtube.com/watch?v=EKWGGDXe5MA&t=296s)，
-> *特立独行的思考* 研讨会（1985 年）
+> [Richard Feynman](https://www.youtube.com/watch?v=EKWGGDXe5MA&t=296s),
+> *Idiosyncratic Thinking* seminar (1985)
 
-一个数据库在最基础的层次上需要完成两件事情：当你把数据交给数据库时，它应当把数据存储起来；而后当你向数据库要数据时，它应当把数据返回给你。
+Ở mức cơ bản nhất, một cơ sở dữ liệu cần làm hai việc: khi bạn đưa dữ liệu cho nó, nó phải lưu lại dữ liệu đó, và khi bạn hỏi lại, nó phải trả dữ liệu về cho bạn.
 
-在 [第 3 章](/ch3#ch_datamodels) 中，我们讨论了数据模型和查询语言，即你将数据交给数据库时采用的格式，以及日后向数据库取回数据时使用的接口。在本章中，我们会从数据库的视角来讨论同样的问题：数据库如何存储我们提供的数据，以及如何在我们需要时重新找到数据。
+Ở [Chương 3](/ch3#ch_datamodels), ta đã bàn về mô hình dữ liệu và ngôn ngữ truy vấn, tức là định dạng bạn dùng để đưa dữ liệu cho cơ sở dữ liệu và giao diện bạn dùng để lấy dữ liệu về sau này. Trong chương này, ta bàn về cùng vấn đề đó từ góc nhìn của cơ sở dữ liệu: nó lưu dữ liệu ta đưa vào như thế nào, và tìm lại dữ liệu khi ta cần ra sao.
 
-作为应用开发者，为什么要关心数据库内部存储与检索的机理？你可能不会从头开始实现自己的 *存储引擎*（*storage engine*），但是你 *确实* 需要从许多可用的存储引擎中选择一个适合应用的。为了让存储引擎能在你的工作负载上运行良好，你也需要大致了解它在底层究竟做了什么。
+Là lập trình viên ứng dụng, vì sao bạn nên quan tâm đến cách cơ sở dữ liệu lưu trữ và truy xuất dữ liệu ở bên trong? Nhiều khả năng bạn sẽ không tự viết *storage engine* (*storage engine*) từ đầu, nhưng bạn *thực sự* cần chọn ra một storage engine phù hợp với ứng dụng trong số rất nhiều engine hiện có. Và để engine đó chạy tốt trên *tải công việc* của bạn, bạn cần hình dung đại khái nó đang làm gì ở bên dưới.
 
-尤其需要注意，针对事务型工作负载（OLTP）优化的存储引擎，与针对分析型工作负载优化的存储引擎之间存在巨大差异（这种区别已在 [“分析型与事务型系统”](/ch1#sec_introduction_analytics) 中介绍）。本章首先考察 OLTP 存储引擎的两大类：写出不可变数据文件的 *日志结构*（*log-structured*）存储引擎，以及像 *B 树* 这样就地更新数据的存储引擎。*键值存储*（*key-value store*）和 *二级索引*（*secondary index*）都可以采用这两类结构。
+Cụ thể, có sự khác biệt rất lớn giữa storage engine tối ưu cho tải công việc giao dịch (OLTP) và storage engine tối ưu cho tải công việc phân tích (sự phân biệt này đã được giới thiệu ở [“Hệ thống phân tích và hệ thống tác nghiệp”](/ch1#sec_introduction_analytics)). Chương này bắt đầu bằng hai họ storage engine OLTP: các engine *log-structured* (*log-structured*) ghi ra các file dữ liệu bất biến, và các engine cập nhật tại chỗ như *B-tree*. Cả *key-value store* (*key-value store*) lẫn *chỉ mục phụ* (*secondary index*) đều có thể được xây dựng theo hai họ cấu trúc này.
 
-稍后在 [“分析型数据存储”](/ch4#sec_storage_analytics) 中，我们会讨论一类针对分析优化的存储引擎；在 [“多维索引与全文索引”](/ch4#sec_storage_multidimensional) 中，还会简要介绍用于文本检索等复杂查询的索引。
+Sau đó, ở [“Kho lưu trữ dữ liệu phân tích”](/ch4#sec_storage_analytics), ta sẽ bàn về một họ storage engine được tối ưu cho phân tích, còn ở [“Chỉ mục đa chiều (*multidimensional index*) và chỉ mục (*index*) toàn văn”](/ch4#sec_storage_multidimensional), ta sẽ lướt qua các loại chỉ mục (*index*) dùng cho những truy vấn phức tạp hơn như tìm kiếm văn bản.
 
-## OLTP 系统的存储与索引 {#sec_storage_oltp}
+## Lưu trữ và chỉ mục (*index*) cho hệ thống OLTP {#sec_storage_oltp}
 
-世界上最简单的数据库可以用两个 Bash 函数实现：
+Cơ sở dữ liệu đơn giản nhất thế giới có thể được hiện thực bằng hai hàm Bash:
 
 ```bash
 #!/bin/bash
@@ -45,9 +43,9 @@ db_get () {
 }
 ```
 
-这两个函数实现了键值存储。调用 `db_set key value`，会将 `key` 和 `value` 存入数据库。键和值（几乎）可以是任意内容，例如值可以是一个 JSON 文档。随后调用 `db_get key`，就会查找与这个键关联的最新值并将其返回。
+Hai hàm này hiện thực một key-value store. Gọi `db_set key value` sẽ lưu `key` và `value` vào cơ sở dữ liệu. Khóa và giá trị (gần như) có thể là bất cứ thứ gì bạn muốn, chẳng hạn giá trị có thể là một tài liệu JSON. Sau đó, gọi `db_get key` sẽ tìm giá trị gần nhất gắn với khóa đó và trả về.
 
-麻雀虽小，五脏俱全：
+Nó chạy được như thế này:
 
 ```bash
 $ db_set 12 '{"name":"London","attractions":["Big Ben","London Eye"]}'
@@ -58,7 +56,7 @@ $ db_get 42
 {"name":"San Francisco","attractions":["Golden Gate Bridge"]}
 ```
 
-底层存储格式非常简单：一个文本文件，每行包含一条以逗号分隔的键值对（忽略转义问题的话，大致与 CSV 文件类似）。每次调用 `db_set` 都会向文件末尾追加记录。多次更新一个键时，旧版本的值不会被覆盖——因而要找到最新值，就必须查看这个键在文件中最后一次出现的位置（所以 `db_get` 中使用了 `tail -n 1`）：
+Định dạng lưu trữ bên dưới rất đơn giản: một file văn bản, mỗi dòng chứa một cặp khóa-giá trị phân tách bằng dấu phẩy (gần giống file CSV, nếu bỏ qua vấn đề escape). Mỗi lần gọi `db_set` sẽ nối thêm vào cuối file. Nếu bạn cập nhật một khóa nhiều lần, các phiên bản cũ của giá trị không bị ghi đè — do đó để tìm giá trị mới nhất, bạn phải tìm lần xuất hiện cuối cùng của khóa trong file (vì vậy `db_get` dùng `tail -n 1`):
 
 ```bash
 $ db_set 42 '{"name":"San Francisco","attractions":["Exploratorium"]}'
@@ -73,300 +71,298 @@ $ cat database
 
 ```
 
-`db_set` 函数对于如此简单的实现其实有着相当不错的性能，因为在文件末尾追加写入通常非常高效。与 `db_set` 所做的事情类似，许多数据库在内部使用 *日志*（*log*），也就是仅追加的数据文件。真正的数据库还要处理更多问题（例如并发写入、回收磁盘空间以免日志无限增长，以及崩溃恢复时处理只写了一部分的记录），但基本原理是一样的。日志极其有用，我们还会在本书中多次遇到它。
+Với một cài đặt đơn giản như vậy, hàm `db_set` có hiệu năng khá tốt, vì việc ghi nối vào cuối file thường rất hiệu quả. Tương tự những gì `db_set` làm, nhiều cơ sở dữ liệu bên trong dùng *log* (*log*), tức là một file dữ liệu chỉ ghi nối (append-only). Cơ sở dữ liệu thực tế còn phải xử lý nhiều vấn đề khác (như ghi đồng thời, thu hồi dung lượng đĩa để log không phình mãi, và xử lý bản ghi mới ghi dở khi khôi phục sau sự cố), nhưng nguyên lý cơ bản là như nhau. Log cực kỳ hữu ích, và ta sẽ còn gặp lại nó nhiều lần trong cuốn sách này.
 
 
 > [!NOTE]
-> *日志* 这个词通常指应用日志，即应用程序输出的、描述正在发生之事的文本。本书在更普遍的意义上使用 *日志* 一词：磁盘上仅追加的记录序列。它不一定供人阅读，也可能采用二进制格式，只供数据库系统内部使用。
+> Từ *log* thường được dùng để chỉ log của ứng dụng: đoạn văn bản mà ứng dụng xuất ra để mô tả những gì đang diễn ra. Trong cuốn sách này, *log* được dùng theo nghĩa rộng hơn: một chuỗi bản ghi chỉ ghi nối trên đĩa. Người đọc không nhất thiết phải đọc được nó. Nó có thể ở định dạng nhị phân và chỉ dành cho nội bộ hệ thống cơ sở dữ liệu.
 
 
 
-另一方面，如果数据库中有大量记录，`db_get` 函数的性能就会非常糟糕。每次查找一个键，`db_get` 都必须从头到尾扫描整个数据库文件，寻找这个键。用算法的语言来说，查找开销是 *O*(*n*)：如果数据库中的记录数 *n* 翻了一倍，查找时间也要翻一倍。这就不好了。
+Mặt khác, hàm `db_get` có hiệu năng rất tệ nếu cơ sở dữ liệu có nhiều bản ghi. Mỗi lần bạn tra một khóa, `db_get` phải quét toàn bộ file cơ sở dữ liệu từ đầu đến cuối để tìm các lần xuất hiện của khóa. Theo ngôn ngữ thuật toán, chi phí tìm kiếm là *O*(*n*): nếu số bản ghi *n* trong cơ sở dữ liệu tăng gấp đôi thì thời gian tìm kiếm cũng tăng gấp đôi. Như vậy là không tốt.
 
-为了高效查找数据库中特定键的值，我们需要一种数据结构：*索引*（*index*）。本章将介绍一系列索引结构，并比较它们之间的差异。索引背后的大致思想，是以某种特定方式组织数据（例如按某个键排序），从而更快地定位想要的数据。如果想以几种不同的方式搜索同一份数据，那么也许需要在数据的不同部分建立多个索引。
+Để tìm hiệu quả giá trị của một khóa cụ thể trong cơ sở dữ liệu, ta cần một cấu trúc dữ liệu khác: *chỉ mục* (*index*). Chương này sẽ giới thiệu một loạt cấu trúc chỉ mục (*index*) và so sánh chúng. Ý tưởng chung là tổ chức dữ liệu theo một cách nhất định (ví dụ sắp xếp theo một khóa nào đó) để định vị dữ liệu mong muốn nhanh hơn. Nếu muốn tìm kiếm cùng một dữ liệu theo nhiều cách khác nhau, bạn có thể cần nhiều chỉ mục (*index*) khác nhau trên những phần khác nhau của dữ liệu.
 
-索引是从主数据衍生出的 *额外* 结构。许多数据库允许添加和删除索引，这不会影响数据库的内容，只会影响查询性能。维护额外结构会产生开销，特别是在写入时。写入性能很难超过简单地向文件末尾追加，因为追加是最简单的写入操作。任何类型的索引通常都会拖慢写入速度，因为每次写入数据时还必须更新索引。
+Chỉ mục (*index*) là một cấu trúc *bổ sung* được dẫn xuất từ dữ liệu gốc. Nhiều cơ sở dữ liệu cho phép thêm và bớt chỉ mục (*index*) mà không ảnh hưởng đến nội dung cơ sở dữ liệu. Nó chỉ ảnh hưởng đến hiệu năng truy vấn. Việc duy trì cấu trúc bổ sung gây ra chi phí, nhất là khi ghi. Với ghi, khó mà vượt được hiệu năng của việc chỉ ghi nối vào cuối file, vì đó là thao tác ghi đơn giản nhất có thể. Bất kỳ loại chỉ mục (*index*) nào cũng thường làm chậm ghi, vì chỉ mục (*index*) phải được cập nhật mỗi khi dữ liệu được ghi.
 
-这是存储系统中一项重要的权衡：精心选择的索引能加快读查询，但每个索引都会占用额外的磁盘空间，并拖慢写入速度，有时影响还相当显著 [^1]。因此，数据库通常不会默认索引所有内容，而是要求编写应用程序或管理数据库的人，根据自己对典型查询模式的了解手动选择索引。这样便可以选出给应用带来最大收益的索引，同时避免不必要的写入开销。
+Đây là một đánh đổi quan trọng trong hệ thống lưu trữ: chỉ mục (*index*) chọn khéo giúp tăng tốc truy vấn đọc, nhưng mỗi chỉ mục (*index*) tốn thêm dung lượng đĩa và làm chậm ghi, đôi khi đáng kể [^1]. Vì thế, cơ sở dữ liệu thường không tự động đánh chỉ mục (*index*) mọi thứ, mà đòi hỏi người viết ứng dụng hoặc quản trị cơ sở dữ liệu tự chọn chỉ mục (*index*) dựa trên hiểu biết về mẫu truy vấn điển hình của ứng dụng. Nhờ đó bạn chọn được các chỉ mục (*index*) mang lại lợi ích nhiều nhất cho ứng dụng mà không phải gánh chi phí ghi không cần thiết.
 
-### 日志结构存储 {#sec_storage_log_structured}
+### Lưu trữ theo cấu trúc log {#sec_storage_log_structured}
 
-首先假设你仍想把数据保存在 `db_set` 写入的仅追加文件中，只是希望加快读取速度。一种索引策略是保留一个内存中的哈希映射，其中每个键都映射到数据文件里的一个字节偏移量，指明该键最新的值位于何处，如 {{< xref fig="4-1" page="/ch4" anchor="fig_storage_csv_hash_index" >}}图 4-1{{< /xref >}} 所示。
+Trước hết, giả sử bạn vẫn muốn lưu dữ liệu trong file chỉ ghi nối do `db_set` tạo ra, và chỉ muốn đọc nhanh hơn. Một chiến lược đánh chỉ mục (*index*) là giữ một hash map trong bộ nhớ, trong đó mỗi khóa ánh xạ tới một byte offset trong file dữ liệu — vị trí của giá trị mới nhất của khóa đó, như minh họa ở {{< xref fig="4-1" page="/ch4" anchor="fig_storage_csv_hash_index" >}}Hình 4-1{{< /xref >}}.
 
-{{< fig num="4-1" id="fig_storage_csv_hash_index" src="/fig/ddia_0401.png" caption="以类似 CSV 的格式存储键值对日志，并使用内存哈希映射建立索引。" class="ddia-figure ddia-figure--wide" width="1772" height="872" />}}
+{{< fig num="4-1" id="fig_storage_csv_hash_index" src="/fig/ddia_0401.png" caption="Lưu log các cặp khóa-giá trị theo định dạng giống CSV, được đánh chỉ mục (*index*) bằng một hash map trong bộ nhớ." class="ddia-figure ddia-figure--wide" width="1772" height="872" />}}
 
-每当向文件追加新的键值对时，还要更新哈希映射，使它指向刚刚写入的数据。查找一个值时，先用哈希映射找到日志文件中的偏移量，再寻道至该位置读取即可。如果数据文件的这一部分已经在文件系统缓存中，读取甚至完全不需要磁盘 I/O。
+Mỗi khi ghi nối một cặp khóa-giá trị mới vào file, bạn cũng cập nhật hash map để nó trỏ tới dữ liệu vừa ghi. Khi tra một giá trị, bạn dùng hash map tìm offset trong file log, seek tới vị trí đó rồi đọc. Nếu phần đó của file dữ liệu đã nằm trong filesystem cache thì việc đọc thậm chí không cần I/O đĩa.
 
-这种方法快得多，但仍有几个问题：
+Cách này nhanh hơn nhiều, nhưng vẫn còn một số vấn đề:
 
-* 被新值覆盖的旧日志条目仍占着磁盘空间，始终得不到释放；如果继续写入数据库，磁盘空间就可能耗尽。
-* 哈希映射没有持久化，数据库重启时必须重建。例如，可以扫描整个日志文件，找出每个键最新的字节偏移量。如果数据量很大，重启就会十分缓慢。
-* 哈希表必须能放进内存。原则上可以在磁盘上维护哈希表，可惜磁盘哈希表很难有良好的性能：它需要大量随机访问 I/O，装满后的扩容代价很高，而且解决哈希冲突需要烦琐的逻辑 [^2]。
-* 范围查询效率不高。例如，无法轻松扫描 `10000` 到 `19999` 之间的所有键，只能在哈希映射中逐个查找。
+* Các mục log cũ đã bị giá trị mới ghi đè vẫn chiếm dung lượng đĩa và không bao giờ được giải phóng. Nếu cứ ghi tiếp vào cơ sở dữ liệu, bạn có thể hết đĩa.
+* Hash map không được lưu bền, nên phải dựng lại khi cơ sở dữ liệu khởi động lại. Chẳng hạn, bạn có thể quét toàn bộ file log để tìm byte offset mới nhất của từng khóa. Nếu dữ liệu lớn, việc khởi động lại sẽ rất chậm.
+* Hash table phải nằm vừa trong bộ nhớ. Về nguyên tắc có thể duy trì hash table trên đĩa, nhưng tiếc là hash table trên đĩa khó đạt hiệu năng tốt: nó cần nhiều I/O truy cập ngẫu nhiên, tốn kém khi phải mở rộng lúc đầy, và việc xử lý xung đột hash đòi hỏi logic rắc rối [^2].
+* Truy vấn khoảng (range query) không hiệu quả. Chẳng hạn, bạn không thể dễ dàng quét mọi khóa từ `10000` đến `19999`. Bạn phải tra từng khóa một trong hash map.
 
-#### SSTable 文件格式 {#the-sstable-file-format}
+#### Định dạng file SSTable {#the-sstable-file-format}
 
-实践中，数据库索引很少采用哈希表，更常见的做法是把数据保存在 *按键排序* 的结构中 [^3]。*排序字符串表*（*Sorted String Table*，简称 SSTable）便是一例，如 {{< xref fig="4-2" page="/ch4" anchor="fig_storage_sstable_index" >}}图 4-2{{< /xref >}} 所示。这种文件格式同样存储键值对，但保证键值对按键排序，而且每个键在文件中只出现一次。
+Trong thực tế, chỉ mục (*index*) cơ sở dữ liệu hiếm khi dùng hash table. Thường gặp hơn là lưu dữ liệu trong một cấu trúc *sắp xếp theo khóa* [^3]. Một ví dụ là *Sorted String Table* (*Sorted String Table*), viết tắt SSTable, như minh họa ở {{< xref fig="4-2" page="/ch4" anchor="fig_storage_sstable_index" >}}Hình 4-2{{< /xref >}}. Định dạng file này cũng lưu các cặp khóa-giá trị, nhưng đảm bảo chúng được sắp xếp theo khóa, và mỗi khóa chỉ xuất hiện một lần trong file.
 
-{{< fig num="4-2" id="fig_storage_sstable_index" src="/fig/ddia_0402.png" caption="带有稀疏索引的 SSTable，查询可以直接跳到正确的数据块。" class="ddia-figure ddia-figure--wide" width="2658" height="1229" />}}
+{{< fig num="4-2" id="fig_storage_sstable_index" src="/fig/ddia_0402.png" caption="SSTable với chỉ mục thưa (*sparse index*), cho phép truy vấn nhảy thẳng tới đúng khối dữ liệu." class="ddia-figure ddia-figure--wide" width="2658" height="1229" />}}
 
-这样便不必在内存中保留所有键。可以把 SSTable 中的键值对分成若干个几千字节大小的 *块*（*block*），索引只存储每个块的第一个键。这种只收录部分键的索引称为 *稀疏索引*（*sparse index*）。索引保存在 SSTable 的一个独立区域中，可以采用不可变 B 树、字典树或其他能快速查找特定键的数据结构 [^4]。
+Cách này giúp bạn không phải giữ mọi khóa trong bộ nhớ. Bạn có thể chia các cặp khóa-giá trị trong SSTable thành các *khối* (*block*) vài kilobyte, rồi chỉ lưu khóa đầu tiên của mỗi khối trong chỉ mục (*index*). Loại chỉ mục (*index*) chỉ lưu một số khóa này gọi là *chỉ mục thưa* (*sparse index*). Chỉ mục (*index*) được lưu ở một vùng riêng của SSTable, và có thể dùng B-tree bất biến, trie hoặc bất kỳ cấu trúc dữ liệu nào cho phép tra nhanh một khóa cụ thể [^4].
 
-以 {{< xref fig="4-2" page="/ch4" anchor="fig_storage_sstable_index" >}}图 4-2{{< /xref >}} 为例，一个块的第一个键是 `handbag`，下一个块的第一个键是 `handsome`。假设要查找没有出现在稀疏索引中的 `handiwork`。根据排序关系可知，`handiwork` 必定在 `handbag` 与 `handsome` 之间。因此，可以寻道至 `handbag` 的偏移量，再从那里开始扫描文件，直到找到 `handiwork`；如果一直扫到下一个块仍未找到，就说明文件中没有这个键。几千字节的数据块很快就能扫描完。
+Chẳng hạn trong {{< xref fig="4-2" page="/ch4" anchor="fig_storage_sstable_index" >}}Hình 4-2{{< /xref >}}, khóa đầu tiên của một khối là `handbag`, còn khóa đầu tiên của khối kế tiếp là `handsome`. Giả sử bạn muốn tìm khóa `handiwork`, vốn không có trong chỉ mục thưa (*sparse index*). Nhờ thứ tự sắp xếp, bạn biết `handiwork` phải nằm giữa `handbag` và `handsome`. Vì vậy bạn seek tới offset của `handbag` rồi quét file từ đó cho đến khi tìm thấy `handiwork`. Nếu quét tới khối kế tiếp mà không thấy thì khóa đó không có trong file. Một khối vài kilobyte có thể quét rất nhanh.
 
-此外，每个记录块都可以压缩（{{< xref fig="4-2" page="/ch4" anchor="fig_storage_sstable_index" >}}图 4-2{{< /xref >}} 中的阴影区域）。除了节省磁盘空间，压缩还能减少 I/O 带宽的使用，代价只是多耗费一点 CPU 时间。
+Ngoài ra, mỗi khối bản ghi có thể được nén (phần tô bóng trong {{< xref fig="4-2" page="/ch4" anchor="fig_storage_sstable_index" >}}Hình 4-2{{< /xref >}}). Bên cạnh việc tiết kiệm dung lượng đĩa, nén còn giảm băng thông I/O, với cái giá chỉ là tốn thêm một chút thời gian CPU.
 
-#### 构建和合并 SSTable {#constructing-and-merging-sstables}
+#### Xây dựng và hợp nhất SSTable {#constructing-and-merging-sstables}
 
-SSTable 文件格式比仅追加日志更利于读取，却让写入变得困难。不能直接向文件末尾追加，否则文件就不再有序（除非键碰巧按升序写入）。如果每次在文件中间插入一个键都要重写整个 SSTable，写入成本又会高得无法接受。
+Định dạng SSTable tốt cho đọc hơn so với log chỉ ghi nối, nhưng lại làm việc ghi khó khăn hơn. Ta không thể đơn giản ghi nối vào cuối file, vì khi đó file không còn được sắp xếp (trừ khi các khóa tình cờ được ghi theo thứ tự tăng dần). Nếu mỗi lần chèn một khóa vào giữa file lại phải viết lại toàn bộ SSTable thì chi phí ghi sẽ cao đến mức không chấp nhận được.
 
-解决办法是采用 *日志结构* 方法，将仅追加日志与排序文件结合起来：
+Giải pháp là dùng cách tiếp cận *log-structured*, kết hợp log chỉ ghi nối với các file đã sắp xếp:
 
-1. 收到写入时，将其加入内存中的有序映射数据结构，例如红黑树、跳表 [^5] 或字典树 [^6]。这类数据结构可以按任意顺序插入键、高效查找键，并按排序顺序读出键。这个内存数据结构称为 *内存表*（*memtable*）。
-2. 当内存表超过某个阈值（通常为几兆字节）时，按排序顺序将它写成磁盘上的 SSTable 文件。这个新的 SSTable 文件称为数据库最新的 *段*（*segment*），它与较旧的段分别存放在独立文件中，每个段都有自己的索引。向磁盘写出新段期间，数据库可以继续向新的内存表实例写入；SSTable 写完后，旧内存表占用的内存即可释放。
-3. 读取某个键的值时，先在内存表和磁盘上最新的段中查找。如果没有找到，就依次查看更旧的段，直到找到这个键或查完最旧的段。如果任何段中都没有这个键，它就不存在于数据库中。
-4. 后台不时运行合并与压实（compaction）过程，将段文件合并起来，并丢弃已经覆盖或删除的值。
+1. Khi nhận một thao tác ghi, thêm nó vào một cấu trúc dữ liệu map có thứ tự trong bộ nhớ, chẳng hạn cây đỏ-đen, skip list [^5] hoặc trie [^6]. Các cấu trúc này cho phép chèn khóa theo thứ tự bất kỳ, tra khóa hiệu quả, và đọc các khóa ra theo thứ tự đã sắp xếp. Cấu trúc dữ liệu trong bộ nhớ này được gọi là *memtable* (*memtable*).
+2. Khi memtable vượt quá một ngưỡng nào đó (thường là vài megabyte), ghi nó ra đĩa thành một file SSTable theo thứ tự đã sắp xếp. File SSTable mới này trở thành *segment* (*segment*) mới nhất của cơ sở dữ liệu, được lưu trong file riêng tách biệt với các segment cũ, và mỗi segment có chỉ mục (*index*) riêng. Trong lúc segment mới đang được ghi ra đĩa, cơ sở dữ liệu vẫn có thể tiếp tục ghi vào một instance memtable mới. Khi SSTable ghi xong, bộ nhớ của memtable cũ được giải phóng.
+3. Để đọc giá trị của một khóa, trước tiên tìm trong memtable và trong segment mới nhất trên đĩa. Nếu không thấy, tìm tiếp trong segment cũ hơn, và cứ thế cho đến khi tìm thấy khóa hoặc đã duyệt hết segment cũ nhất. Nếu khóa không có trong bất kỳ segment nào thì nó không tồn tại trong cơ sở dữ liệu.
+4. Thỉnh thoảng, một tiến trình hợp nhất và compaction chạy nền để gộp các file segment lại và loại bỏ những giá trị đã bị ghi đè hoặc xóa.
 
-段的合并类似于 *归并排序* 算法 [^5]，如 {{< xref fig="4-3" page="/ch4" anchor="fig_storage_sstable_merging" >}}图 4-3{{< /xref >}} 所示。并行读取各个输入文件，比较每个文件当前的第一个键，把排序最靠前的键复制到输出文件，然后不断重复。如果同一个键出现在多个输入文件中，只保留较新的值。这样生成的新段仍按键排序，每个键只保留一个值；由于可以逐键遍历 SSTable，整个过程只需要很少的内存。
+Việc hợp nhất các segment tương tự thuật toán *merge sort* [^5], như minh họa ở {{< xref fig="4-3" page="/ch4" anchor="fig_storage_sstable_merging" >}}Hình 4-3{{< /xref >}}. Bạn đọc song song các file đầu vào, nhìn khóa đầu tiên của mỗi file, chép khóa nhỏ nhất theo thứ tự sắp xếp vào file đầu ra, rồi lặp lại. Nếu cùng một khóa xuất hiện trong nhiều file đầu vào, chỉ giữ giá trị mới hơn. Kết quả là một segment mới, cũng được sắp xếp theo khóa và mỗi khóa chỉ có một giá trị. Vì có thể duyệt SSTable từng khóa một nên quá trình này cần rất ít bộ nhớ.
 
-{{< fig num="4-3" id="fig_storage_sstable_merging" src="/fig/ddia_0403.png" caption="合并多个 SSTable 段，仅保留每个键的最新值。" class="ddia-figure ddia-figure--standard" width="2658" height="1772" />}}
+{{< fig num="4-3" id="fig_storage_sstable_merging" src="/fig/ddia_0403.png" caption="Hợp nhất nhiều segment SSTable, chỉ giữ giá trị mới nhất cho mỗi khóa." class="ddia-figure ddia-figure--standard" width="2658" height="1772" />}}
 
-为了避免数据库崩溃时丢失内存表中的数据，存储引擎还会在磁盘上保存一个单独的日志，每次写入都会立即追加到这个日志。日志不按键排序，但这并不重要，因为它的唯一用途是在崩溃后恢复内存表。每当内存表写成 SSTable 后，日志中相应的部分便可丢弃。
+Để tránh mất dữ liệu trong memtable nếu cơ sở dữ liệu gặp sự cố, storage engine còn giữ một log riêng trên đĩa, và mỗi thao tác ghi được ghi nối ngay vào log đó. Log này không được sắp xếp theo khóa, nhưng điều đó không quan trọng, vì mục đích duy nhất của nó là khôi phục memtable sau sự cố. Mỗi khi memtable đã được ghi thành SSTable, phần log tương ứng có thể bị loại bỏ.
 
-如果要删除一个键及其关联的值，必须向数据文件追加一种称为 *墓碑*（*tombstone*）的特殊删除记录。日志段合并时，墓碑会指示合并过程丢弃这个键此前的所有值。墓碑一旦合并进最旧的段，自身也就可以删除。
+Nếu muốn xóa một khóa và giá trị gắn với nó, bạn phải ghi nối vào file dữ liệu một bản ghi xóa đặc biệt gọi là *tombstone* (*tombstone*). Khi các segment log được hợp nhất, tombstone cho tiến trình hợp nhất biết phải loại bỏ mọi giá trị trước đó của khóa này. Khi tombstone đã được hợp nhất vào segment cũ nhất, nó cũng có thể bị xóa.
 
-这里描述的算法，本质上就是 RocksDB [^7]、Cassandra、ScyllaDB 和 HBase [^8] 所采用的算法。这些系统都受 Google Bigtable 论文 [^9] 的启发；*SSTable* 和 *memtable* 两个术语正是由该论文提出的。
+Thuật toán mô tả ở đây về cơ bản chính là thuật toán được RocksDB [^7], Cassandra, ScyllaDB và HBase [^8] sử dụng. Các hệ thống này đều lấy cảm hứng từ bài báo Bigtable của Google [^9], nơi lần đầu đưa ra các thuật ngữ *SSTable* và *memtable*.
 
-这一算法最初发表于 1996 年，名为 *日志结构合并树*（*Log-Structured Merge-Tree*，简称 *LSM 树*）[^10]，它建立在更早的日志结构文件系统研究之上 [^11]。因此，凡是以合并、压实有序文件为基本原理的存储引擎，通常都称为 *LSM 存储引擎*。
+Thuật toán này lần đầu được công bố năm 1996 với tên *Log-Structured Merge-Tree* (*Log-Structured Merge-Tree*), viết tắt *LSM-tree* [^10], xây dựng trên các nghiên cứu trước đó về hệ thống file có cấu trúc log [^11]. Vì thế, các storage engine dựa trên nguyên lý hợp nhất và compaction các file đã sắp xếp thường được gọi là *storage engine LSM*.
 
-在 LSM 存储引擎中，段文件会一次写完（或者由内存表写出，或者由若干现有段合并而成），此后便不可变。段的合并与压实可以由后台线程完成；在此期间，旧段文件仍可继续处理读取请求。合并完成后，读取请求切换到新的合并段，旧段文件即可删除。
+Trong storage engine LSM, các file segment được ghi một lần (bằng cách ghi từ memtable ra, hoặc hợp nhất các segment hiện có) và sau đó là bất biến. Việc hợp nhất và compaction segment có thể do thread chạy nền thực hiện. Trong lúc đó, các file segment cũ vẫn tiếp tục phục vụ yêu cầu đọc. Khi hợp nhất xong, các yêu cầu đọc chuyển sang segment đã hợp nhất mới, và các file segment cũ có thể bị xóa.
 
-段文件不一定要保存在本地磁盘上；它们也非常适合写入对象存储。例如，SlateDB 和 Delta Lake 就采用这种方法 [^12]。
+Các file segment không nhất thiết phải nằm trên đĩa cục bộ. Chúng cũng rất thích hợp để ghi vào kho lưu trữ đối tượng. Chẳng hạn SlateDB và Delta Lake dùng cách này [^12].
 
-段文件不可变，也让崩溃恢复变得更简单：如果写出内存表或合并段时发生崩溃，数据库只需删除未完成的 SSTable，再重新开始即可。用于持久化内存表写入的日志，可能因写到一半时崩溃或磁盘已满而留下不完整记录；通常可以借助日志中的校验和检测这些记录，并丢弃损坏或不完整的条目。我们将在 [第 8 章](/ch8#ch_transactions) 进一步讨论持久性与崩溃恢复。
+Việc file segment bất biến cũng làm khôi phục sau sự cố đơn giản hơn: nếu sự cố xảy ra khi đang ghi memtable hoặc hợp nhất segment, cơ sở dữ liệu chỉ cần xóa SSTable dở dang rồi bắt đầu lại. Log dùng để lưu bền các thao tác ghi vào memtable có thể chứa bản ghi không đầy đủ nếu sự cố xảy ra giữa chừng hoặc đĩa đầy. Thường có thể phát hiện các bản ghi này nhờ checksum trong log, rồi loại bỏ các mục bị hỏng hoặc không đầy đủ. Ta sẽ bàn thêm về tính bền vững và khôi phục sau sự cố ở [Chương 8](/ch8#ch_transactions).
 
 <a id="sec_storage_bloom_filter"></a>
 
-#### 布隆过滤器 {#bloom-filters}
+#### Bloom filter {#bloom-filters}
 
-在 LSM 存储中，读取很久以前才更新过的键，或读取根本不存在的键，可能十分缓慢，因为存储引擎必须检查多个段文件。为了加快这类读取，LSM 存储引擎通常会为每个段配备一个 *布隆过滤器*（*Bloom filter*）[^13]，用来快速、近似地判断某个键是否出现在某个 SSTable 中。
+Với LSM storage, việc đọc một khóa đã lâu không được cập nhật, hoặc một khóa hoàn toàn không tồn tại, có thể khá chậm vì storage engine phải kiểm tra nhiều file segment. Để tăng tốc các lần đọc như vậy, các storage engine LSM thường giữ một *Bloom filter* (*Bloom filter*) [^13] cho mỗi segment. Nó cho biết nhanh, ở mức xấp xỉ, một khóa có xuất hiện trong một SSTable hay không.
 
-{{< xref fig="4-4" page="/ch4" anchor="fig_storage_bloom" >}}图 4-4{{< /xref >}} 展示了一个包含两个键、长度为 16 位的布隆过滤器（实际的键和位都会多得多）。对 SSTable 中的每个键计算哈希函数，会得到一组数字，再将这些数字解释为位数组中的下标 [^14]。把这些位置上的位设为 1，其余位保持为 0。例如，键 `handbag` 的哈希结果是 (2, 9, 4)，于是将第 2、9、4 位设为 1。得到的位图会与稀疏键索引一起存入 SSTable。它会占用一点额外空间，不过布隆过滤器通常远小于 SSTable 的其余部分。
+{{< xref fig="4-4" page="/ch4" anchor="fig_storage_bloom" >}}Hình 4-4{{< /xref >}} minh họa một Bloom filter dài 16 bit chứa hai khóa (thực tế sẽ có nhiều khóa và nhiều bit hơn rất nhiều). Với mỗi khóa trong SSTable, ta tính một hàm hash và nhận được một tập số, rồi diễn giải các số đó thành chỉ số trong mảng bit [^14]. Ta đặt các bit ở những vị trí đó bằng 1 và để các bit còn lại bằng 0. Chẳng hạn, khóa `handbag` có kết quả hash là (2, 9, 4), nên ta đặt các bit 2, 9 và 4 bằng 1. Bitmap thu được được lưu trong SSTable cùng với chỉ mục (*index*) khóa thưa. Nó tốn thêm một chút dung lượng, nhưng Bloom filter thường nhỏ hơn rất nhiều so với phần còn lại của SSTable.
 
-{{< fig num="4-4" id="fig_storage_bloom" src="/fig/ddia_0404.png" caption="布隆过滤器以概率方式快速判断某个键是否存在于某个 SSTable 中。" class="ddia-figure ddia-figure--wide" width="2658" height="1137" />}}
+{{< fig num="4-4" id="fig_storage_bloom" src="/fig/ddia_0404.png" caption="Bloom filter cho biết theo xác suất và rất nhanh liệu một khóa có tồn tại trong một SSTable hay không." class="ddia-figure ddia-figure--wide" width="2658" height="1137" />}}
 
-要判断某个键是否出现在 SSTable 中，只需对它计算同样的哈希，再检查对应下标处的位。例如，{{< xref fig="4-4" page="/ch4" anchor="fig_storage_bloom" >}}图 4-4{{< /xref >}} 查询的是键 `handheld`，其哈希结果为 (6, 11, 2)。其中第 2 位为 1，另外两位为 0。所有 CPU 都支持的位运算可以极快地完成这些检查。
+Để kiểm tra một khóa có trong SSTable hay không, ta tính cùng các hash cho khóa đó rồi xem các bit ở những chỉ số tương ứng. Chẳng hạn trong {{< xref fig="4-4" page="/ch4" anchor="fig_storage_bloom" >}}Hình 4-4{{< /xref >}}, ta truy vấn khóa `handheld`, có kết quả hash là (6, 11, 2). Bit 2 bằng 1, còn hai bit kia bằng 0. Các phép toán bit mà mọi CPU đều hỗ trợ cho phép thực hiện các kiểm tra này cực nhanh.
 
-只要其中至少一位为 0，就能确定 SSTable 中绝对没有这个键。如果查询对应的位全为 1，这个键很可能在 SSTable 中，但也可能只是其他键碰巧把这些位全都设成了 1。这种看似存在、实际却不存在的情况称为 *假阳性*（*false positive*）。
+Nếu có ít nhất một bit bằng 0, ta biết chắc khóa không có trong SSTable. Nếu các bit của truy vấn đều bằng 1, khóa rất có thể có trong SSTable, nhưng cũng có thể là các khóa khác tình cờ đã đặt tất cả các bit đó bằng 1. Trường hợp trông như có nhưng thực ra không này gọi là *dương tính giả* (*false positive*).
 
-假阳性的概率取决于键的数量、每个键设置多少位，以及布隆过滤器的总位数。可以借助在线计算器为应用选择合适的参数 [^15]。粗略地说，SSTable 中每个键分配 10 位布隆过滤器空间，假阳性概率约为 1%；此后每个键再多分配 5 位，概率就会降低一个数量级。
+Xác suất dương tính giả phụ thuộc vào số khóa, số bit đặt cho mỗi khóa và tổng số bit của Bloom filter. Bạn có thể dùng các công cụ tính trực tuyến để chọn tham số phù hợp cho ứng dụng [^15]. Theo kinh nghiệm, cần dành 10 bit Bloom filter cho mỗi khóa trong SSTable để có xác suất dương tính giả khoảng 1%, và cứ thêm 5 bit cho mỗi khóa thì xác suất giảm đi một bậc độ lớn.
 
-对 LSM 存储引擎来说，假阳性不会造成正确性问题：
+Với storage engine LSM, dương tính giả không gây ra vấn đề về tính đúng đắn:
 
-* 如果布隆过滤器判断键 *不存在*，就可以放心跳过这个 SSTable，因为其中一定没有该键。
-* 如果布隆过滤器判断键 *存在*，还要查询稀疏索引、解码键值对块，确认键是否真的在其中。如果遇到假阳性，不过是多做了一点无用功，并无其他危害；继续搜索下一个更旧的段即可。
+* Nếu Bloom filter nói khóa *không có*, ta có thể yên tâm bỏ qua SSTable đó vì chắc chắn khóa không nằm trong đó.
+* Nếu Bloom filter nói khóa *có*, ta phải tra chỉ mục thưa (*sparse index*) và giải mã khối cặp khóa-giá trị để kiểm tra khóa có thật sự ở đó không. Nếu là dương tính giả, ta chỉ tốn thêm chút công vô ích, ngoài ra không có hại gì. Ta tiếp tục tìm trong segment cũ hơn kế tiếp.
 
-#### 压实策略 {#sec_storage_lsm_compaction}
+#### Chiến lược compaction {#sec_storage_lsm_compaction}
 
-LSM 存储的一项重要设计细节，是何时执行压实，以及每次压实应包含哪些 SSTable。许多基于 LSM 的存储系统都允许配置压实策略，常见选择包括 [^16] [^17]：
+Một chi tiết thiết kế quan trọng của LSM storage là khi nào thực hiện compaction và mỗi lần compaction gồm những SSTable nào. Nhiều hệ thống lưu trữ dựa trên LSM cho phép cấu hình chiến lược compaction. Các lựa chọn phổ biến [^16] [^17] gồm:
 
-按大小分层压实（size-tiered compaction）
-: 将较新、较小的 SSTable 逐步合并到较旧、较大的 SSTable 中。保存旧数据的 SSTable 可能变得非常大，合并时需要大量临时磁盘空间。这种策略的优点是能应对很高的写入吞吐量。
+Size-tiered compaction
+: Dần dần hợp nhất các SSTable mới hơn, nhỏ hơn vào các SSTable cũ hơn, lớn hơn. Các SSTable chứa dữ liệu cũ có thể trở nên rất lớn, và việc hợp nhất chúng cần nhiều dung lượng đĩa tạm. Ưu điểm của chiến lược này là chịu được thông lượng ghi rất cao.
 
-分级压实（leveled compaction）
-: 将键范围拆分到较小的 SSTable 中，并把较旧的数据移入不同的“层级”。这样可以更增量地进行压实，所需磁盘空间也少于按大小分层策略。分级压实的读取效率更高，因为存储引擎只需检查较少的 SSTable，就能判断其中是否含有所需的键。
+Leveled compaction
+: Chia dải khóa thành các SSTable nhỏ hơn và chuyển dữ liệu cũ hơn sang các "tầng" (level) khác nhau. Cách này cho phép compaction diễn ra tăng dần hơn và cần ít dung lượng đĩa hơn size-tiered compaction. Leveled compaction đọc hiệu quả hơn, vì storage engine chỉ cần kiểm tra ít SSTable hơn để xem chúng có chứa khóa cần tìm không.
 
-根据经验，如果工作负载以写入为主、读取很少，按大小分层压实通常表现更好；如果读取占主导，分级压实通常更好。若少量键经常写入，而大量键很少写入，分级压实也可能更有优势 [^18]。
+Theo kinh nghiệm, size-tiered compaction thường hoạt động tốt hơn nếu tải công việc chủ yếu là ghi và ít đọc, còn leveled compaction thường tốt hơn nếu đọc chiếm ưu thế. Leveled compaction cũng có thể có lợi thế nếu một số ít khóa được ghi thường xuyên còn rất nhiều khóa hiếm khi được ghi [^18].
 
-尽管其中有许多微妙之处，LSM 树的基本思想——保存一系列在后台合并的 SSTable——简单而有效。我们将在 [“比较 B 树与 LSM 树”](/ch4#sec_storage_btree_lsm_comparison) 中更详细地讨论其性能特征。
+Dù có nhiều điểm tinh tế, ý tưởng cơ bản của LSM-tree — giữ một chuỗi các SSTable được hợp nhất ở chế độ nền — vẫn đơn giản và hiệu quả. Ta sẽ bàn chi tiết hơn về đặc tính hiệu năng của nó ở [“So sánh B-tree và LSM-tree”](/ch4#sec_storage_btree_lsm_comparison).
 
 
 <a id="sidebar_embedded"></a>
 
-> [!TIP] 嵌入式存储引擎
+> [!TIP] Storage engine nhúng
 >
-> 许多数据库以服务形式运行，通过网络接收查询；但也有一些 *嵌入式*（*embedded*）数据库并不提供网络 API。它们是与应用代码运行在同一进程中的库，通常读写本地磁盘上的文件，应用则通过普通函数调用与之交互。RocksDB、SQLite、LMDB、DuckDB 和 KùzuDB 都是嵌入式存储引擎 [^19]。
+> Nhiều cơ sở dữ liệu chạy dưới dạng dịch vụ, nhận truy vấn qua mạng, nhưng cũng có những cơ sở dữ liệu *nhúng* (*embedded*), không cung cấp API mạng. Chúng là thư viện chạy trong cùng tiến trình với mã ứng dụng, thường đọc và ghi file trên đĩa cục bộ, và ứng dụng tương tác với chúng bằng các lời gọi hàm thông thường. RocksDB, SQLite, LMDB, DuckDB và KùzuDB đều là storage engine nhúng [^19].
 >
-> 嵌入式数据库在移动应用中十分常见，可用于保存本地用户的数据。在后端，如果数据小到单机足以容纳，并发事务又不多，嵌入式数据库也可能是合适的选择。例如在多租户系统中，如果每个租户的数据量都很小，且彼此完全隔离（即不需要查询多个租户的合并数据），就可以考虑为每个租户分别运行一个嵌入式数据库实例 [^20]。
+> Cơ sở dữ liệu nhúng rất phổ biến trong ứng dụng di động, nơi chúng dùng để lưu dữ liệu cục bộ của người dùng. Ở backend, chúng cũng có thể là lựa chọn phù hợp nếu dữ liệu đủ nhỏ để vừa một máy và không có nhiều giao dịch đồng thời. Chẳng hạn trong hệ thống multitenant, nếu mỗi tenant đủ nhỏ và được cô lập hoàn toàn với nhau (tức là không cần chạy truy vấn kết hợp dữ liệu của nhiều tenant), bạn có thể cân nhắc chạy một instance cơ sở dữ liệu nhúng riêng cho từng tenant [^20].
 >
-> 本章讨论的存储与检索方法，既适用于嵌入式数据库，也适用于客户端—服务器数据库。在 [第 6 章](/ch6#ch_replication) 和 [第 7 章](/ch7#ch_sharding) 中，我们将讨论如何把数据库扩展到多台机器。
+> Các phương pháp lưu trữ và truy xuất bàn trong chương này dùng được cho cả cơ sở dữ liệu nhúng lẫn cơ sở dữ liệu client-server. Ở [Chương 6](/ch6#ch_replication) và [Chương 7](/ch7#ch_sharding), ta sẽ bàn về cách mở rộng cơ sở dữ liệu ra nhiều máy.
 
-### B 树 {#sec_storage_b_trees}
+### B-tree {#sec_storage_b_trees}
 
-日志结构方法很流行，但它不是键值存储的唯一形式。按键读写数据库记录时，使用最广泛的结构是 *B 树*。
+Cách tiếp cận log-structured khá phổ biến, nhưng không phải dạng key-value store duy nhất. Cấu trúc được dùng rộng rãi nhất để đọc và ghi bản ghi cơ sở dữ liệu theo khóa là *B-tree*.
 
-B 树自 1970 年问世 [^21]，不到 10 年就被称为“无处不在”[^22]，很好地经受住了时间的考验。时至今日，它仍然是几乎所有关系数据库中的标准索引实现，许多非关系数据库也使用 B 树。
+B-tree ra đời năm 1970 [^21] và chưa đầy 10 năm sau đã được gọi là "có mặt khắp nơi" [^22]. Nó đã trụ vững rất tốt theo thời gian. Cho đến nay, nó vẫn là cách hiện thực chỉ mục (*index*) tiêu chuẩn trong hầu như mọi cơ sở dữ liệu quan hệ, và nhiều cơ sở dữ liệu phi quan hệ cũng dùng nó.
 
-与 SSTable 一样，B 树按键保存有序的键值对，因而能够高效地查找键值和执行范围查询。但相似之处也到此为止：B 树有着截然不同的设计理念。
+Giống SSTable, B-tree lưu các cặp khóa-giá trị đã sắp xếp theo khóa, nhờ đó tra khóa và truy vấn khoảng hiệu quả. Nhưng điểm giống nhau dừng ở đó: B-tree có triết lý thiết kế hoàn toàn khác.
 
-前面看到的日志结构索引把数据库分成大小可变的 *段*（*segment*），通常每段为几兆字节或更大；段只写入一次，此后便不可变。相比之下，B 树把数据库分成大小固定的 *块* 或 *页*，并允许就地覆盖页。传统的页大小是 4 KiB，不过 PostgreSQL 目前默认使用 8 KiB，MySQL 默认使用 16 KiB。
+Các chỉ mục (*index*) log-structured vừa xem chia cơ sở dữ liệu thành các *segment* kích thước thay đổi, thường vài megabyte trở lên, được ghi một lần rồi bất biến. Ngược lại, B-tree chia cơ sở dữ liệu thành các *khối* hay *trang* (page) kích thước cố định, và cho phép ghi đè tại chỗ một trang. Kích thước trang truyền thống là 4 KiB, tuy nhiên PostgreSQL hiện mặc định dùng 8 KiB và MySQL mặc định 16 KiB.
 
-每一页都有页号作为标识，因此一页可以引用另一页——类似于指针，只不过位于磁盘而非内存。如果所有页都保存在同一个文件中，页号乘以页大小，就是该页在文件中的字节偏移量。利用这些页引用可以构造一棵页组成的树，如 {{< xref fig="4-5" page="/ch4" anchor="fig_storage_b_tree" >}}图 4-5{{< /xref >}} 所示。
+Mỗi trang được định danh bằng số trang, nên một trang có thể tham chiếu tới trang khác — tương tự con trỏ, nhưng nằm trên đĩa thay vì trong bộ nhớ. Nếu mọi trang đều nằm trong cùng một file thì số trang nhân với kích thước trang chính là byte offset của trang trong file. Dùng các tham chiếu trang này, ta có thể dựng một cây các trang, như minh họa ở {{< xref fig="4-5" page="/ch4" anchor="fig_storage_b_tree" >}}Hình 4-5{{< /xref >}}.
 
-{{< fig num="4-5" id="fig_storage_b_tree" src="/fig/ddia_0405.png" caption="使用 B 树索引查找键 251。先从根页沿引用进入键 200–300 所在的页，再进入键 250–270 所在的页。" class="ddia-figure ddia-figure--wide" width="2658" height="1472" />}}
+{{< fig num="4-5" id="fig_storage_b_tree" src="/fig/ddia_0405.png" caption="Tra khóa 251 bằng chỉ mục (*index*) B-tree. Từ trang gốc, đi theo tham chiếu tới trang chứa các khóa 200–300, rồi tới trang chứa các khóa 250–270." class="ddia-figure ddia-figure--wide" width="2658" height="1472" />}}
 
-其中一页被指定为 B 树的 *根*（*root*）；在索引中查找键时，总是从这里开始。根页包含若干个键和对子页的引用。每个子页负责一段连续的键范围，引用之间的键标示出相邻范围的边界。（这种结构有时称为 B+ 树，不过这里不必把它与其他 B 树变体区分开来。）
+Một trang được chọn làm *gốc* (*root*) của B-tree. Mỗi khi cần tra một khóa trong chỉ mục (*index*), ta luôn bắt đầu từ đây. Trang gốc chứa một số khóa và các tham chiếu tới trang con. Mỗi trang con phụ trách một dải khóa liên tục, và các khóa nằm giữa các tham chiếu cho biết ranh giới giữa các dải kề nhau. (Cấu trúc này đôi khi được gọi là B+ tree, nhưng ở đây ta không cần phân biệt nó với các biến thể B-tree khác.)
 
-在 {{< xref fig="4-5" page="/ch4" anchor="fig_storage_b_tree" >}}图 4-5{{< /xref >}} 的例子中，我们要寻找键 251，因此沿着边界 200 与 300 之间的页引用向下走。接下来的一页结构相似，只是把 200–300 进一步划分成更小的子范围。最终会到达包含各个键的 *叶页*（*leaf page*）；叶页或者直接保存每个键的值，或者保存指向值所在页的引用。
+Trong ví dụ ở {{< xref fig="4-5" page="/ch4" anchor="fig_storage_b_tree" >}}Hình 4-5{{< /xref >}}, ta đang tìm khóa 251, nên đi theo tham chiếu trang nằm giữa các ranh giới 200 và 300. Trang tiếp theo có cấu trúc tương tự, chia dải 200–300 thành các dải con nhỏ hơn. Cuối cùng ta tới một *trang lá* (*leaf page*) chứa các khóa riêng lẻ. Trang lá hoặc chứa trực tiếp giá trị của từng khóa, hoặc chứa tham chiếu tới trang nơi lưu giá trị đó.
 
-B 树一页中对子页的引用数称为 *分支因子*（*branching factor*）。例如，{{< xref fig="4-5" page="/ch4" anchor="fig_storage_b_tree" >}}图 4-5{{< /xref >}} 中的分支因子为 6。实践中的分支因子取决于页引用和范围边界所需的空间，不过通常可达几百。
+Số tham chiếu tới trang con trong một trang của B-tree được gọi là *hệ số phân nhánh* (*branching factor*). Chẳng hạn trong {{< xref fig="4-5" page="/ch4" anchor="fig_storage_b_tree" >}}Hình 4-5{{< /xref >}}, hệ số phân nhánh là 6. Trong thực tế, hệ số phân nhánh phụ thuộc vào dung lượng cần để lưu các tham chiếu trang và ranh giới dải, nhưng thường lên tới vài trăm.
 
-如果要更新 B 树中已有键的值，就先找到包含该键的叶页，再用含有新值的版本覆盖磁盘上的这一页。如果要添加新键，则找到范围涵盖该键的页，并把键加入其中。如果页内没有足够的空闲空间容纳新键，就把它拆成两个半满的页，并更新父页，以反映键范围的新划分。
+Nếu muốn cập nhật giá trị của một khóa đã có trong B-tree, bạn tìm trang lá chứa khóa đó rồi ghi đè trang đó trên đĩa bằng phiên bản chứa giá trị mới. Nếu muốn thêm khóa mới, bạn tìm trang có dải khóa bao trùm khóa mới và thêm khóa vào đó. Nếu trang không đủ chỗ trống cho khóa mới, nó được tách thành hai trang đầy một nửa, và trang cha được cập nhật để phản ánh cách chia dải khóa mới.
 
-{{< fig num="4-6" id="fig_storage_b_tree_split" src="/fig/ddia_0406.png" caption="在边界键 337 处拆分页，使 B 树增长；父页也随之更新，以引用两个子页。" class="ddia-figure ddia-figure--wide" width="2658" height="1588" />}}
+{{< fig num="4-6" id="fig_storage_b_tree_split" src="/fig/ddia_0406.png" caption="Làm B-tree lớn thêm bằng cách tách một trang tại khóa biên 337. Trang cha cũng được cập nhật để tham chiếu tới hai trang con." class="ddia-figure ddia-figure--wide" width="2658" height="1588" />}}
 
-在 {{< xref fig="4-6" page="/ch4" anchor="fig_storage_b_tree_split" >}}图 4-6{{< /xref >}} 中，我们想插入键 334，但负责 333–345 范围的页已经装满。于是把它拆成两页：一页负责 333–337（并包含新键），另一页负责 337–344。父页也必须更新，增加对两个子页的引用，并以 337 作为二者的边界。如果父页容不下新的引用，它也要拆分；这种拆分可能一路向上传播到树根。根页拆分时，则在其上方创建一个新根。删除键还可能需要合并节点，处理起来更加复杂 [^5]。
+Trong {{< xref fig="4-6" page="/ch4" anchor="fig_storage_b_tree_split" >}}Hình 4-6{{< /xref >}}, ta muốn chèn khóa 334, nhưng trang phụ trách dải 333–345 đã đầy. Vì vậy ta tách nó thành hai trang: một trang phụ trách dải 333–337 (gồm cả khóa mới), trang kia phụ trách dải 337–344. Trang cha cũng phải được cập nhật, thêm tham chiếu tới cả hai trang con với 337 làm ranh giới giữa chúng. Nếu trang cha không còn chỗ cho tham chiếu mới, nó cũng bị tách, và việc tách có thể lan ngược lên tận gốc cây. Khi trang gốc bị tách, một gốc mới được tạo phía trên nó. Xóa khóa cũng có thể cần hợp nhất các nút, và phức tạp hơn [^5].
 
-这个算法可以确保树始终 *平衡*（*balanced*）：包含 *n* 个键的 B 树深度总是 *O*(log *n*)。大多数数据库只需要三四层深的 B 树，因此不必沿着很多页引用就能找到目标页。（一棵四层深、页大小为 4 KiB、分支因子为 500 的树，最多可以存储 250 TB 数据。）
+Thuật toán này đảm bảo cây luôn *cân bằng* (*balanced*): một B-tree với *n* khóa luôn có độ sâu *O*(log *n*). Hầu hết cơ sở dữ liệu chỉ cần B-tree sâu ba hoặc bốn tầng, nên bạn không phải lần theo quá nhiều tham chiếu trang để tìm trang cần thiết. (Một cây bốn tầng với trang 4 KiB và hệ số phân nhánh 500 có thể lưu tới 250 TB dữ liệu.)
 
-#### 使 B 树可靠 {#sec_storage_btree_wal}
+#### Làm cho B-tree đáng tin cậy {#sec_storage_btree_wal}
 
-B 树最基本的底层写操作，是用新数据覆写磁盘上的页，并假定覆写不会改变页的位置：也就是说，页被覆写后，所有指向它的引用仍然有效。这与 LSM 树一类日志结构索引形成鲜明对比；后者只向文件追加写入（并最终删除过时文件），从不就地修改文件。
+Thao tác ghi cơ bản nhất của B-tree là ghi đè một trang trên đĩa bằng dữ liệu mới, với giả định việc ghi đè không làm thay đổi vị trí trang: nghĩa là sau khi một trang bị ghi đè, mọi tham chiếu tới nó vẫn còn hiệu lực. Điều này trái ngược hẳn với các chỉ mục (*index*) log-structured như LSM-tree, vốn chỉ ghi nối vào file (và cuối cùng xóa các file lỗi thời) chứ không bao giờ sửa file tại chỗ.
 
-一次覆写多个页——例如拆分页时——是很危险的操作。如果数据库只写完其中一部分就崩溃，最终会留下损坏的树（例如出现不属于任何父页的 *孤儿页*，*orphan page*）。如果硬件不能原子地写入整页，还可能留下只写了一部分的页，这称为 *页撕裂*（*torn page*）[^23]。
+Ghi đè nhiều trang cùng lúc — chẳng hạn khi tách trang — là thao tác nguy hiểm: nếu cơ sở dữ liệu gặp sự cố khi mới ghi được một phần, kết quả là một cây bị hỏng (chẳng hạn có thể có *orphan page* (*orphan page*), tức trang không thuộc trang cha nào). Nếu phần cứng không thể ghi nguyên tử cả một trang, bạn còn có thể có một trang chỉ được ghi một phần, gọi là *torn page* (*torn page*) [^23].
 
-为了让数据库能够从崩溃中恢复，B 树实现通常会在磁盘上维护一个额外的数据结构：*预写日志*（*write-ahead log*，WAL）。这是一个仅追加文件；对 B 树的每项修改，都必须先写入 WAL，才能应用到树本身的页上。数据库在崩溃后重新启动时，会用这个日志把 B 树恢复到一致状态 [^2] [^24]。文件系统中的对应机制称为 *日志机制*（*journaling*）。
+Để cơ sở dữ liệu có thể khôi phục sau sự cố, các cách hiện thực B-tree thường giữ thêm một cấu trúc dữ liệu trên đĩa: *write-ahead log* (*write-ahead log*, WAL). Đây là một file chỉ ghi nối. Mọi sửa đổi đối với B-tree phải được ghi vào đó trước khi áp dụng lên chính các trang của cây. Khi cơ sở dữ liệu khởi động lại sau sự cố, log này được dùng để đưa B-tree về trạng thái nhất quán [^2] [^24]. Trong hệ thống file, cơ chế tương ứng được gọi là *journaling* (*journaling*).
 
-为了提高性能，B 树实现通常不会立刻把每个修改过的页写入磁盘，而是先把 B 树页在内存中缓冲一段时间。此时，预写日志还负责确保崩溃时不丢数据：只要数据已写入 WAL，并通过 `fsync()` 系统调用刷到磁盘，它就是持久的，因为数据库能够在崩溃后将它恢复出来 [^25]。
+Để tăng hiệu năng, các cách hiện thực B-tree thường không ghi ngay từng trang đã sửa xuống đĩa mà đệm các trang B-tree trong bộ nhớ một lúc. Khi đó, write-ahead log còn đảm bảo dữ liệu không bị mất khi sự cố xảy ra: miễn là dữ liệu đã được ghi vào WAL và đã được flush xuống đĩa bằng system call `fsync()`, thì nó là bền vững, vì cơ sở dữ liệu có thể khôi phục nó sau sự cố [^25].
 
-#### B 树变体 {#b-tree-variants}
+#### Các biến thể của B-tree {#b-tree-variants}
 
-由于 B 树已经存在很久，多年来发展出了许多变体。这里只举几例：
+Vì B-tree đã tồn tại lâu, nhiều biến thể đã xuất hiện qua nhiều năm. Xin nêu vài ví dụ:
 
-* 一些数据库（如 LMDB）不覆写页，也不靠 WAL 进行崩溃恢复，而是采用写时复制（copy-on-write）方案 [^26]。修改过的页写入新的位置，并为树中的父页创建新版本，使其指向新位置。这种方法对并发控制也很有用，我们将在 [“快照隔离与可重复读”](/ch8#sec_transactions_snapshot_isolation) 中看到。
-* 可以不存储完整的键，而只存储其缩写，以节省页内空间。尤其在树的内部页中，键只需包含足够的信息，能够充当键范围之间的边界即可。一页容纳的键越多，树的分支因子就越大，层数也越少。
-* 为了加快按排序顺序扫描键范围，有些 B 树实现会尽量安排树的布局，使叶页在磁盘上也按顺序出现，从而减少磁盘寻道。不过随着树不断增长，这种顺序很难维持。
-* 还可以向树中加入额外的指针。例如，让每个叶页引用左右相邻的兄弟页，便能按顺序扫描键，而不必反复跳回父页。
+* Một số cơ sở dữ liệu (như LMDB) không ghi đè trang và không dựa vào WAL để khôi phục sau sự cố, mà dùng phương án *copy-on-write* (*copy-on-write*) [^26]. Trang đã sửa được ghi vào vị trí mới, và một phiên bản mới của trang cha trong cây được tạo ra để trỏ tới vị trí mới. Cách này cũng hữu ích cho kiểm soát đồng thời, như ta sẽ thấy ở [“Snapshot isolation và repeatable read”](/ch8#sec_transactions_snapshot_isolation).
+* Ta có thể tiết kiệm chỗ trong trang bằng cách không lưu toàn bộ khóa mà chỉ lưu dạng viết tắt. Đặc biệt ở các trang bên trong của cây, khóa chỉ cần chứa đủ thông tin để làm ranh giới giữa các dải khóa. Nhồi được nhiều khóa hơn vào một trang cho phép cây có hệ số phân nhánh cao hơn, và do đó ít tầng hơn.
+* Để quét nhanh một dải khóa theo thứ tự sắp xếp, một số cách hiện thực B-tree cố bố trí cây sao cho các trang lá cũng nằm liên tiếp trên đĩa, nhờ đó giảm số lần seek. Tuy nhiên, khi cây lớn dần, rất khó giữ được thứ tự này.
+* Ta cũng có thể thêm các con trỏ phụ vào cây. Chẳng hạn, mỗi trang lá có thể tham chiếu tới các trang anh em bên trái và bên phải, cho phép quét các khóa theo thứ tự mà không phải nhảy ngược lên trang cha.
 
-### 比较 B 树与 LSM 树 {#sec_storage_btree_lsm_comparison}
+### So sánh B-tree và LSM-tree {#sec_storage_btree_lsm_comparison}
 
-根据经验，LSM 树更适合写入密集型应用，而 B 树的读取通常更快 [^27] [^28]。不过，基准测试结果往往对工作负载的细节非常敏感。只有使用自己的实际工作负载测试系统，比较才有意义。此外，LSM 树与 B 树并非严格的二选一：存储引擎有时会融合两种方法的特点，例如维护多棵 B 树，再用 LSM 风格将它们合并。本节将简要讨论衡量存储引擎性能时值得考虑的几个方面。
+Theo kinh nghiệm, LSM-tree hợp hơn với các ứng dụng nặng về ghi, còn B-tree thường đọc nhanh hơn [^27] [^28]. Tuy nhiên, kết quả benchmark thường rất nhạy với chi tiết của tải công việc. Bạn cần thử nghiệm hệ thống với tải công việc thực tế của mình thì việc so sánh mới có ý nghĩa. Ngoài ra, LSM-tree và B-tree không phải là lựa chọn loại trừ nhau tuyệt đối: storage engine đôi khi kết hợp đặc điểm của cả hai cách, chẳng hạn duy trì nhiều B-tree rồi hợp nhất chúng theo kiểu LSM. Phần này sẽ điểm qua ngắn gọn vài khía cạnh đáng cân nhắc khi đánh giá hiệu năng của storage engine.
 
-#### 读取性能 {#read-performance}
+#### Hiệu năng đọc {#read-performance}
 
-在 B 树中查找键，需要在树的每一层读取一页。由于层数通常很少，B 树读取一般很快，性能也比较容易预测。LSM 存储引擎往往需要检查处于不同压实阶段的多个 SSTable，不过布隆过滤器能减少实际需要执行的磁盘 I/O 次数。两种方法都可能有良好表现；究竟哪种更快，取决于存储引擎的具体实现和工作负载。
+Tra một khóa trong B-tree cần đọc một trang ở mỗi tầng của cây. Vì số tầng thường nhỏ, việc đọc B-tree nhìn chung nhanh và hiệu năng khá dễ dự đoán. Storage engine LSM thường phải kiểm tra nhiều SSTable ở các giai đoạn compaction khác nhau, nhưng Bloom filter giúp giảm số lần I/O đĩa thực sự phải thực hiện. Cả hai cách đều có thể cho kết quả tốt. Cách nào nhanh hơn tùy vào cách hiện thực storage engine và tải công việc.
 
-B 树本身有序，因此范围查询简单而快速。LSM 存储也能利用 SSTable 的排序，但必须并行扫描所有段，再把结果合并起来。布隆过滤器对范围查询无能为力，因为计算范围内每个潜在键的哈希并不切实际；所以在 LSM 存储中，范围查询的成本高于点查询 [^29]。
+B-tree vốn đã có thứ tự nên truy vấn khoảng đơn giản và nhanh. LSM storage cũng tận dụng được việc SSTable được sắp xếp, nhưng phải quét song song mọi segment rồi hợp nhất kết quả. Bloom filter không giúp ích gì cho truy vấn khoảng, vì không thực tế khi tính hash cho mọi khóa tiềm năng trong khoảng. Do đó trong LSM storage, truy vấn khoảng tốn kém hơn truy vấn điểm [^29].
 
-在日志结构存储引擎中，高写入吞吐量可能在内存表填满时引发延迟尖峰。如果数据来不及写入磁盘——或许因为压实速度赶不上新增写入——就会出现这种情况。包括 RocksDB 在内的许多存储引擎会在此时施加 *背压*（*backpressure*）：暂停所有读写，直到内存表写入磁盘 [^30] [^31]。
+Trong storage engine log-structured, thông lượng ghi cao có thể gây ra các đỉnh độ trễ khi memtable đầy. Điều này xảy ra nếu dữ liệu không thể ghi ra đĩa kịp — có thể vì compaction không theo kịp lượng ghi mới đến. Nhiều storage engine, kể cả RocksDB, áp dụng *backpressure* (*backpressure*) trong tình huống này: chúng tạm dừng mọi đọc và ghi cho đến khi memtable được ghi xong xuống đĩa [^30] [^31].
 
-至于读取吞吐量，现代 SSD（尤其是 NVMe）可以并行处理许多相互独立的读取请求。LSM 树和 B 树都能提供很高的读取吞吐量，但存储引擎必须经过精心设计，才能利用这种并行能力 [^32]。
+Về thông lượng đọc, SSD hiện đại (đặc biệt là NVMe) có thể xử lý song song nhiều yêu cầu đọc độc lập. Cả LSM-tree lẫn B-tree đều có thể đạt thông lượng đọc cao, nhưng storage engine phải được thiết kế cẩn thận để tận dụng được khả năng song song này [^32].
 
-#### 顺序与随机写入 {#sidebar_sequential}
+#### Ghi tuần tự và ghi ngẫu nhiên {#sidebar_sequential}
 
-使用 B 树时，如果应用写入的键散布在整个键空间，产生的磁盘操作也会四处分散，因为存储引擎要覆写的页可能位于磁盘任何位置。日志结构存储引擎则一次写出整个段文件——无论是把内存表写出，还是压实现有段——其大小远远超过 B 树中的一页。
+Với B-tree, nếu ứng dụng ghi các khóa rải rác khắp không gian khóa, các thao tác đĩa tạo ra cũng rải rác khắp nơi, vì các trang storage engine cần ghi đè có thể nằm ở bất cứ đâu trên đĩa. Ngược lại, storage engine log-structured ghi ra cả một file segment mỗi lần — dù là ghi từ memtable ra hay compaction các segment hiện có — với kích thước lớn hơn nhiều so với một trang trong B-tree.
 
-这种数量多、规模小而位置分散的写入模式（如 B 树）称为 *随机写入*（*random write*）；数量少、规模较大的写入模式（如 LSM 树）则称为 *顺序写入*（*sequential write*）。磁盘的顺序写入吞吐量通常高于随机写入，因此在相同硬件上，日志结构存储引擎一般能承受比 B 树更高的写入吞吐量。这种差异在机械硬盘（HDD）上尤其显著；如今多数数据库使用固态硬盘（SSD），差距有所缩小，但依然不可忽略（参见 [“SSD 上的顺序与随机写入”](/ch4#sidebar_sequential)）。
+Kiểu ghi gồm nhiều thao tác nhỏ và nằm rải rác (như trong B-tree) gọi là *ghi ngẫu nhiên* (*random write*), còn kiểu ghi gồm ít thao tác lớn hơn (như trong LSM-tree) gọi là *ghi tuần tự* (*sequential write*). Thông lượng ghi tuần tự của đĩa thường cao hơn ghi ngẫu nhiên, nên trên cùng phần cứng, storage engine log-structured thường chịu được thông lượng ghi cao hơn B-tree. Chênh lệch này đặc biệt rõ trên ổ đĩa quay (HDD). Ngày nay đa số cơ sở dữ liệu dùng ổ thể rắn (SSD) nên khoảng cách đã thu hẹp, nhưng vẫn không thể bỏ qua (xem [“Ghi tuần tự và ghi ngẫu nhiên trên SSD”](/ch4#sidebar_sequential)).
 
-> [!TIP] SSD 上的顺序与随机写入
+> [!TIP] Ghi tuần tự và ghi ngẫu nhiên trên SSD
 >
-> 在机械硬盘（HDD）上，顺序写入远快于随机写入：随机写入必须把磁头机械地移到新位置，还要等待盘片上的目标区域转到磁头下方，耗时可达数毫秒——以计算机的时间尺度看，简直是一生。如今，SSD（固态硬盘）已经在许多场景中取代 HDD，其中也包括 NVMe（Non-Volatile Memory Express，即通过 PCI Express 总线连接的闪存）；它们没有这种机械限制。
+> Trên ổ đĩa quay (HDD), ghi tuần tự nhanh hơn ghi ngẫu nhiên rất nhiều: ghi ngẫu nhiên phải di chuyển cơ học đầu từ tới vị trí mới và chờ vùng cần ghi trên đĩa quay tới dưới đầu từ, mất đến vài mili giây — theo thang thời gian của máy tính thì như cả một đời người. Ngày nay SSD (ổ thể rắn) đã thay thế HDD trong nhiều trường hợp, kể cả NVMe (Non-Volatile Memory Express, tức bộ nhớ flash nối qua bus PCI Express). Chúng không có giới hạn cơ học này.
 >
-> 尽管如此，SSD 的顺序写入吞吐量仍然高于随机写入。闪存每次可以读写一页（通常为 4 KiB），却只能按块擦除（通常为 512 KiB）。同一个块中，有些页可能仍保存有效数据，另一些页中的数据则已经无用。擦除整个块之前，控制器必须先把含有有效数据的页搬到其他块；这个过程称为 *垃圾回收*（GC）[^33]。
+> Tuy vậy, SSD vẫn có thông lượng ghi tuần tự cao hơn ghi ngẫu nhiên. Bộ nhớ flash có thể đọc và ghi từng trang (thường 4 KiB) nhưng chỉ xóa được theo từng khối (thường 512 KiB). Trong cùng một khối, một số trang có thể vẫn chứa dữ liệu hợp lệ, còn dữ liệu ở các trang khác thì đã vô dụng. Trước khi xóa cả khối, bộ điều khiển phải chuyển các trang chứa dữ liệu hợp lệ sang khối khác. Quá trình này gọi là *garbage collection* (*garbage collection*, GC) [^33].
 >
-> 顺序写入每次写入更大块的数据，所以一个完整的 512 KiB 块很可能都属于同一个文件；日后删除这个文件时，可以直接擦除整个块，不必执行 GC。随机写入则更容易让一个块混杂有效页和无效页，因此在擦除块之前，GC 必须完成更多搬运工作 [^34] [^35] [^36]。
+> Ghi tuần tự mỗi lần ghi khối dữ liệu lớn hơn, nên một khối 512 KiB đầy đủ nhiều khả năng thuộc về cùng một file. Khi file đó bị xóa sau này, cả khối có thể được xóa thẳng mà không cần GC. Ngược lại, ghi ngẫu nhiên dễ khiến một khối lẫn lộn trang hợp lệ và trang không hợp lệ, nên GC phải làm nhiều việc chuyển dữ liệu hơn trước khi xóa được khối [^34] [^35] [^36].
 >
-> GC 占用的写入带宽无法再供应用使用；而且 GC 带来的额外写入会加剧闪存磨损。因此，随机写入比顺序写入更快地损耗 SSD。
+> Băng thông ghi mà GC chiếm dụng không còn dành cho ứng dụng. Hơn nữa, các thao tác ghi bổ sung do GC sinh ra làm flash mòn nhanh hơn. Vì vậy, ghi ngẫu nhiên làm SSD hao mòn nhanh hơn ghi tuần tự.
 
-#### 写放大 {#write-amplification}
+#### Khuếch đại ghi {#write-amplification}
 
-无论采用哪种存储引擎，应用发出的一次写请求都会转化为底层磁盘上的多次 I/O。对 LSM 树而言，一个值首先写入日志以确保持久性；内存表写入磁盘时又写一次；此后每次所在的键值对参与压实，还要再次写入。（如果值远大于键，可以把键和值分开存放，只压实包含键和值引用的 SSTable，以降低这项开销 [^37]。）
+Với bất kỳ storage engine nào, một yêu cầu ghi từ ứng dụng sẽ chuyển thành nhiều thao tác I/O trên đĩa bên dưới. Với LSM-tree, một giá trị trước hết được ghi vào log để đảm bảo bền vững, rồi ghi lần nữa khi memtable được ghi xuống đĩa, và lại ghi thêm mỗi lần cặp khóa-giá trị đó tham gia compaction. (Nếu giá trị lớn hơn khóa rất nhiều, có thể giảm chi phí này bằng cách lưu khóa và giá trị riêng, và chỉ compaction các SSTable chứa khóa cùng tham chiếu tới giá trị [^37].)
 
-B 树索引也必须把每份数据至少写两次：一次写入预写日志，一次写入树页本身。为了确保 B 树能在崩溃或断电后正确恢复，有时即使页内只有几个字节发生变化，也必须写出整页 [^38] [^39]。
+Chỉ mục (*index*) B-tree cũng phải ghi mỗi mẩu dữ liệu ít nhất hai lần: một lần vào write-ahead log và một lần vào chính trang của cây. Để đảm bảo B-tree khôi phục đúng sau sự cố hoặc mất điện, đôi khi còn phải ghi cả một trang dù chỉ vài byte trong trang thay đổi [^38] [^39].
 
-把某个工作负载实际写入磁盘的总字节数，除以不带索引、只写仅追加日志时所需的字节数，得到的比值就是 *写放大*（*write amplification*）。（写放大有时也按 I/O 操作次数而非字节数定义。）在写入密集型应用中，瓶颈可能是数据库向磁盘写入的速度。此时写放大越高，在有限磁盘带宽内每秒能处理的写入就越少。
+Tỷ lệ giữa tổng số byte thực sự ghi xuống đĩa cho một tải công việc và số byte cần ghi nếu chỉ ghi vào log chỉ ghi nối, không có chỉ mục (*index*), được gọi là *khuếch đại ghi* (*write amplification*). (Khuếch đại ghi đôi khi cũng được định nghĩa theo số thao tác I/O thay vì số byte.) Trong các ứng dụng nặng về ghi, nút thắt cổ chai có thể là tốc độ cơ sở dữ liệu ghi xuống đĩa. Khi đó, khuếch đại ghi càng cao thì số thao tác ghi mỗi giây xử lý được trong băng thông đĩa có hạn càng ít.
 
-LSM 树和 B 树都有写放大问题。孰优孰劣取决于许多因素，例如键和值的长度，以及覆盖现有键与插入新键各有多频繁。对典型工作负载而言，LSM 树往往具有更低的写放大，因为它不必写出整页，还可以压缩 SSTable 中的数据块 [^40]。这也是 LSM 存储引擎适合写入密集型工作负载的原因之一。
+Cả LSM-tree lẫn B-tree đều có khuếch đại ghi. Bên nào tốt hơn phụ thuộc vào nhiều yếu tố, chẳng hạn độ dài khóa và giá trị, hay mức độ thường xuyên ghi đè khóa có sẵn so với chèn khóa mới. Với các tải công việc điển hình, LSM-tree thường có khuếch đại ghi thấp hơn vì không phải ghi cả trang và có thể nén các khối dữ liệu trong SSTable [^40]. Đây cũng là một lý do khiến storage engine LSM phù hợp với tải công việc nặng về ghi.
 
-写放大除了影响吞吐量，也关系到 SSD 的磨损：存储引擎的写放大越低，SSD 损耗得就越慢。
+Ngoài ảnh hưởng đến thông lượng, khuếch đại ghi còn liên quan đến độ hao mòn của SSD: khuếch đại ghi của storage engine càng thấp thì SSD mòn càng chậm.
 
-测量存储引擎的写入吞吐量时，实验必须运行足够长的时间，才能显现写放大的影响。刚开始向空 LSM 树写入时，压实尚未发生，全部磁盘带宽都可供新写入使用。随着数据库增长，新写入便不得不与压实共享磁盘带宽。
+Khi đo thông lượng ghi của storage engine, thử nghiệm phải chạy đủ lâu để khuếch đại ghi thể hiện ra. Khi bắt đầu ghi vào một LSM-tree rỗng, chưa có compaction nên toàn bộ băng thông đĩa dành cho các thao tác ghi mới. Khi cơ sở dữ liệu lớn dần, các thao tác ghi mới buộc phải chia sẻ băng thông đĩa với compaction.
 
-#### 磁盘空间使用 {#disk-space-usage}
+#### Dung lượng đĩa sử dụng {#disk-space-usage}
 
-B 树可能随着时间推移逐渐 *碎片化*（*fragmented*）。例如，删除大量键之后，数据库文件里可能留下许多 B 树不再使用的页。以后向 B 树添加数据时可以复用这些空闲页，但它们位于文件中间，很难归还给操作系统，所以仍会占用文件系统空间。因此，数据库需要后台进程搬移并重新整理这些页，例如 PostgreSQL 的清理（vacuum）进程 [^25]。
+B-tree có thể dần trở nên *phân mảnh* (*fragmented*) theo thời gian. Chẳng hạn, sau khi xóa nhiều khóa, file cơ sở dữ liệu có thể còn lại nhiều trang mà B-tree không dùng nữa. Những trang trống này có thể được tái sử dụng khi thêm dữ liệu vào B-tree về sau, nhưng vì chúng nằm giữa file nên khó trả lại cho hệ điều hành, và vẫn chiếm dung lượng hệ thống file. Do đó, cơ sở dữ liệu cần một tiến trình nền để di chuyển và sắp xếp lại các trang, chẳng hạn tiến trình *vacuum* của PostgreSQL [^25].
 
-碎片化对 LSM 树来说问题较小，因为压实过程本来就会定期重写数据文件，而且 SSTable 中不存在留有空闲空间的页。此外，SSTable 中的键值对块更便于压缩，所以生成的磁盘文件通常小于 B 树。已经覆盖的键和值会继续占用空间，直到在压实中移除；不过采用分级压实时，这项开销相当低 [^40] [^41]。按大小分层压实（参见 [“压实策略”](/ch4#sec_storage_lsm_compaction)）会占用更多磁盘空间，尤其是在压实过程中临时占用的空间。
+Phân mảnh ít gây vấn đề hơn với LSM-tree, vì compaction vốn đã định kỳ ghi lại các file dữ liệu, và SSTable không có trang chừa chỗ trống. Ngoài ra, các khối cặp khóa-giá trị trong SSTable dễ nén hơn, nên file đĩa thu được thường nhỏ hơn B-tree. Các khóa và giá trị đã bị ghi đè vẫn chiếm dung lượng cho đến khi được loại bỏ trong compaction, nhưng với leveled compaction thì chi phí này khá thấp [^40] [^41]. Size-tiered compaction (xem [“Chiến lược compaction”](/ch4#sec_storage_lsm_compaction)) dùng nhiều dung lượng đĩa hơn, nhất là dung lượng tạm thời trong lúc compaction.
 
-如果需要删除某些数据并确信它们确实已经消失——例如为了遵守数据保护法规——磁盘上并存的多份副本也会带来麻烦。在大多数 LSM 存储引擎中，已删除的记录仍可能留在较高层级，直到代表删除操作的墓碑传遍所有压实层级；这一过程可能持续很久。有些专门的存储引擎设计可以更快地传播删除操作 [^42]。
+Nếu bạn cần xóa một số dữ liệu và chắc chắn chúng thực sự biến mất — chẳng hạn để tuân thủ quy định bảo vệ dữ liệu — thì việc có nhiều bản sao cùng tồn tại trên đĩa cũng gây rắc rối. Ở hầu hết storage engine LSM, bản ghi đã xóa vẫn có thể còn ở các tầng cao hơn cho đến khi tombstone đại diện cho thao tác xóa lan qua mọi tầng compaction, và quá trình này có thể kéo dài. Một số thiết kế storage engine chuyên biệt có thể lan truyền thao tác xóa nhanh hơn [^42].
 
-另一方面，SSTable 段文件的不可变性很适合为数据库创建时间点快照（例如用于备份，或复制一份数据库进行测试）：只需写出内存表，再记下当时存在哪些段文件。只要不删除属于快照的文件，就完全不必实际复制它们。B 树会覆写页，因此很难如此高效地创建快照。
+Mặt khác, tính bất biến của các file segment SSTable rất hữu ích khi muốn tạo snapshot tại một thời điểm của cơ sở dữ liệu (chẳng hạn để backup, hoặc sao một bản cơ sở dữ liệu để thử nghiệm): chỉ cần ghi memtable ra rồi ghi nhận hiện có những file segment nào. Miễn là không xóa các file thuộc snapshot, ta hoàn toàn không cần thực sự tạo bản sao của chúng. B-tree ghi đè trang nên khó tạo snapshot hiệu quả như vậy.
 
+### Chỉ mục (*index*) nhiều cột và chỉ mục phụ (*secondary index*) {#sec_storage_index_multicolumn}
 
-### 多列索引与二级索引 {#sec_storage_index_multicolumn}
+Cho đến giờ ta mới chỉ bàn về chỉ mục (*index*) khóa-giá trị, tương tự chỉ mục (*index*) *khóa chính* (*primary key*) trong mô hình quan hệ. Khóa chính định danh duy nhất một hàng trong bảng quan hệ, một tài liệu trong cơ sở dữ liệu tài liệu, hoặc một đỉnh trong cơ sở dữ liệu đồ thị. Các bản ghi khác trong cơ sở dữ liệu có thể tham chiếu tới hàng, tài liệu hay đỉnh đó bằng khóa chính (hoặc ID), và chỉ mục (*index*) dùng để phân giải các tham chiếu này.
 
-到目前为止，我们只讨论了键值索引，它们类似于关系模型中的 *主键*（*primary key*）索引。主键唯一标识关系表中的一行、文档数据库中的一个文档，或图数据库中的一个顶点。数据库里的其他记录可以通过主键（或 ID）引用这一行、文档或顶点，而索引负责解析这种引用。
+*Chỉ mục phụ* (*secondary index*) cũng rất phổ biến. Trong cơ sở dữ liệu quan hệ, bạn có thể tạo nhiều chỉ mục phụ (*secondary index*) trên cùng một bảng bằng lệnh `CREATE INDEX`, cho phép tìm kiếm theo các cột khác ngoài khóa chính. Chẳng hạn, trong {{< xref fig="3-1" page="/ch3" anchor="fig_obama_relational" >}}Hình 3-1{{< /xref >}} (xem [Chương 3](/ch3#ch_datamodels)), nhiều khả năng ta sẽ tạo chỉ mục phụ (*secondary index*) trên cột `user_id` ở các bảng để tìm mọi hàng thuộc cùng một người dùng.
 
-*二级索引* 也很常见。在关系数据库中，可以用 `CREATE INDEX` 命令在同一张表上创建多个二级索引，从而按主键以外的列进行搜索。例如，{{< xref fig="3-1" page="/ch3" anchor="fig_obama_relational" >}}图 3-1{{< /xref >}}（见 [第 3 章](/ch3#ch_datamodels)）中的各张表很可能都要在 `user_id` 列上建立二级索引，以便找出属于同一用户的所有行。
+Chỉ mục phụ (*secondary index*) dễ dàng được xây từ chỉ mục (*index*) khóa-giá trị. Điểm khác biệt chính là giá trị được đánh chỉ mục (*index*) trong chỉ mục phụ (*secondary index*) không nhất thiết là duy nhất, tức là có thể có nhiều hàng (hoặc tài liệu, đỉnh) dưới cùng một mục chỉ mục (*index*). Có hai cách giải quyết: biến giá trị trong chỉ mục (*index*) thành danh sách các định danh hàng khớp (như postings list trong chỉ mục (*index*) toàn văn), hoặc làm cho mỗi mục trong chỉ mục (*index*) là duy nhất bằng cách nối thêm định danh hàng vào nó. Cả storage engine cập nhật tại chỗ như B-tree lẫn storage engine log-structured đều có thể dùng để hiện thực chỉ mục phụ (*secondary index*).
 
-二级索引很容易用键值索引构建。主要区别在于，二级索引中的被索引值不一定唯一，也就是说，同一个索引条目下可能对应许多行（或文档、顶点）。有两种解决办法：把索引中的值做成匹配行标识符的列表（类似全文索引的倒排列表）；或者在每个索引项后附加行标识符，使它成为唯一项。B 树一类就地更新的存储引擎和日志结构存储都可以实现二级索引。
+#### Lưu giá trị trong chỉ mục (*index*) {#sec_storage_index_heap}
 
-#### 在索引中存储值 {#sec_storage_index_heap}
+Khóa trong chỉ mục (*index*) là thứ truy vấn tìm kiếm, còn giá trị có thể là một trong nhiều dạng:
 
-索引中的键是查询要搜索的内容，而值可以采用以下几种形式：
+* Nếu dữ liệu thực tế (hàng, tài liệu, đỉnh) được lưu trực tiếp trong cấu trúc chỉ mục (*index*) thì đó là *chỉ mục cụm* (*clustered index*). Chẳng hạn, storage engine InnoDB của MySQL luôn dùng khóa chính của bảng làm chỉ mục cụm (*clustered index*), còn SQL Server cho phép chỉ định một chỉ mục cụm (*clustered index*) cho mỗi bảng [^43].
+* Cách khác là để giá trị tham chiếu tới dữ liệu thực: có thể là khóa chính của hàng tương ứng (đây là cách chỉ mục phụ (*secondary index*) của InnoDB làm), hoặc tham chiếu trực tiếp tới vị trí trên đĩa. Trong trường hợp sau, nơi lưu các hàng được gọi là *heap file* (*heap file*). Dữ liệu trong heap file không theo thứ tự cụ thể nào, có thể chỉ ghi nối, hoặc ghi nhận các hàng đã xóa để sau này ghi đè bằng dữ liệu mới. Chẳng hạn, Postgres dùng heap file [^44].
+* Một giải pháp dung hòa giữa hai cách được gọi là *chỉ mục bao phủ* (*covering index*) hay *chỉ mục có cột bao gồm* (*index with included columns*): hàng đầy đủ vẫn nằm trong heap file hoặc chỉ mục cụm (*clustered index*) theo khóa chính, nhưng chỉ mục (*index*) cũng lưu *một số* cột của bảng [^45]. Nhờ vậy một số truy vấn có thể được trả lời chỉ bằng chỉ mục (*index*) mà không cần phân giải khóa chính hay truy cập heap file. Khi đó ta nói chỉ mục (*index*) *bao phủ* truy vấn. Chỉ mục bao phủ (*covering index*) có thể tăng tốc một số truy vấn, nhưng dữ liệu trùng lặp tốn thêm dung lượng đĩa và làm chậm ghi.
 
-* 如果实际数据（行、文档或顶点）直接存储在索引结构中，这就是 *聚簇索引*（*clustered index*）。例如，MySQL 的 InnoDB 存储引擎总是把表的主键作为聚簇索引；SQL Server 则允许每张表指定一个聚簇索引 [^43]。
-* 另一种选择是让值引用实际数据：它可以是相应行的主键（InnoDB 的二级索引便是如此），也可以直接引用磁盘上的位置。后一种情况下，存放行的地方称为 *堆文件*（*heap file*）；堆文件中的数据没有特定顺序，可以是仅追加的，也可以记录已删除的行，以便日后用新数据覆写。例如，Postgres 就使用堆文件 [^44]。
-* 两者之间的折中称为 *覆盖索引*（*covering index*）或 *包含列的索引*（*index with included columns*）：完整的行仍保存在堆文件或主键聚簇索引中，但索引也会保存表的 *部分* 列 [^45]。这样，一些查询只用索引就能得到答案，不必再解析主键或访问堆文件；此时称该索引 *覆盖* 了查询。覆盖索引可以加快某些查询，但重复数据会占用更多磁盘空间，也会拖慢写入。
+Các chỉ mục (*index*) bàn đến cho tới giờ chỉ ánh xạ một khóa duy nhất tới giá trị. Nếu cần truy vấn đồng thời nhiều cột trong bảng (hoặc nhiều trường trong tài liệu), xem [“Chỉ mục đa chiều (*multidimensional index*) và chỉ mục (*index*) toàn văn”](/ch4#sec_storage_multidimensional).
 
-到目前为止讨论的索引，都只是把单个键映射到值。如果需要同时查询表中的多个列（或文档中的多个字段），请参见 [“多维索引与全文索引”](/ch4#sec_storage_multidimensional)。
+Khi cập nhật một giá trị mà không đổi khóa, heap file cho phép ghi đè bản ghi tại chỗ, miễn là giá trị mới không lớn hơn giá trị cũ. Nếu giá trị mới lớn hơn thì phức tạp hơn: bản ghi có thể phải chuyển tới một vị trí mới trong heap có đủ chỗ. Khi đó, hoặc mọi chỉ mục (*index*) phải được cập nhật để trỏ tới vị trí mới của bản ghi trong heap, hoặc phải để lại một con trỏ chuyển tiếp ở vị trí cũ [^2].
 
-更新值但不改变键时，采用堆文件可以就地覆写记录，前提是新值不大于旧值。如果新值更大，情况会复杂一些：记录可能必须移到堆内空间足够的新位置。此时，要么更新所有索引，使其指向记录在堆中的新位置；要么在旧位置留下一个转发指针 [^2]。
+### Lưu trữ toàn bộ trong bộ nhớ {#sec_storage_inmemory}
 
-### 全内存存储 {#sec_storage_inmemory}
+Các cấu trúc dữ liệu bàn đến trong chương này đến giờ đều là lời đáp cho những hạn chế của đĩa. So với bộ nhớ chính, đĩa khó xử lý hơn. Với cả đĩa từ lẫn SSD, muốn đọc và ghi tốt thì phải bố trí dữ liệu trên đĩa cẩn thận. Nhưng ta chịu sự bất tiện này vì đĩa có hai ưu điểm đáng kể: nó bền (nội dung không mất khi mất điện) và chi phí trên mỗi GB thấp hơn RAM.
 
-本章到目前为止讨论的数据结构，都是对磁盘局限的应对。与主内存相比，磁盘处理起来很麻烦。无论是磁性硬盘还是 SSD，要想获得良好的读写性能，都必须仔细安排数据在磁盘上的布局。不过我们能容忍这种麻烦，是因为磁盘有两项显著优势：它是持久的（断电后内容不会丢失），而且每 GB 的成本低于 RAM。
+Khi RAM ngày càng rẻ, lợi thế về chi phí trên mỗi GB của đĩa đang giảm dần. Nhiều tập dữ liệu vốn không lớn đến thế, nên hoàn toàn có thể giữ toàn bộ trong bộ nhớ, thậm chí phân tán trên nhiều máy nếu cần. Điều này dẫn đến sự phát triển của *cơ sở dữ liệu trong bộ nhớ* (*in-memory databases*).
 
-随着 RAM 越来越便宜，磁盘的每 GB 成本优势正在减弱。许多数据集本来就没有那么大，因此完全可以把它们全部放进内存，必要时还可以分布到多台机器上。于是，*内存数据库*（*in-memory databases*）发展了起来。
+Một số key-value store trong bộ nhớ, như Memcached, chỉ dùng để cache, mất dữ liệu khi máy khởi động lại cũng không sao. Nhưng một số cơ sở dữ liệu trong bộ nhớ khác hướng tới tính bền vững, có thể đạt được bằng phần cứng đặc biệt (như RAM chạy bằng pin), bằng cách ghi log các thay đổi xuống đĩa, bằng cách ghi snapshot định kỳ xuống đĩa, hoặc bằng cách sao chép (*replication*) trạng thái trong bộ nhớ sang các máy khác.
 
-有些内存键值存储（如 Memcached）仅用于缓存，机器重启时丢失数据也无妨。但另一些内存数据库以持久性为目标，可以借助特殊硬件（如电池供电的 RAM）、把变更日志写入磁盘、定期把快照写入磁盘，或把内存状态复制到其他机器来实现。
+Khi cơ sở dữ liệu trong bộ nhớ được khởi động lại, nó cần nạp lại trạng thái từ đĩa hoặc từ một bản sao qua mạng (trừ khi dùng phần cứng đặc biệt). Dù ghi xuống đĩa, nó vẫn là cơ sở dữ liệu trong bộ nhớ, vì đĩa chỉ được dùng làm log chỉ ghi nối để đảm bảo tính bền vững, còn mọi thao tác đọc đều do bộ nhớ phục vụ. Ghi xuống đĩa cũng có lợi ích vận hành: các file trên đĩa có thể được công cụ bên ngoài dễ dàng backup, kiểm tra và phân tích.
 
-内存数据库重启时，需要从磁盘或通过网络从副本重新加载状态（使用特殊硬件时除外）。它虽然写磁盘，却仍然属于内存数据库，因为磁盘只是用作确保持久性的仅追加日志，所有读取都由内存处理。写入磁盘还有运维上的好处：外部工具可以轻松备份、检查和分析磁盘上的文件。
+Các sản phẩm như VoltDB, SingleStore và Oracle TimesTen là cơ sở dữ liệu trong bộ nhớ dùng mô hình quan hệ. Nhà cung cấp tuyên bố rằng chúng có thể cải thiện hiệu năng mạnh mẽ nhờ loại bỏ toàn bộ chi phí quản lý cấu trúc dữ liệu trên đĩa [^46] [^47]. RAMCloud là key-value store trong bộ nhớ mã nguồn mở có tính bền vững, dùng cách tiếp cận log-structured cho cả dữ liệu trong bộ nhớ lẫn trên đĩa [^48].
 
-VoltDB、SingleStore 和 Oracle TimesTen 等产品是采用关系模型的内存数据库。供应商宣称，省去管理磁盘数据结构的全部开销后，它们可以大幅提高性能 [^46] [^47]。RAMCloud 则是一个具备持久性的开源内存键值存储，对内存和磁盘中的数据都采用日志结构方法 [^48]。
+Redis và Couchbase cung cấp tính bền vững yếu bằng cách ghi xuống đĩa một cách bất đồng bộ.
 
-Redis 和 Couchbase 通过异步写入磁盘提供弱持久性。
+Trái với trực giác, ưu thế hiệu năng của cơ sở dữ liệu trong bộ nhớ không đến từ việc không phải đọc đĩa. Nếu đủ bộ nhớ, ngay cả storage engine dựa trên đĩa cũng có thể không bao giờ phải đọc đĩa thật, vì hệ điều hành vốn đã cache các khối đĩa được dùng gần đây trong bộ nhớ. Cơ sở dữ liệu trong bộ nhớ có thể nhanh hơn là vì chúng tránh được chi phí mã hóa các cấu trúc dữ liệu trong bộ nhớ thành dạng có thể ghi xuống đĩa [^49].
 
-反直觉的是，内存数据库的性能优势并不来自省去了磁盘读取。如果内存足够，即便基于磁盘的存储引擎也可能从不真正读取磁盘，因为操作系统本来就会把最近使用的磁盘块缓存在内存中。内存数据库可能更快，是因为它可以省去把内存数据结构编码成可写入磁盘的形式这一开销 [^49]。
+Ngoài hiệu năng, một điểm thú vị khác của cơ sở dữ liệu trong bộ nhớ là chúng có thể cung cấp các mô hình dữ liệu khó hiện thực bằng chỉ mục (*index*) trên đĩa. Chẳng hạn, Redis cung cấp giao diện giống cơ sở dữ liệu cho nhiều cấu trúc dữ liệu như hàng đợi ưu tiên và tập hợp. Vì mọi dữ liệu đều nằm trong bộ nhớ nên việc hiện thực tương đối đơn giản.
 
-除了性能之外，内存数据库还有一个有趣之处：它可以提供很难用磁盘索引实现的数据模型。例如，Redis 为优先队列、集合等各种数据结构提供了类似数据库的接口。由于所有数据都放在内存中，实现起来相对简单。
+## Kho lưu trữ dữ liệu phân tích {#sec_storage_analytics}
 
+Kho dữ liệu thường dùng mô hình dữ liệu quan hệ, vì SQL thường rất phù hợp với truy vấn phân tích. Nhiều công cụ phân tích dữ liệu có giao diện đồ họa tạo ra truy vấn SQL, trực quan hóa kết quả và cho phép nhà phân tích khám phá dữ liệu qua các thao tác như *drill-down* (*drill-down*) và *slicing and dicing* (*slicing and dicing*).
 
-## 分析型数据存储 {#sec_storage_analytics}
+Nhìn bề ngoài, kho dữ liệu và cơ sở dữ liệu OLTP quan hệ khá giống nhau vì cả hai đều có giao diện truy vấn SQL. Tuy nhiên, bên trong chúng có thể khác nhau rất xa, vì chúng nhắm tới các mẫu truy vấn hoàn toàn khác nhau. Ngày nay, nhiều nhà cung cấp cơ sở dữ liệu chỉ tập trung vào xử lý giao dịch hoặc vào tải công việc phân tích, chứ không làm cả hai.
 
-数据仓库最常采用关系数据模型，因为 SQL 通常很适合分析查询。许多图形化数据分析工具可以生成 SQL 查询、可视化查询结果，并让分析师通过 *下钻*（*drill-down*）、*切片与切块*（*slicing and dicing*）等操作探索数据。
+Một số cơ sở dữ liệu như Microsoft SQL Server, SAP HANA và SingleStore hỗ trợ cả xử lý giao dịch lẫn kho dữ liệu trong cùng một sản phẩm. Tuy nhiên, các cơ sở dữ liệu xử lý giao dịch/phân tích kết hợp (HTAP) này (đã giới thiệu ở [“Kho dữ liệu”](/ch1#sec_introduction_dwh)) đang ngày càng trở thành hai engine lưu trữ và truy vấn tách biệt, chỉ tình cờ được truy cập qua cùng một giao diện SQL [^50] [^51] [^52] [^53].
 
-表面上，数据仓库与关系型 OLTP 数据库十分相似，因为二者都有 SQL 查询接口。然而，它们的内部实现可能大相径庭，因为两者针对的查询模式完全不同。如今，许多数据库供应商只专注于事务处理或分析工作负载中的一种，而非两者兼顾。
+### Kho dữ liệu trên đám mây {#sec_cloud_data_warehouses}
 
-Microsoft SQL Server、SAP HANA 和 SingleStore 等数据库在同一产品中同时支持事务处理和数据仓库。不过，这些混合事务/分析处理（HTAP）数据库（已在 [“数据仓库”](/ch1#sec_introduction_dwh) 中介绍）正日益演变成两套彼此独立的存储与查询引擎，只是恰好通过同一个 SQL 接口访问 [^50] [^51] [^52] [^53]。
+Các nhà cung cấp kho dữ liệu như Teradata, Vertica và SAP HANA bán cả kho dữ liệu triển khai tại chỗ theo giấy phép thương mại lẫn giải pháp trên đám mây. Khi ngày càng nhiều khách hàng chuyển lên đám mây, các kho dữ liệu đám mây thế hệ mới như Google Cloud BigQuery, Amazon Redshift và Snowflake đã được áp dụng rộng rãi. Khác với kho dữ liệu truyền thống, kho dữ liệu đám mây tận dụng hạ tầng đám mây có khả năng mở rộng như lưu trữ đối tượng và nền tảng tính toán serverless.
 
-### 云数据仓库 {#sec_cloud_data_warehouses}
+Kho dữ liệu đám mây thường tích hợp tốt hơn với các dịch vụ đám mây khác và linh hoạt hơn. Chẳng hạn, nhiều kho dữ liệu đám mây hỗ trợ tự động nạp log và dễ dàng kết nối với các framework xử lý dữ liệu như Google Cloud Dataflow hay Amazon Web Services Kinesis. Chúng cũng linh hoạt hơn vì tách việc tính toán truy vấn khỏi tầng lưu trữ [^54]. Dữ liệu được lưu bền trong lưu trữ đối tượng thay vì đĩa cục bộ, nên dung lượng lưu trữ và tài nguyên tính toán truy vấn có thể được điều chỉnh riêng rẽ, như đã giới thiệu ở [“Kiến trúc hệ thống cloud-native”](/ch1#sec_introduction_cloud_native).
 
-Teradata、Vertica 和 SAP HANA 等数据仓库供应商，既以商业许可证销售本地部署的数据仓库，也提供云端解决方案。随着越来越多的客户迁往云端，Google Cloud BigQuery、Amazon Redshift 和 Snowflake 等新一代云数据仓库也得到广泛采用。与传统数据仓库不同，云数据仓库会利用对象存储、无服务器计算平台等可伸缩的云基础设施。
+Các kho dữ liệu mã nguồn mở như Apache Hive, Trino và Apache Spark cũng phát triển cùng với điện toán đám mây. Khi kho lưu trữ dữ liệu phân tích chuyển sang data lake trên lưu trữ đối tượng, các kho dữ liệu mã nguồn mở bắt đầu bị tách rời thành các thành phần độc lập [^55]. Những chức năng trước đây được tích hợp trong một hệ thống duy nhất như Apache Hive nay thường do các thành phần riêng biệt sau đảm nhiệm:
 
-云数据仓库通常能更好地集成其他云服务，也更具弹性。例如，许多云数据仓库支持自动摄取日志，并且可以轻松接入 Google Cloud Dataflow、Amazon Web Services Kinesis 等数据处理框架。它们把查询计算与存储层解耦，因此也更具弹性 [^54]。数据持久保存在对象存储而非本地磁盘上，于是存储容量和查询计算资源可以分别调整，正如 [“云原生系统架构”](/ch1#sec_introduction_cloud_native) 所介绍的那样。
+Query engine
+: Các query engine như Trino, Apache DataFusion và Presto phân tích cú pháp truy vấn SQL, tối ưu nó thành kế hoạch thực thi rồi thực thi trên dữ liệu. Truy vấn thường cần được xử lý song song bởi các tác vụ phân tán. Một số query engine có sẵn khả năng thực thi tác vụ, số khác dựa vào framework thực thi bên thứ ba như Apache Spark hoặc Apache Flink.
 
-Apache Hive、Trino 和 Apache Spark 等开源数据仓库也随着云计算共同演进。分析数据存储迁入对象存储上的数据湖之后，开源数据仓库开始拆分、解耦 [^55]。过去集成在 Apache Hive 这类单一系统中的功能，如今往往由以下独立组件实现：
+Định dạng lưu trữ
+: Định dạng lưu trữ quy định cách mã hóa các hàng của bảng thành byte trong file, thường được lưu trong lưu trữ đối tượng hoặc hệ thống file phân tán [^12]. Query engine có thể truy cập dữ liệu này, và các ứng dụng khác dùng chung data lake cũng vậy. Parquet, ORC, Lance và Nimble đều thuộc loại này, và ta sẽ bàn thêm ở phần sau.
 
-查询引擎
-: Trino、Apache DataFusion 和 Presto 等查询引擎负责解析 SQL 查询，将其优化成执行计划，再针对数据执行。查询通常需要由分布式任务并行处理。有些查询引擎内置了任务执行能力，另一些则借助 Apache Spark 或 Apache Flink 等第三方执行框架。
+Định dạng bảng
+: File được ghi bằng định dạng lưu trữ như Apache Parquet thường là bất biến. Để hỗ trợ chèn và xóa hàng, người ta dùng các định dạng bảng như Apache Iceberg hoặc Databricks Delta. Định dạng bảng dùng một định dạng file để xác định file nào cấu thành một bảng và bảng đó dùng schema nào. Nó cũng có thể cung cấp các tính năng nâng cao như time travel (truy vấn trạng thái của bảng tại một thời điểm trong quá khứ), garbage collection và thậm chí cả giao dịch.
 
-存储格式
-: 存储格式规定如何把表中的行编码成文件里的字节；文件通常保存在对象存储或分布式文件系统中 [^12]。查询引擎可以访问这些数据，使用同一数据湖的其他应用也可以。Parquet、ORC、Lance 和 Nimble 都属于这类格式，下一节还会进一步介绍。
+Data catalog
+: Giống như định dạng bảng xác định file nào tạo nên một bảng, data catalog xác định bảng nào tạo nên một cơ sở dữ liệu. Catalog dùng để tạo, đổi tên và xóa bảng. Khác với định dạng lưu trữ và định dạng bảng, data catalog như Snowflake Polaris hay Databricks Unity Catalog thường chạy như dịch vụ độc lập và nhận truy vấn qua giao diện REST. Apache Iceberg cũng cung cấp catalog, có thể chạy nhúng trong client hoặc như một tiến trình độc lập. Query engine dùng thông tin trong catalog khi đọc và ghi bảng. Theo truyền thống, catalog được tích hợp với query engine. Việc tách chúng ra giúp các hệ thống khám phá dữ liệu và quản trị dữ liệu (xem [“Hệ thống dữ liệu, pháp luật và xã hội”](/ch1#sec_introduction_compliance)) cũng truy cập được siêu dữ liệu trong catalog.
 
-表格式
-: 以 Apache Parquet 等存储格式写出的文件通常不可变。为了支持插入和删除行，还要使用 Apache Iceberg 或 Databricks Delta 等表格式。表格式用一种文件格式来定义哪些文件构成一张表，以及这张表采用什么模式。它还可以提供时间旅行（查询表在过去某个时刻的状态）、垃圾回收乃至事务等高级功能。
+### Lưu trữ theo cột {#sec_storage_column}
 
-数据目录
-: 正如表格式定义哪些文件组成一张表，数据目录定义哪些表组成一个数据库。目录用于创建、重命名和删除表。与存储格式和表格式不同，Snowflake Polaris、Databricks Unity Catalog 等数据目录通常作为独立服务运行，并通过 REST 接口接受查询。Apache Iceberg 也提供目录，既可以嵌入客户端运行，也可以作为独立进程运行。查询引擎读写表时会使用目录信息。传统上，目录与查询引擎集成在一起；将二者解耦之后，数据发现和数据治理系统（见 [“数据系统、法律与社会”](/ch1#sec_introduction_compliance)）也可以访问目录中的元数据。
+Như đã nêu ở [“Star schema và snowflake schema: các schema cho phân tích”](/ch3#sec_datamodels_analytics), kho dữ liệu thường dùng schema quan hệ, trong đó một bảng fact khổng lồ tham chiếu tới các bảng dimension qua khóa ngoại. Nếu bảng fact có hàng nghìn tỷ hàng và hàng petabyte dữ liệu thì việc lưu trữ và truy vấn hiệu quả trở thành một thách thức lớn. Các bảng dimension thường nhỏ hơn nhiều (chỉ vài triệu hàng), nên phần này sẽ tập trung vào việc lưu trữ bảng fact.
 
-### 列式存储 {#sec_storage_column}
+Dù bảng fact thường có hơn 100 cột, một truy vấn kho dữ liệu điển hình mỗi lần chỉ truy cập 4 hoặc 5 cột trong số đó (truy vấn phân tích hiếm khi cần `"SELECT *"`) [^52]. Lấy {{< xref eg="4-1" page="/ch4" anchor="fig_storage_analytics_query" >}}Ví dụ 4-1{{< /xref >}}: nó truy cập rất nhiều hàng (mọi lần bán trái cây tươi hoặc kẹo trong năm 2024) nhưng chỉ cần ba cột của bảng `fact_sales`: `date_key`, `product_sk` và `quantity`. Truy vấn bỏ qua tất cả các cột còn lại.
 
-正如 [“星型与雪花型：分析模式”](/ch3#sec_datamodels_analytics) 所述，数据仓库通常采用关系模式：一张巨大的事实表通过外键引用各张维度表。如果事实表有数万亿行、数 PB 数据，如何高效存储和查询就成了严峻挑战。维度表通常小得多（只有数百万行），所以本节将重点讨论事实表的存储。
-
-尽管事实表通常有 100 多列，但典型的数据仓库查询一次只访问其中 4、5 列（分析查询很少需要 `"SELECT *"`）[^52]。以 {{< xref eg="4-1" page="/ch4" anchor="fig_storage_analytics_query" >}}示例 4-1{{< /xref >}} 为例：它会访问大量行（2024 年中每一笔水果或糖果销售记录），却只需要 `fact_sales` 表中的三列：`date_key`、`product_sk` 和 `quantity`。其他所有列都被查询忽略了。
-
-{{< eg num="4-1" id="fig_storage_analytics_query" caption="分析人们在一周中的哪一天更倾向于购买新鲜水果或糖果" >}}
+{{< eg num="4-1" id="fig_storage_analytics_query" caption="Phân tích xem người ta có xu hướng mua trái cây tươi hoặc kẹo vào ngày nào trong tuần" >}}
 ```sql
 SELECT
     dim_date.weekday, dim_product.category,
@@ -382,217 +378,216 @@ GROUP BY
 ```
 {{< /eg >}}
 
-怎样才能高效执行这个查询？
+Làm thế nào để thực thi truy vấn này hiệu quả?
 
-大多数 OLTP 数据库都以 *面向行*（*row-oriented*）的方式布置存储：表中同一行的所有值相邻存放。文档数据库也很相似，通常把整个文档存成一段连续的字节序列。{{< xref fig="4-1" page="/ch4" anchor="fig_storage_csv_hash_index" >}}图 4-1{{< /xref >}} 的 CSV 示例就是如此。
+Hầu hết cơ sở dữ liệu OLTP bố trí lưu trữ theo kiểu *hướng hàng* (*row-oriented*): mọi giá trị của cùng một hàng trong bảng được lưu cạnh nhau. Cơ sở dữ liệu tài liệu cũng tương tự: cả tài liệu thường được lưu thành một chuỗi byte liên tục. Ví dụ CSV ở {{< xref fig="4-1" page="/ch4" anchor="fig_storage_csv_hash_index" >}}Hình 4-1{{< /xref >}} chính là như vậy.
 
-为了处理 {{< xref eg="4-1" page="/ch4" anchor="fig_storage_analytics_query" >}}示例 4-1{{< /xref >}} 这样的查询，可以在 `fact_sales.date_key` 和（或）`fact_sales.product_sk` 上建立索引，告诉存储引擎去哪里寻找某一天或某种产品的所有销售记录。但面向行的存储引擎仍要把这些完整的行（每行有 100 多个属性）从磁盘载入内存，逐一解析，再过滤掉不满足条件的行。这个过程可能十分耗时。
+Để xử lý truy vấn như {{< xref eg="4-1" page="/ch4" anchor="fig_storage_analytics_query" >}}Ví dụ 4-1{{< /xref >}}, bạn có thể tạo chỉ mục (*index*) trên `fact_sales.date_key` và/hoặc `fact_sales.product_sk` để cho storage engine biết tìm mọi lần bán hàng của một ngày hoặc một sản phẩm cụ thể ở đâu. Nhưng storage engine hướng hàng vẫn phải nạp các hàng đầy đủ đó (mỗi hàng có hơn 100 thuộc tính) từ đĩa vào bộ nhớ, phân tích cú pháp từng hàng rồi lọc bỏ những hàng không thỏa điều kiện. Việc này có thể mất rất nhiều thời gian.
 
-*面向列*（*column-oriented*，或 *列式*，*columnar*）存储背后的想法很简单：不要把同一行中的所有值放在一起，而要把同一 *列* 中的所有值放在一起 [^56]。每列分别存储后，查询只需读取和解析自己用到的列，能省下大量工作。{{< xref fig="4-7" page="/ch4" anchor="fig_column_store" >}}图 4-7{{< /xref >}} 用 {{< xref fig="3-5" page="/ch3" anchor="fig_dwh_schema" >}}图 3-5{{< /xref >}} 中事实表的扩展版本展示了这一原理。
+Ý tưởng đằng sau lưu trữ *hướng cột* (*column-oriented*, hay *columnar*) rất đơn giản: đừng lưu mọi giá trị của một hàng cạnh nhau, mà lưu mọi giá trị của cùng một *cột* cạnh nhau [^56]. Nếu mỗi cột được lưu riêng, truy vấn chỉ cần đọc và phân tích những cột nó dùng, tiết kiệm được rất nhiều việc. {{< xref fig="4-7" page="/ch4" anchor="fig_column_store" >}}Hình 4-7{{< /xref >}} minh họa nguyên lý này bằng một phiên bản mở rộng của bảng fact trong {{< xref fig="3-5" page="/ch3" anchor="fig_dwh_schema" >}}Hình 3-5{{< /xref >}}.
 
 
 > [!NOTE]
-> 列式存储在关系数据模型中最容易理解，但同样适用于非关系数据。例如，Parquet [^57] 是一种支持文档数据模型的列式存储格式，它以 Google Dremel [^58] 为基础，使用一种称为 *拆分*（*shredding*）或 *条带化*（*striping*）的技术 [^59]。
+> Lưu trữ theo cột dễ hiểu nhất trong mô hình dữ liệu quan hệ, nhưng cũng áp dụng được cho dữ liệu phi quan hệ. Chẳng hạn, Parquet [^57] là định dạng lưu trữ theo cột hỗ trợ mô hình dữ liệu tài liệu, dựa trên Google Dremel [^58], dùng một kỹ thuật gọi là *shredding* (*shredding*) hay *striping* (*striping*) [^59].
 
 
-{{< fig num="4-7" id="fig_column_store" src="/fig/ddia_0407.png" caption="按列而不是按行存储关系数据。" class="ddia-figure ddia-figure--standard" width="2658" height="1804" />}}
+{{< fig num="4-7" id="fig_column_store" src="/fig/ddia_0407.png" caption="Lưu dữ liệu quan hệ theo cột thay vì theo hàng." class="ddia-figure ddia-figure--standard" width="2658" height="1804" />}}
 
-面向列的存储布局要求每一列都按相同的行顺序保存数据。因此，要重新拼出完整的一行，可以分别取出每列中的第 23 项，把它们组合成表的第 23 行。
+Cách bố trí lưu trữ hướng cột đòi hỏi mỗi cột lưu dữ liệu theo cùng một thứ tự hàng. Do đó, để ghép lại một hàng đầy đủ, bạn lấy mục thứ 23 của từng cột rồi kết hợp chúng thành hàng thứ 23 của bảng.
 
-实际上，列式存储引擎并不会把完整的一列（可能有数万亿行）一次存放在一起。它会把表切成若干个包含数千乃至数百万行的数据块，再在每个块内分别保存各列的值 [^60]。许多查询只关注特定日期范围，因此常让每个块包含某个时间戳范围内的行。查询只需在与目标日期范围重叠的块中，加载自己需要的列。
+Trên thực tế, storage engine theo cột không lưu nguyên một cột (có thể có hàng nghìn tỷ hàng) thành một khối liền. Nó chia bảng thành các khối gồm hàng nghìn đến hàng triệu hàng, rồi trong mỗi khối lưu riêng giá trị của từng cột [^60]. Vì nhiều truy vấn chỉ quan tâm một khoảng ngày nhất định nên thường cho mỗi khối chứa các hàng trong một khoảng timestamp nhất định. Khi đó, truy vấn chỉ cần nạp những cột cần dùng từ các khối có khoảng thời gian giao với khoảng ngày cần tìm.
 
-如今，几乎所有分析数据库都采用列式存储 [^60]：从 Snowflake [^61] 这样的大型云数据仓库，到 DuckDB [^62] 这样的单节点嵌入式数据库，再到 Pinot [^63]、Druid [^64] 等产品分析系统。Parquet、ORC [^65] [^66]、Lance [^67] 和 Nimble [^68] 等存储格式，以及 Apache Arrow [^65] [^69]、pandas/NumPy [^70] 等内存分析格式，也都采用列式布局。InfluxDB IOx [^71]、TimescaleDB [^72] 等时间序列数据库同样以列式存储为基础。
+Ngày nay, gần như mọi cơ sở dữ liệu phân tích đều dùng lưu trữ theo cột [^60], từ các kho dữ liệu đám mây lớn như Snowflake [^61], đến cơ sở dữ liệu nhúng đơn node như DuckDB [^62], đến các hệ thống phân tích sản phẩm như Pinot [^63] và Druid [^64]. Các định dạng lưu trữ như Parquet, ORC [^65] [^66], Lance [^67] và Nimble [^68], cùng các định dạng phân tích trong bộ nhớ như Apache Arrow [^65] [^69] và pandas/NumPy [^70], cũng dùng bố cục theo cột. Các cơ sở dữ liệu chuỗi thời gian như InfluxDB IOx [^71] và TimescaleDB [^72] cũng xây dựng trên lưu trữ theo cột.
 
-#### 列压缩 {#sec_storage_column_compression}
+#### Nén cột {#sec_storage_column_compression}
 
-除了只从磁盘加载查询需要的列，还可以压缩数据，进一步降低对磁盘吞吐量和网络带宽的需求。幸运的是，列式存储通常很适合压缩。
+Ngoài việc chỉ nạp từ đĩa những cột mà truy vấn cần, ta còn có thể nén dữ liệu để giảm hơn nữa yêu cầu về thông lượng đĩa và băng thông mạng. May mắn là lưu trữ theo cột thường rất phù hợp để nén.
 
-看看 {{< xref fig="4-7" page="/ch4" anchor="fig_column_store" >}}图 4-7{{< /xref >}} 中各列的值序列：它们往往相当重复，这是很适合压缩的信号。根据列中数据的不同，可以选用不同的压缩技术。其中对数据仓库特别有效的一种是 *位图编码*（*bitmap encoding*），如 {{< xref fig="4-8" page="/ch4" anchor="fig_bitmap_index" >}}图 4-8{{< /xref >}} 所示。
+Hãy nhìn các chuỗi giá trị của từng cột trong {{< xref fig="4-7" page="/ch4" anchor="fig_column_store" >}}Hình 4-7{{< /xref >}}: chúng trông khá lặp lại, đó là dấu hiệu tốt cho việc nén. Tùy dữ liệu trong cột, có thể dùng các kỹ thuật nén khác nhau. Một kỹ thuật đặc biệt hiệu quả trong kho dữ liệu là *mã hóa bitmap* (*bitmap encoding*), như minh họa ở {{< xref fig="4-8" page="/ch4" anchor="fig_bitmap_index" >}}Hình 4-8{{< /xref >}}.
 
-{{< fig num="4-8" id="fig_bitmap_index" src="/fig/ddia_0408.png" caption="对单列进行压缩并建立位图索引的存储方式。" class="ddia-figure ddia-figure--standard" width="2658" height="1963" />}}
+{{< fig num="4-8" id="fig_bitmap_index" src="/fig/ddia_0408.png" caption="Nén một cột đơn và lưu dưới dạng chỉ mục (*index*) bitmap." class="ddia-figure ddia-figure--standard" width="2658" height="1963" />}}
 
-通常，一列中不同值的数量远小于总行数（例如，零售商可能有数十亿笔销售交易，却只有 100,000 种产品）。可以把一个具有 *n* 个不同值的列转换成 *n* 张独立位图：每个不同值对应一张位图，每一行对应其中一位。如果该行取这个值，对应位就是 1，否则为 0。
+Thông thường, số giá trị phân biệt trong một cột nhỏ hơn nhiều so với số hàng (chẳng hạn, một nhà bán lẻ có thể có hàng tỷ giao dịch bán hàng nhưng chỉ có 100.000 sản phẩm). Ta có thể biến một cột có *n* giá trị phân biệt thành *n* bitmap riêng biệt: mỗi giá trị phân biệt một bitmap, mỗi hàng một bit. Bit bằng 1 nếu hàng đó mang giá trị này, bằng 0 nếu không.
 
-一种选择是按每行一位直接存储这些位图。不过，位图中通常有大量的 0，也就是十分 *稀疏*。这时还可以使用游程编码：统计连续出现的 0 或 1 的数量，并存下这个数字，如 {{< xref fig="4-8" page="/ch4" anchor="fig_bitmap_index" >}}图 4-8{{< /xref >}} 底部所示。Roaring 位图会在两种位图表示之间切换，总是选用更紧凑的一种 [^73]。这样可以极其高效地编码一整列。
+Một lựa chọn là lưu các bitmap này theo từng bit cho mỗi hàng. Nhưng bitmap thường chứa rất nhiều số 0, tức là rất *thưa*. Khi đó ta có thể dùng run-length encoding: đếm số lượng số 0 hoặc 1 liên tiếp và lưu con số đó, như thể hiện ở phần dưới của {{< xref fig="4-8" page="/ch4" anchor="fig_bitmap_index" >}}Hình 4-8{{< /xref >}}. Roaring bitmap chuyển đổi giữa hai cách biểu diễn bitmap và luôn dùng cách gọn hơn [^73]. Nhờ vậy có thể mã hóa cả một cột cực kỳ hiệu quả.
 
-像这样的位图索引非常适合数据仓库中常见的查询类型。例如：
+Chỉ mục (*index*) bitmap như thế rất hợp với các loại truy vấn thường gặp trong kho dữ liệu. Ví dụ:
 
 `WHERE product_sk IN (31, 68, 69):`
-: 加载 `product_sk = 31`、`product_sk = 68` 和 `product_sk = 69` 对应的三张位图，再计算三者的按位 *或*，这个操作可以非常高效地完成。
+: Nạp ba bitmap cho `product_sk = 31`, `product_sk = 68` và `product_sk = 69`, rồi tính phép *OR* theo bit của ba bitmap đó, việc này có thể làm rất hiệu quả.
 
 `WHERE product_sk = 30 AND store_sk = 3:`
-: 加载 `product_sk = 30` 和 `store_sk = 3` 对应的位图，再计算按位 *与*。之所以可行，是因为各列中的行顺序相同：一列位图中的第 *k* 位，与另一列位图中的第 *k* 位对应同一行。
+: Nạp các bitmap cho `product_sk = 30` và `store_sk = 3`, rồi tính phép *AND* theo bit. Cách này làm được vì thứ tự hàng ở mọi cột đều giống nhau: bit thứ *k* trong bitmap của một cột ứng với cùng hàng với bit thứ *k* trong bitmap của cột khác.
 
-位图也可以回答图查询，例如找出社交网络中所有“被用户 *X* 关注、同时又关注用户 *Y*”的用户 [^74]。列式数据库还有许多其他压缩方案，参见参考文献 [^75]。
+Bitmap cũng có thể trả lời các truy vấn đồ thị, chẳng hạn tìm mọi người dùng trong mạng xã hội được người dùng *X* theo dõi và đồng thời theo dõi người dùng *Y* [^74]. Cơ sở dữ liệu theo cột còn có nhiều phương án nén khác. Xem tài liệu tham khảo [^75].
 
 
 > [!NOTE]
-> 不要把列式数据库与 *宽列*（*wide-column*，又称 *列族*，*column-family*）数据模型混为一谈。宽列模型的一行可以有数千列，各行也不必拥有相同的列 [^9]。尽管名字相似，宽列数据库其实是面向行的，因为它会把同一行的所有值存放在一起。Google Bigtable、Apache Accumulo 和 HBase 都属于宽列模型。
+> Đừng nhầm cơ sở dữ liệu hướng cột với mô hình dữ liệu *wide-column* (*wide-column*, còn gọi là *column-family*), trong đó một hàng có thể có hàng nghìn cột và các hàng không nhất thiết có cùng các cột [^9]. Dù tên gọi giống nhau, cơ sở dữ liệu wide-column thực ra hướng hàng, vì nó lưu mọi giá trị của cùng một hàng cạnh nhau. Google Bigtable, Apache Accumulo và HBase đều thuộc mô hình wide-column.
 
 
-#### 列存储中的排序顺序 {#sort-order-in-column-storage}
+#### Thứ tự sắp xếp trong lưu trữ theo cột {#sort-order-in-column-storage}
 
-在列式存储中，行的存储顺序并不一定重要。最简单的方式是按插入顺序存放，因为插入新行时只需向每一列追加数据。不过，也可以像此前处理 SSTable 那样，为数据指定某种顺序，并把这种顺序用作索引机制。
+Trong lưu trữ theo cột, thứ tự lưu các hàng không nhất thiết quan trọng. Cách đơn giản nhất là lưu theo thứ tự chèn, vì chèn hàng mới chỉ cần ghi nối vào mỗi cột. Tuy nhiên, ta cũng có thể áp đặt một thứ tự cho dữ liệu, như đã làm với SSTable, và dùng thứ tự đó như một cơ chế chỉ mục (*index*).
 
-注意，分别对每一列独立排序毫无意义，因为那样就再也不知道不同列中的哪些项属于同一行。我们之所以能够重建一行，正是因为一列中的第 *k* 项与另一列中的第 *k* 项属于同一行。
+Lưu ý rằng sắp xếp từng cột độc lập là vô nghĩa, vì khi đó ta không còn biết các mục nào ở những cột khác nhau thuộc cùng một hàng. Ta chỉ dựng lại được một hàng vì mục thứ *k* của một cột thuộc cùng hàng với mục thứ *k* của cột khác.
 
-因此，即使数据按列存储，排序也必须以整行为单位。数据库管理员可以根据自己对常见查询的了解，选择表按哪些列排序。例如，如果查询经常针对“上个月”这样的日期范围，就可以把 `date_key` 作为第一个排序键。这样查询只需扫描上个月的行，比扫描所有行快得多。
+Vì vậy, dù dữ liệu được lưu theo cột, việc sắp xếp vẫn phải thực hiện cho cả hàng. Quản trị viên cơ sở dữ liệu có thể chọn các cột để sắp xếp bảng dựa trên hiểu biết về các truy vấn phổ biến. Chẳng hạn, nếu truy vấn thường nhắm vào một khoảng ngày như "tháng trước", có thể chọn `date_key` làm khóa sắp xếp đầu tiên. Khi đó truy vấn chỉ cần quét các hàng của tháng trước, nhanh hơn nhiều so với quét mọi hàng.
 
-对于第一排序列中取值相同的行，可以用第二列进一步决定顺序。例如，如果 {{< xref fig="4-7" page="/ch4" anchor="fig_column_store" >}}图 4-7{{< /xref >}} 以 `date_key` 为第一排序键，那么把 `product_sk` 作为第二排序键或许很有用：同一天、同一种产品的所有销售记录就会在存储中相邻。这有利于在特定日期范围内按产品分组或筛选销售记录的查询。
+Với các hàng có cùng giá trị ở cột sắp xếp đầu tiên, cột thứ hai có thể quyết định tiếp thứ tự. Chẳng hạn, nếu `date_key` là khóa sắp xếp đầu tiên trong {{< xref fig="4-7" page="/ch4" anchor="fig_column_store" >}}Hình 4-7{{< /xref >}}, thì dùng `product_sk` làm khóa sắp xếp thứ hai có thể hữu ích: mọi lần bán cùng một sản phẩm trong cùng một ngày sẽ nằm cạnh nhau trong kho lưu trữ. Điều này giúp các truy vấn nhóm hoặc lọc doanh số theo sản phẩm trong một khoảng ngày nhất định.
 
-排序的另一个好处是有助于列压缩。如果主排序列没有太多不同的值，排序后会形成很长的连续序列，同一个值反复出现。使用简单的游程编码——就像 {{< xref fig="4-8" page="/ch4" anchor="fig_bitmap_index" >}}图 4-8{{< /xref >}} 中的位图一样——即可把这一列压缩到几千字节，即使表中有数十亿行也不例外。
+Một lợi ích khác của việc sắp xếp là hỗ trợ nén cột. Nếu cột sắp xếp chính không có quá nhiều giá trị phân biệt thì sau khi sắp xếp, ta sẽ có những chuỗi liên tục rất dài trong đó cùng một giá trị lặp đi lặp lại. Dùng run-length encoding đơn giản — như với các bitmap trong {{< xref fig="4-8" page="/ch4" anchor="fig_bitmap_index" >}}Hình 4-8{{< /xref >}} — là có thể nén cột đó xuống còn vài kilobyte, ngay cả khi bảng có hàng tỷ hàng.
 
-这种压缩效果在第一排序键上最强。第二、第三排序键会更加杂乱，不会出现那么长的重复值序列。排序优先级更低的列基本呈随机顺序，压缩效果可能不佳。不过，只要前几列经过排序，整体上依然受益。
+Hiệu quả nén mạnh nhất ở khóa sắp xếp đầu tiên. Khóa sắp xếp thứ hai và thứ ba lộn xộn hơn nên không có những chuỗi giá trị lặp dài như vậy. Các cột có thứ tự ưu tiên thấp hơn về cơ bản xuất hiện theo thứ tự ngẫu nhiên, nên có thể nén không tốt. Nhưng chỉ cần sắp xếp được vài cột đầu thì nhìn chung vẫn có lợi.
 
-#### 写入列式存储 {#writing-to-column-oriented-storage}
+#### Ghi vào lưu trữ hướng cột {#writing-to-column-oriented-storage}
 
-我们在 [“事务处理与分析的特征”](/ch1#sec_introduction_oltp) 中看到，数据仓库的读取通常要聚合大量行；列式存储、压缩和排序都能加快这类读查询。数据仓库的写入则往往是批量导入数据，通常通过 ETL 流程完成。
+Ở [“Đặc điểm của xử lý giao dịch và phân tích”](/ch1#sec_introduction_oltp), ta đã thấy rằng các lần đọc trong kho dữ liệu thường tổng hợp một lượng lớn hàng. Lưu trữ theo cột, nén và sắp xếp đều giúp các truy vấn đọc này nhanh hơn. Còn các lần ghi vào kho dữ liệu thường là nạp dữ liệu hàng loạt, thường qua quy trình ETL.
 
-对列式存储而言，在有序表的中间插入单独一行非常低效，因为从插入位置开始，所有压缩列都必须重写。但一次批量写入很多行，可以分摊重写这些列的成本，因而效率很高。
+Với lưu trữ theo cột, chèn riêng lẻ một hàng vào giữa bảng đã sắp xếp rất kém hiệu quả, vì mọi cột đã nén đều phải được ghi lại từ vị trí chèn trở đi. Nhưng ghi hàng loạt nhiều hàng cùng lúc phân bổ chi phí ghi lại các cột đó, nên rất hiệu quả.
 
-批量写入通常采用日志结构方法。所有写入先进入一个面向行、有序的内存存储。积累足够多的写入后，再与磁盘上的列编码文件合并，并成批写入新文件。旧文件保持不可变，新文件一次写成，所以对象存储很适合保存这些文件。
+Việc ghi hàng loạt thường dùng cách tiếp cận log-structured. Mọi thao tác ghi trước tiên đi vào một kho lưu trữ trong bộ nhớ, hướng hàng và có thứ tự. Khi tích lũy đủ lượng ghi, chúng được hợp nhất với các file mã hóa theo cột trên đĩa và ghi thành file mới theo từng lô. Các file cũ giữ nguyên bất biến, còn file mới được ghi một lần, nên lưu trữ đối tượng rất phù hợp để chứa các file này.
 
-查询必须同时检查磁盘上的列数据和内存中的近期写入，再把两部分结果合并起来。查询执行引擎会向用户隐藏这项区别。在分析师看来，插入、更新或删除的数据会立刻反映在后续查询中。Snowflake、Vertica、Apache Pinot、Apache Druid 等许多系统都是这样做的 [^61] [^63] [^64] [^76]。
+Truy vấn phải xem xét cả dữ liệu cột trên đĩa lẫn các thao tác ghi gần đây trong bộ nhớ, rồi kết hợp hai phần. Query execution engine che giấu sự phân biệt này khỏi người dùng. Với nhà phân tích, dữ liệu được chèn, cập nhật hoặc xóa sẽ phản ánh ngay trong các truy vấn sau đó. Snowflake, Vertica, Apache Pinot, Apache Druid và nhiều hệ thống khác làm như vậy [^61] [^63] [^64] [^76].
+
+### Thực thi truy vấn: biên dịch và vector hóa {#sec_storage_vectorized}
+
+Một truy vấn SQL phân tích phức tạp được phân rã thành một *kế hoạch truy vấn* (*query plan*) gồm nhiều giai đoạn thực thi gọi là *toán tử* (*operator*), có thể được phân tán trên nhiều máy để chạy song song. Bộ lập kế hoạch truy vấn có thể tối ưu rất nhiều bằng cách quyết định dùng toán tử nào, theo thứ tự nào, và mỗi toán tử chạy ở đâu.
+
+Bên trong mỗi toán tử, query engine cần thực hiện nhiều thao tác trên các giá trị của một cột, chẳng hạn tìm mọi hàng có giá trị thuộc một tập nào đó (có thể là một phần của phép join), hoặc kiểm tra giá trị có lớn hơn 15 không. Query engine cũng cần xem đồng thời nhiều cột của cùng một hàng, chẳng hạn tìm mọi lần bán hàng mà sản phẩm là chuối và cửa hàng là cửa hàng mục tiêu.
+
+Truy vấn kho dữ liệu phải quét hàng triệu hàng, nên ta phải quan tâm không chỉ lượng dữ liệu đọc từ đĩa mà còn cả thời gian CPU để thực thi các toán tử phức tạp. Toán tử đơn giản nhất giống một trình thông dịch của ngôn ngữ lập trình: với mỗi hàng, nó xem cấu trúc dữ liệu biểu diễn truy vấn để biết cần so sánh hay tính toán gì trên cột nào. Tiếc là cách này quá chậm với nhiều bài toán phân tích. Hai cách thực thi truy vấn hiệu quả đã xuất hiện trong thực tế [^77] như sau:
+
+Biên dịch truy vấn (query compilation)
+: Query engine sinh mã thực thi từ truy vấn SQL. Mã này lặp qua từng hàng, đọc giá trị ở các cột liên quan, thực hiện phép so sánh hoặc tính toán cần thiết, và nếu điều kiện thỏa thì chép các giá trị cần thiết vào bộ đệm đầu ra. Sau đó query engine biên dịch mã sinh ra thành mã máy (thường nhờ một trình biên dịch có sẵn như LLVM) và chạy nó trên dữ liệu cột đã mã hóa được nạp vào bộ nhớ. Cách sinh mã này giống biên dịch just-in-time (JIT) mà các runtime như Java Virtual Machine (JVM) sử dụng.
+
+Xử lý vector hóa (vectorized processing)
+: Truy vấn vẫn được thông dịch chứ không biên dịch, nhưng để tăng tốc, nó xử lý hàng loạt giá trị của một cột cùng lúc thay vì lặp từng hàng. Cơ sở dữ liệu có sẵn một tập toán tử định nghĩa trước cố định. Ta truyền tham số cho toán tử và nhận về một lô kết quả [^50] [^75].
+
+Chẳng hạn, ta có thể truyền cột `product_sk` và ID của chuối cho toán tử so sánh bằng, và nhận về một bitmap: mỗi giá trị của cột đầu vào ứng với một bit, bằng 1 nếu là chuối. Ta truyền cột `store_sk` và ID của cửa hàng mục tiêu cho cùng toán tử đó để nhận bitmap thứ hai. Cuối cùng, truyền hai bitmap cho toán tử "AND theo bit", như trong {{< xref fig="4-9" page="/ch4" anchor="fig_bitmap_and" >}}Hình 4-9{{< /xref >}}. Bitmap kết quả có một bit 1 cho mỗi lần bán chuối ở cửa hàng cụ thể đó.
+
+{{< fig num="4-9" id="fig_bitmap_and" src="/fig/ddia_0409.png" caption="Phép AND theo bit giữa hai bitmap rất thích hợp cho xử lý vector hóa." class="ddia-figure ddia-figure--wide" width="2658" height="961" />}}
+
+Hai cách này khác nhau nhiều về cách hiện thực, nhưng cả hai đều được dùng trong thực tế [^77]. Cả hai đều khai thác đặc tính của CPU hiện đại để đạt hiệu năng rất tốt:
+
+* ưu tiên truy cập bộ nhớ tuần tự thay vì ngẫu nhiên để giảm cache miss [^78];
+* dồn phần lớn công việc vào các vòng lặp trong chặt chẽ (ít lệnh và không có lời gọi hàm), giúp pipeline lệnh của CPU luôn bận và tránh dự đoán rẽ nhánh sai;
+* tận dụng song song hóa như đa luồng và lệnh SIMD (single instruction, multiple data) [^79] [^80];
+* thao tác trực tiếp trên dữ liệu nén mà không giải mã sang một biểu diễn khác trong bộ nhớ, tránh chi phí cấp phát và copy bộ nhớ.
+
+### Khung nhìn vật chất hóa và data cube {#sec_storage_materialized_views}
+
+Ta đã gặp *khung nhìn vật chất hóa* (*materialized view*) ở [“Vật chất hóa và cập nhật timeline”](/ch2#sec_introduction_materializing). Trong mô hình dữ liệu quan hệ, đó là một đối tượng giống bảng có nội dung là kết quả của một truy vấn nào đó. Khung nhìn vật chất hóa là bản sao kết quả truy vấn được thực sự ghi xuống đĩa, còn khung nhìn ảo chỉ là lối tắt để viết truy vấn. Khi đọc từ khung nhìn ảo, SQL engine sẽ khai triển nó ngay lập tức thành truy vấn bên dưới rồi xử lý truy vấn đã khai triển đó.
+
+Khi dữ liệu bên dưới thay đổi, khung nhìn vật chất hóa cần được cập nhật tương ứng. Một số cơ sở dữ liệu làm việc này tự động, và các hệ thống như Materialize chuyên về việc duy trì khung nhìn vật chất hóa [^81]. Cập nhật khung nhìn làm tăng khối lượng ghi, nhưng khung nhìn vật chất hóa có thể cải thiện hiệu năng đọc nếu tải công việc lặp đi lặp lại cùng các truy vấn.
+
+*Tổng hợp vật chất hóa* (*materialized aggregate*) là một loại khung nhìn vật chất hóa có thể hữu ích trong kho dữ liệu. Như đã nói, truy vấn kho dữ liệu thường dùng các hàm tổng hợp trong SQL như `COUNT`, `SUM`, `AVG`, `MIN` hoặc `MAX`. Nếu nhiều truy vấn dùng cùng một phép tổng hợp, việc xử lý lại dữ liệu thô mỗi lần là lãng phí — sao không cache lại các giá trị count hay sum được dùng nhiều nhất? *Data cube* (*data cube*, hay *OLAP cube*) tạo một lưới các phép tổng hợp được nhóm theo các chiều khác nhau, nhằm đúng mục đích cache đó [^82]. {{< xref fig="4-10" page="/ch4" anchor="fig_data_cube" >}}Hình 4-10{{< /xref >}} cho một ví dụ.
+
+{{< fig num="4-10" id="fig_data_cube" src="/fig/ddia_0410.png" caption="Hai chiều của một data cube, tổng hợp dữ liệu bằng phép tính tổng." class="ddia-figure ddia-figure--wide" width="2880" height="1484" />}}
+
+Trước hết hãy giả sử mỗi bản ghi fact chỉ có khóa ngoại tham chiếu tới hai bảng dimension — trong {{< xref fig="4-10" page="/ch4" anchor="fig_data_cube" >}}Hình 4-10{{< /xref >}} là `date_key` và `product_sk`. Khi đó có thể vẽ một bảng hai chiều, một trục là ngày và trục kia là sản phẩm. Mỗi ô chứa giá trị tổng hợp (ví dụ `SUM`) của một thuộc tính (ví dụ `net_price`) trên mọi bản ghi fact có tổ hợp ngày–sản phẩm tương ứng. Sau đó có thể áp dụng cùng phép tổng hợp dọc theo từng hàng hoặc từng cột để được bản tóm tắt giảm đi một chiều: doanh số theo sản phẩm bất kể ngày, hoặc doanh số theo ngày bất kể sản phẩm.
+
+Nhìn chung, fact thường có nhiều hơn hai chiều. Trong {{< xref fig="3-5" page="/ch3" anchor="fig_dwh_schema" >}}Hình 3-5{{< /xref >}} có năm chiều: ngày, sản phẩm, cửa hàng, khuyến mãi và khách hàng. Khó hình dung một siêu khối năm chiều, nhưng nguyên lý vẫn như vậy: mỗi ô chứa doanh số của một tổ hợp ngày–sản phẩm–cửa hàng–khuyến mãi–khách hàng cụ thể, và các giá trị này sau đó có thể được tóm tắt lặp lại dọc theo từng chiều.
+
+Lợi ích của data cube vật chất hóa là một số truy vấn trở nên rất nhanh, vì kết quả thực chất đã được tính sẵn. Chẳng hạn, nếu muốn biết tổng doanh số của từng cửa hàng hôm qua, bạn chỉ cần xem tổng ở chiều tương ứng, không phải quét hàng triệu hàng.
+
+Nhược điểm là data cube không linh hoạt bằng truy vấn dữ liệu thô. Chẳng hạn, không thể tính tỷ lệ doanh số đến từ các mặt hàng giá trên 100 đô-la nếu giá không phải là một trong các chiều. Vì vậy, hầu hết kho dữ liệu cố giữ càng nhiều dữ liệu thô càng tốt, và chỉ dùng các phép tổng hợp như data cube làm cách tối ưu hiệu năng cho một số truy vấn nhất định.
 
 
-### 查询执行：编译与向量化 {#sec_storage_vectorized}
+## Chỉ mục đa chiều (*multidimensional index*) và chỉ mục (*index*) toàn văn {#sec_storage_multidimensional}
 
-复杂的分析型 SQL 查询会被分解成一个 *查询计划*（*query plan*），其中包含多个称为 *算子*（*operator*）的执行阶段；这些算子可能分布到多台机器上并行执行。查询规划器可以决定选用哪些算子、以什么顺序执行，以及每个算子在哪里运行，从而完成大量优化。
+B-tree và LSM-tree ở nửa đầu chương này cho phép truy vấn khoảng trên một thuộc tính duy nhất. Chẳng hạn, nếu khóa là tên người dùng, chúng cho phép đánh chỉ mục (*index*) để tìm hiệu quả mọi tên bắt đầu bằng chữ L. Nhưng đôi khi chỉ tìm theo một thuộc tính là chưa đủ.
 
-在每个算子内部，查询引擎都要对列中的值执行各种操作，例如找出值属于某个集合的所有行（或许是连接的一部分），或者判断值是否大于 15。查询引擎还要同时查看同一行的多个列，例如找出产品是香蕉、门店又恰好是目标门店的所有销售记录。
+Loại chỉ mục (*index*) nhiều cột phổ biến nhất gọi là *chỉ mục ghép* (*concatenated index*). Nó kết hợp nhiều trường thành một khóa bằng cách nối cột này sau cột kia. Thứ tự nối do định nghĩa chỉ mục (*index*) quy định. Điều này giống chỉ mục (*index*) của danh bạ điện thoại giấy kiểu cũ, ánh xạ từ (*họ*, *tên*) sang số điện thoại. Vì chỉ mục (*index*) được sắp xếp theo thứ tự này, ta có thể dùng nó để tìm mọi người có một họ nhất định, hoặc mọi người có một tổ hợp *họ–tên* cụ thể. Nhưng chỉ mục (*index*) này vô dụng nếu bạn muốn tìm mọi người có một tên nhất định.
 
-数据仓库查询需要扫描数百万行，因此不仅要关注从磁盘读取的数据量，还要关注执行复杂算子所需的 CPU 时间。最简单的算子就像编程语言解释器：遍历每一行时，查看表示查询的数据结构，弄清要对哪些列做什么比较或计算。遗憾的是，这种方式对许多分析场景来说太慢。实践中出现了两种高效执行查询的方法 [^77]：
-
-查询编译（query compilation）
-: 查询引擎根据 SQL 查询生成执行代码。代码逐行迭代，读取相关列中的值，完成所需的比较或计算；如果条件满足，就把必要的值复制到输出缓冲区。随后，查询引擎把生成的代码编译成机器码（往往借助 LLVM 等现有编译器），再对已经载入内存的列编码数据运行。这种代码生成方式类似 Java 虚拟机（JVM）等运行时采用的即时（JIT）编译。
-
-向量化处理（vectorized processing）
-: 查询仍然采用解释执行，而非编译执行；但它不再逐行迭代，而是成批处理一列中的许多值，从而提高速度。数据库内置一组固定的预定义算子，向算子传入参数，就会得到一批结果 [^50] [^75]。
-
-例如，把 `product_sk` 列和“香蕉”的 ID 传给相等比较算子，会得到一张位图：输入列的每个值对应一位，是香蕉则为 1。再把 `store_sk` 列和目标门店的 ID 传给同一个算子，得到另一张位图。最后把两张位图传给“按位与”算子，如 {{< xref fig="4-9" page="/ch4" anchor="fig_bitmap_and" >}}图 4-9{{< /xref >}} 所示。结果位图中，特定门店售出的每一笔香蕉都对应一个 1。
-
-{{< fig num="4-9" id="fig_bitmap_and" src="/fig/ddia_0409.png" caption="两张位图的按位与运算非常适合向量化处理。" class="ddia-figure ddia-figure--wide" width="2658" height="961" />}}
-
-这两种方法的实现大不相同，但都已投入实际使用 [^77]。它们都能利用现代 CPU 的特点，获得优异性能：
-
-* 优先顺序访问内存而非随机访问，减少缓存未命中 [^78]；
-* 把大部分工作放在紧凑的内层循环中（指令少且没有函数调用），使 CPU 指令流水线保持忙碌，并避免分支预测错误；
-* 利用多线程和单指令多数据（SIMD）指令等并行机制 [^79] [^80]；
-* 直接处理压缩数据，不先解码成另一种内存表示，从而省去内存分配和复制的成本。
-
-### 物化视图与多维数据集 {#sec_storage_materialized_views}
-
-我们曾在 [“时间线的物化与更新”](/ch2#sec_introduction_materializing) 中遇到 *物化视图*（*materialized view*）。在关系数据模型中，它是一种类似表的对象，内容是某个查询的结果。物化视图是实际写入磁盘的查询结果副本，而虚拟视图只是编写查询的快捷方式。从虚拟视图读取时，SQL 引擎会即时把它展开成底层查询，再处理展开后的查询。
-
-底层数据变化时，物化视图也必须随之更新。有些数据库可以自动完成这项工作，Materialize 等系统则专门负责维护物化视图 [^81]。更新视图会增加写入工作量，但如果工作负载反复执行相同查询，物化视图可以改善读取性能。
-
-*物化聚合*（*materialized aggregate*）是一类对数据仓库很有用的物化视图。如前所述，数据仓库查询经常使用 SQL 中的 `COUNT`、`SUM`、`AVG`、`MIN` 或 `MAX` 等聚合函数。如果许多查询都使用相同的聚合，每次重新处理原始数据就太浪费了，何不把最常用的计数或总和缓存起来？*多维数据集*（*data cube*，或 *OLAP 多维数据集*，*OLAP cube*）会创建一个按不同维度分组的聚合网格，正是为了实现这种缓存 [^82]。{{< xref fig="4-10" page="/ch4" anchor="fig_data_cube" >}}图 4-10{{< /xref >}} 展示了一个例子。
-
-{{< fig num="4-10" id="fig_data_cube" src="/fig/ddia_0410.png" caption="多维数据集的两个维度，通过求和聚合数据。" class="ddia-figure ddia-figure--wide" width="2880" height="1484" />}}
-
-暂且假设每条事实记录只外键引用两张维度表——{{< xref fig="4-10" page="/ch4" anchor="fig_data_cube" >}}图 4-10{{< /xref >}} 中是 `date_key` 和 `product_sk`。这样可以画出一张二维表，一条轴表示日期，另一条轴表示产品。每个单元格保存具有相应“日期—产品”组合的所有事实记录中，某项属性（如 `net_price`）的聚合值（如 `SUM`）。再沿每一行或每一列应用同样的聚合，就能得到减少一个维度的汇总结果：不考虑日期的产品销售额，或者不考虑产品的逐日销售额。
-
-一般而言，事实往往不止两个维度。{{< xref fig="3-5" page="/ch3" anchor="fig_dwh_schema" >}}图 3-5{{< /xref >}} 中就有日期、产品、门店、促销和客户五个维度。五维超立方体很难想象，但原理仍然一样：每个单元格保存特定“日期—产品—门店—促销—客户”组合的销售额，随后可以沿每个维度反复汇总这些值。
-
-物化多维数据集的优点，是某些查询会变得非常快，因为结果实际上已经预先计算好了。例如，要知道昨天每家门店的总销售额，只需查看相应维度上的汇总值，不必扫描数百万行。
-
-缺点是多维数据集不如直接查询原始数据灵活。例如，价格不是其中一个维度，就无法计算有多大比例的销售额来自售价超过 100 美元的商品。因此，大多数数据仓库会尽可能保留原始数据，只把多维数据集等聚合用作某些查询的性能优化手段。
-
-
-## 多维索引与全文索引 {#sec_storage_multidimensional}
-
-本章前半部分介绍的 B 树和 LSM 树，可以对单个属性执行范围查询。例如，如果键是用户名，就能用它们建立索引，高效找出所有以 L 开头的名字。但有时，只按一个属性搜索并不够用。
-
-最常见的多列索引称为 *联合索引*（*concatenated index*）。它把一列接在另一列之后，将多个字段组合成一个键；字段的连接顺序由索引定义指定。这就像老式纸质电话簿提供的索引：从（*姓*、*名*）映射到电话号码。由于索引按这个顺序排列，可以找出某个姓氏对应的所有人，也可以找出特定 *姓—名* 组合对应的所有人。但如果只想查找某个名字对应的所有人，这个索引就毫无用处。
-
-*多维索引*（*multidimensional index*）则允许同时查询多个列，这对地理空间数据尤其重要。例如，餐厅搜索网站的数据库可能保存了每家餐厅的经纬度。用户查看地图时，网站需要找出当前矩形地图区域内的所有餐厅。这就需要下面这样的二维范围查询：
+*Chỉ mục đa chiều* (*multidimensional index*) cho phép truy vấn đồng thời nhiều cột, điều đặc biệt quan trọng với dữ liệu không gian địa lý. Chẳng hạn, cơ sở dữ liệu của một trang web tìm nhà hàng có thể lưu vĩ độ và kinh độ của từng nhà hàng. Khi người dùng xem bản đồ, trang web cần tìm mọi nhà hàng nằm trong vùng hình chữ nhật mà bản đồ đang hiển thị. Việc này đòi hỏi một truy vấn khoảng hai chiều như sau:
 
 ```sql
 SELECT * FROM restaurants WHERE latitude > 51.4946 AND latitude < 51.5079
     AND longitude > -0.1162 AND longitude < -0.1004;
 ```
 
-在纬度和经度列上建立联合索引，无法高效回答这个查询：它只能返回某一纬度范围内的所有餐厅（经度任意），或者某一经度范围内的所有餐厅（纬度可以是南北两极之间的任意位置），却无法同时约束两者。
+Chỉ mục ghép (*concatenated index*) trên các cột vĩ độ và kinh độ không thể trả lời hiệu quả truy vấn này: nó chỉ có thể trả về mọi nhà hàng trong một khoảng vĩ độ nào đó (ở mọi kinh độ), hoặc mọi nhà hàng trong một khoảng kinh độ nào đó (ở bất kỳ vĩ độ nào giữa hai cực Bắc và Nam), chứ không thể ràng buộc cả hai cùng lúc.
 
-一种办法是使用空间填充曲线把二维位置转换成单个数字，再建立普通的 B 树索引 [^83]。更常见的做法是使用 R 树、Bkd 树 [^84] 等专门的空间索引；它们对空间进行划分，让邻近的数据点尽量落在同一棵子树中。例如，PostGIS 使用 PostgreSQL 的通用搜索树索引设施，以 R 树实现地理空间索引 [^85]。另一种选择是使用规则排布的三角形、正方形或六边形网格 [^86]。
+Một cách là dùng đường cong lấp đầy không gian (space-filling curve) để chuyển vị trí hai chiều thành một con số duy nhất, rồi dùng chỉ mục (*index*) B-tree thông thường [^83]. Phổ biến hơn là dùng các chỉ mục (*index*) không gian chuyên biệt như R-tree hay Bkd-tree [^84]. Chúng chia nhỏ không gian sao cho các điểm dữ liệu gần nhau có xu hướng nằm trong cùng một cây con. Chẳng hạn, PostGIS hiện thực chỉ mục (*index*) không gian địa lý dưới dạng R-tree bằng cơ chế chỉ mục (*index*) Generalized Search Tree của PostgreSQL [^85]. Cũng có thể dùng lưới đều gồm tam giác, hình vuông hoặc lục giác [^86].
 
-多维索引并不只用于地理位置。例如，电子商务网站可以在（*红*、*绿*、*蓝*）三个维度上建立索引，以搜索特定颜色范围内的产品；天气观测数据库也可以在（*日期*、*温度*）上建立二维索引，高效找出 2013 年中温度介于 25～30℃ 的所有观测记录。使用一维索引，要么必须扫描 2013 年的所有记录（不考虑温度）再按温度筛选，要么反过来处理。二维索引则可以同时按时间戳和温度缩小结果范围 [^87]。
+Chỉ mục đa chiều (*multidimensional index*) không chỉ dùng cho vị trí địa lý. Chẳng hạn, trên trang thương mại điện tử, bạn có thể dùng chỉ mục (*index*) ba chiều trên (*đỏ*, *xanh lục*, *xanh lam*) để tìm sản phẩm trong một khoảng màu nhất định, hoặc trong cơ sở dữ liệu quan sát thời tiết, bạn có thể dùng chỉ mục (*index*) hai chiều trên (*ngày*, *nhiệt độ*) để tìm hiệu quả mọi quan sát trong năm 2013 có nhiệt độ từ 25 đến 30℃. Với chỉ mục (*index*) một chiều, bạn sẽ phải hoặc quét mọi bản ghi năm 2013 (bất kể nhiệt độ) rồi lọc theo nhiệt độ, hoặc làm ngược lại. Chỉ mục (*index*) hai chiều có thể thu hẹp kết quả đồng thời theo timestamp và nhiệt độ [^87].
 
-### 全文检索 {#sec_storage_full_text}
+### Tìm kiếm toàn văn {#sec_storage_full_text}
 
-*全文检索*（*full-text search*）允许按关键词搜索一组文本文档（网页、产品描述等），关键词可以出现在文本中的任意位置 [^88]。信息检索是一门庞大而专门的学科，往往还要针对具体语言进行处理。例如，一些亚洲语言书写时不会在词与词之间添加空格或标点，因此把文本切分成词需要借助模型，判断哪些字符序列构成一个词。全文检索还经常需要匹配相似但不完全相同的词（例如拼写错误或同一个词的不同语法形式），以及同义词。这些问题都超出了本书的范围。
+*Tìm kiếm toàn văn* (*full-text search*) cho phép tìm một tập tài liệu văn bản (trang web, mô tả sản phẩm, v.v.) theo từ khóa, trong đó từ khóa có thể xuất hiện ở bất kỳ đâu trong văn bản [^88]. Truy xuất thông tin là một lĩnh vực lớn và chuyên sâu, thường còn liên quan đến xử lý riêng cho từng ngôn ngữ. Chẳng hạn, một số ngôn ngữ châu Á được viết không có khoảng trắng hay dấu câu giữa các từ, nên để tách văn bản thành từ cần một mô hình cho biết chuỗi ký tự nào tạo thành một từ. Tìm kiếm toàn văn cũng thường cần khớp các từ giống nhưng không hoàn toàn trùng (như lỗi chính tả hoặc các dạng ngữ pháp khác nhau của cùng một từ) và các từ đồng nghĩa. Những vấn đề này nằm ngoài phạm vi cuốn sách.
 
-不过从核心原理看，全文检索也可以视为一种多维查询：文本中可能出现的每个词（即一个 *词项*，*term*）都是一个维度。包含词项 *x* 的文档在维度 *x* 上取值为 1，不包含 *x* 则取值为 0。搜索提到“红苹果”的文档，就是同时寻找 *红* 维度和 *苹果* 维度都为 1 的文档。这样一来，维度数可能非常庞大。
+Tuy nhiên, về bản chất, tìm kiếm toàn văn cũng có thể xem là một loại truy vấn đa chiều: mỗi từ có thể xuất hiện trong văn bản (một *term*) là một chiều. Tài liệu chứa term *x* có giá trị 1 ở chiều *x*, còn tài liệu không chứa *x* có giá trị 0. Tìm các tài liệu nhắc tới "táo đỏ" nghĩa là tìm tài liệu có giá trị 1 ở cả chiều *đỏ* lẫn chiều *táo*. Do đó số chiều có thể cực lớn.
 
-许多搜索引擎使用 *倒排索引*（*inverted index*）回答这类查询。它是一种键值结构：键是词项，值是所有包含该词项的文档 ID 列表，即 *倒排列表*（*postings list*）。如果文档 ID 是连续数字，倒排列表也可以表示成 {{< xref fig="4-8" page="/ch4" anchor="fig_bitmap_index" >}}图 4-8{{< /xref >}} 那样的稀疏位图：如果 ID 为 *n* 的文档包含词项 *x*，那么词项 *x* 的位图中第 *n* 位就是 1 [^89]。
+Nhiều công cụ tìm kiếm dùng *chỉ mục đảo ngược* (*inverted index*) để trả lời loại truy vấn này. Đó là một cấu trúc khóa-giá trị, trong đó khóa là term và giá trị là danh sách ID của mọi tài liệu chứa term đó — *postings list* (*postings list*). Nếu ID tài liệu là các số liên tiếp thì postings list cũng có thể biểu diễn thành bitmap thưa như {{< xref fig="4-8" page="/ch4" anchor="fig_bitmap_index" >}}Hình 4-8{{< /xref >}}: bit thứ *n* trong bitmap của term *x* bằng 1 nếu tài liệu có ID *n* chứa term *x* [^89].
 
-现在，查找同时包含词项 *x* 和 *y* 的所有文档，就类似于用向量化数据仓库查询寻找满足两个条件的行（{{< xref fig="4-9" page="/ch4" anchor="fig_bitmap_and" >}}图 4-9{{< /xref >}}）：载入 *x* 和 *y* 对应的两张位图，再计算按位与。即使位图经过游程编码，这个操作也可以高效完成。
+Việc tìm mọi tài liệu chứa cả term *x* lẫn *y* khi đó giống truy vấn kho dữ liệu vector hóa tìm các hàng thỏa hai điều kiện ({{< xref fig="4-9" page="/ch4" anchor="fig_bitmap_and" >}}Hình 4-9{{< /xref >}}): nạp bitmap của *x* và *y* rồi tính AND theo bit. Dù bitmap được mã hóa run-length, việc này vẫn thực hiện hiệu quả.
 
-Elasticsearch 和 Solr 使用的全文索引引擎 Lucene 就采用这种方法 [^90]。它把从词项到倒排列表的映射保存在类似 SSTable 的有序文件中，再使用本章前面介绍的日志结构方法，在后台合并这些文件 [^91]。PostgreSQL 的 GIN 索引也通过倒排列表支持全文检索，以及 JSON 文档内部的索引 [^92] [^93]。
+Lucene, engine chỉ mục (*index*) toàn văn mà Elasticsearch và Solr dùng, hoạt động theo cách này [^90]. Nó lưu ánh xạ từ term đến postings list trong các file có thứ tự giống SSTable, và hợp nhất các file đó ở chế độ nền bằng cách tiếp cận log-structured đã nêu ở phần trước của chương [^91]. Chỉ mục (*index*) GIN của PostgreSQL cũng dùng postings list để hỗ trợ tìm kiếm toàn văn và đánh chỉ mục (*index*) bên trong tài liệu JSON [^92] [^93].
 
-除了把文本切分成词，还可以找出所有长度为 *n* 的子串，称为 *n*-gram。例如，字符串 `"hello"` 的 3-gram（*n* = 3）是 `"hel"`、`"ell"` 和 `"llo"`。如果为所有 3-gram 建立倒排索引，就能搜索任意长度至少为三个字符的子串。这样的索引甚至支持在搜索查询中使用正则表达式，缺点是体积相当大 [^94]。
+Thay vì tách văn bản thành từ, một lựa chọn khác là tìm mọi chuỗi con có độ dài *n*, gọi là *n*-gram. Chẳng hạn, các 3-gram (*n* = 3) của chuỗi `"hello"` là `"hel"`, `"ell"` và `"llo"`. Nếu đánh chỉ mục đảo ngược (*inverted index*) cho mọi 3-gram, ta có thể tìm kiếm mọi chuỗi con dài ít nhất ba ký tự. Chỉ mục (*index*) như vậy thậm chí cho phép dùng biểu thức chính quy trong truy vấn tìm kiếm, với cái giá là kích thước khá lớn [^94].
 
-为了应对文档或查询中的拼写错误，Lucene 可以搜索与目标词相差一定编辑距离的词（编辑距离为 1，表示增加、删除或替换了一个字母）[^95]。它把词项集合存储成一个以键中字符为边的有限状态自动机，结构类似 *字典树*（*trie*）[^96]；再将其转换成 *莱文斯坦自动机*（*Levenshtein automaton*），从而高效搜索给定编辑距离以内的词 [^97]。
+Để xử lý lỗi chính tả trong tài liệu hoặc truy vấn, Lucene có thể tìm các từ nằm trong một khoảng cách chỉnh sửa (edit distance) nhất định so với từ cần tìm (khoảng cách chỉnh sửa 1 nghĩa là đã thêm, xóa hoặc thay một chữ cái) [^95]. Để làm vậy, nó lưu tập term dưới dạng một automaton hữu hạn trạng thái trên các ký tự của khóa, tương tự *trie* (*trie*) [^96], và chuyển nó thành *Levenshtein automaton* (*Levenshtein automaton*), cho phép tìm hiệu quả các từ trong một khoảng cách chỉnh sửa cho trước [^97].
 
 
-### 向量嵌入 {#id92}
+### Vector embedding {#id92}
 
-语义搜索不只处理同义词和拼写错误，还试图理解文档表达的概念和用户的意图。例如，帮助中心有一页标题是“取消订阅”，那么用户搜索“如何关闭账户”或“终止合同”时也应当找到它：这些说法用词完全不同，意思却十分接近。
+Tìm kiếm ngữ nghĩa không chỉ xử lý từ đồng nghĩa và lỗi chính tả, mà còn cố hiểu khái niệm mà tài liệu diễn đạt và ý định của người dùng. Chẳng hạn, nếu một trang trong trung tâm trợ giúp có tiêu đề "Hủy đăng ký", người dùng tìm "cách đóng tài khoản" hay "chấm dứt hợp đồng" cũng nên tìm thấy trang đó: các cách nói này hoàn toàn khác từ ngữ nhưng ý nghĩa rất gần nhau.
 
-为了理解文档的语义，也就是它表达的含义，语义搜索索引会使用嵌入模型，把文档转换成由浮点数组成的向量，称为 *向量嵌入*（*vector embedding*）。这个向量表示多维空间中的一个点，每个浮点数表示文档在某一维坐标轴上的位置。如果输入文档的语义相似，嵌入模型就会生成在多维空间中彼此接近的向量。
+Để hiểu ngữ nghĩa của tài liệu, tức ý nghĩa mà nó biểu đạt, chỉ mục tìm kiếm (*search index*) ngữ nghĩa dùng mô hình embedding để chuyển tài liệu thành một vector các số thực dấu phẩy động, gọi là *vector embedding* (*vector embedding*). Vector này biểu diễn một điểm trong không gian đa chiều, và mỗi số thực biểu diễn vị trí của tài liệu trên một trục chiều. Nếu các tài liệu đầu vào có ngữ nghĩa tương tự, mô hình embedding sẽ sinh ra các vector nằm gần nhau trong không gian đa chiều.
 
 
 > [!NOTE]
-> 我们在 [“查询执行：编译与向量化”](/ch4#sec_storage_vectorized) 中见过 *向量化处理* 一词。语义搜索中的“向量”含义不同：向量化处理所说的向量，是一批可以用专门优化的代码处理的比特；嵌入模型所说的向量，则是一列浮点数，用来表示多维空间中的位置。
+> Ta đã gặp thuật ngữ *xử lý vector hóa* ở [“Thực thi truy vấn: biên dịch và vector hóa”](/ch4#sec_storage_vectorized). "Vector" trong tìm kiếm ngữ nghĩa mang nghĩa khác: trong xử lý vector hóa, vector là một lô bit có thể xử lý bằng mã được tối ưu chuyên biệt, còn trong mô hình embedding, vector là một danh sách số thực dấu phẩy động biểu diễn một vị trí trong không gian đa chiều.
 
 
-例如，一篇介绍农业的维基百科页面，其三维向量嵌入可能是 `[0.1, 0.22, 0.11]`。介绍蔬菜的页面应该离它很近，向量或许是 `[0.13, 0.19, 0.24]`。介绍星型模式的页面则可能得到 `[0.82, 0.39, -0.74]`，距离相对很远。只看数字也能发现，前两个向量比第三个更接近。
+Chẳng hạn, vector embedding ba chiều của một trang Wikipedia về nông nghiệp có thể là `[0.1, 0.22, 0.11]`. Một trang về rau củ sẽ gần nó, có thể có vector `[0.13, 0.19, 0.24]`. Một trang về star schema có thể có embedding `[0.82, 0.39, -0.74]`, tương đối xa. Chỉ nhìn các con số cũng thấy hai vector đầu gần nhau hơn vector thứ ba.
 
-实际的嵌入模型使用大得多的向量，往往包含 1,000 多个数字，但原理相同。我们不会试图理解每个数字各自代表什么；它们只是嵌入模型用来指向抽象多维空间中某个位置的方式。搜索引擎通过余弦相似度、欧几里得距离等距离函数衡量向量间的距离。余弦相似度计算两个向量夹角的余弦，判断它们有多接近；欧几里得距离则计算空间中两点间的直线距离。
+Mô hình embedding thực tế dùng vector lớn hơn nhiều, thường có hơn 1.000 số, nhưng nguyên lý giống nhau. Ta không cố hiểu từng con số đại diện cho điều gì. Chúng chỉ là cách mô hình embedding trỏ tới một vị trí trong không gian đa chiều trừu tượng. Công cụ tìm kiếm dùng các hàm khoảng cách như cosine similarity hay khoảng cách Euclid để đo khoảng cách giữa các vector. Cosine similarity tính cosine của góc giữa hai vector để xem chúng gần nhau đến đâu, còn khoảng cách Euclid tính khoảng cách đường thẳng giữa hai điểm trong không gian.
 
-Word2Vec [^98]、BERT [^99] 和 GPT [^100] 等许多早期嵌入模型都处理文本数据，通常以神经网络实现。后来，研究者又为视频、音频和图像创建了嵌入模型。近来，模型架构进一步走向 *多模态*（*multimodal*）：同一个模型可以为文本、图像等多种模态生成向量嵌入。
+Nhiều mô hình embedding ban đầu như Word2Vec [^98], BERT [^99] và GPT [^100] xử lý dữ liệu văn bản, thường được hiện thực bằng mạng nơ-ron. Về sau, các nhà nghiên cứu cũng tạo ra mô hình embedding cho video, âm thanh và hình ảnh. Gần đây, kiến trúc mô hình còn tiến tới *đa phương thức* (*multimodal*): một mô hình duy nhất có thể sinh vector embedding cho nhiều phương thức như văn bản và hình ảnh.
 
-用户输入查询时，语义搜索引擎会把查询及其相关上下文（例如用户位置）交给嵌入模型，生成查询的向量嵌入。随后，搜索引擎还必须通过向量索引，找出向量嵌入与查询相似的文档。
+Khi người dùng nhập truy vấn, công cụ tìm kiếm ngữ nghĩa đưa truy vấn và ngữ cảnh liên quan (chẳng hạn vị trí người dùng) cho mô hình embedding để sinh vector embedding của truy vấn. Sau đó, công cụ tìm kiếm phải dùng chỉ mục (*index*) vector để tìm các tài liệu có vector embedding tương tự truy vấn.
 
-向量索引保存一组文档的向量嵌入。查询时传入查询本身的向量嵌入，索引会返回向量最接近查询向量的文档。前面介绍的 R 树不适合维度很高的向量，因此需要专门的向量索引，例如：
+Chỉ mục (*index*) vector lưu vector embedding của một tập tài liệu. Khi truy vấn, ta đưa vector embedding của chính truy vấn vào, và chỉ mục (*index*) trả về các tài liệu có vector gần nhất với vector truy vấn. R-tree đã nói ở trên không phù hợp với vector có số chiều rất cao, nên cần các chỉ mục (*index*) vector chuyên biệt, chẳng hạn:
 
-平面索引（Flat indexes）
-: 向量原样保存在索引中。查询必须读取每个向量，并测量它与查询向量的距离。平面索引结果精确，但逐一计算查询与每个向量的距离很慢。
+Flat index
+: Vector được lưu nguyên trong chỉ mục (*index*). Truy vấn phải đọc từng vector và đo khoảng cách giữa nó với vector truy vấn. Flat index cho kết quả chính xác, nhưng việc đo khoảng cách giữa truy vấn và từng vector rất chậm.
 
-倒排文件（IVF）索引
-: 把向量空间聚类成若干向量分区，以减少必须比较的向量数；这些分区称为 *质心*（*centroid*）。IVF 索引比平面索引更快，却只能给出近似结果：查询向量和某个文档向量可能十分接近，却恰好落入不同分区。查询 IVF 索引时，首先要指定 *探测数*（probes），也就是需要检查多少个分区。探测数越大，查询越准确，但也越慢，因为必须比较更多向量。
+Inverted file (IVF) index
+: Gom không gian vector thành các phân vùng vector, gọi là *tâm cụm* (*centroid*), để giảm số vector phải so sánh. Chỉ mục (*index*) IVF nhanh hơn flat index nhưng chỉ cho kết quả xấp xỉ: vector truy vấn và vector tài liệu có thể rất gần nhau nhưng lại rơi vào hai phân vùng khác nhau. Khi truy vấn chỉ mục (*index*) IVF, trước hết phải chỉ định số *probe*, tức số phân vùng cần kiểm tra. Số probe càng lớn thì truy vấn càng chính xác nhưng càng chậm, vì phải so sánh nhiều vector hơn.
 
-分层可导航小世界（HNSW）
-: HNSW 索引维护向量空间的多个层级，如 {{< xref fig="4-11" page="/ch4" anchor="fig_vector_hnsw" >}}图 4-11{{< /xref >}} 所示。每层都表示成一张图：节点代表向量，边表示向量彼此接近。查询先在节点很少的最顶层找到最近向量，再进入下一层的同一节点；下一层连接更密集，查询沿边寻找更接近查询向量的向量。这个过程不断重复，直至最底层。与 IVF 一样，HNSW 也是近似索引。
+Hierarchical Navigable Small World (HNSW)
+: Chỉ mục (*index*) HNSW duy trì nhiều tầng của không gian vector, như minh họa ở {{< xref fig="4-11" page="/ch4" anchor="fig_vector_hnsw" >}}Hình 4-11{{< /xref >}}. Mỗi tầng được biểu diễn thành một đồ thị, trong đó nút đại diện cho vector và cạnh cho biết các vector gần nhau. Truy vấn bắt đầu bằng việc tìm vector gần nhất ở tầng trên cùng, nơi chỉ có rất ít nút, rồi đi xuống cùng nút đó ở tầng kế tiếp, nơi các kết nối dày đặc hơn, và đi theo các cạnh để tìm vector gần vector truy vấn hơn. Quá trình lặp lại cho đến tầng dưới cùng. Giống IVF, HNSW cũng là chỉ mục (*index*) xấp xỉ.
 
-{{< fig num="4-11" id="fig_vector_hnsw" src="/fig/ddia_0411.png" caption="在 HNSW 索引中查找最接近给定查询向量的数据库条目。" class="ddia-figure ddia-figure--wide" width="2658" height="1452" />}}
-
-
-许多流行的向量数据库都实现了 IVF 和 HNSW 索引。Facebook 的 Faiss 库为两者提供了许多变体 [^101]，PostgreSQL 的 pgvector 也同时支持这两种索引 [^102]。IVF 和 HNSW 算法的完整细节超出了本书范围，不过介绍它们的论文是很好的参考资料 [^103] [^104]。
-
-## 总结 {#summary}
-
-在本章中，我们试图深入了解数据库是如何处理存储与检索的。把数据存入数据库时会发生什么？日后再次查询这些数据时，数据库又会做什么？
-
-[“分析型与事务型系统”](/ch1#sec_introduction_analytics) 介绍了事务处理（OLTP）与分析（OLAP）的区别。本章进一步看到，针对 OLTP 优化的存储引擎，与针对分析优化的存储引擎大不相同：
-
-* OLTP 系统针对大量请求优化；每个请求只读写少量记录，并且需要迅速响应。记录通常通过主键或二级索引访问，这些索引一般是从键到记录的有序映射，也支持范围查询。
-* 数据仓库等分析型系统，针对需要扫描大量记录的复杂读查询优化。它们通常采用经过压缩的列式存储布局，尽可能减少查询要从磁盘读取的数据量；并通过查询的即时编译或向量化，尽可能减少处理数据所耗费的 CPU 时间。
-
-在 OLTP 方面，我们看到了两个主要思想流派的存储引擎：
-
-* 日志结构学派只允许向文件追加数据和删除过时文件，从不更新已经写出的文件。SSTable、LSM 树、RocksDB、Cassandra、HBase、ScyllaDB、Lucene 等都属于这一类。一般而言，日志结构存储引擎能提供很高的写入吞吐量。
-* 就地更新学派把磁盘视为一组大小固定、可以覆写的页。B 树是这种理念最典型的代表，所有主流关系型 OLTP 数据库和许多非关系数据库都使用它。根据经验，B 树通常更适合读取，其读取吞吐量高于日志结构存储，响应时间也更短。
-
-随后，我们考察了能够同时搜索多个条件的索引：R 树等多维索引可以同时按经度和纬度搜索地图上的点；全文检索索引则可以搜索同一段文本中出现的多个关键词。最后，向量数据库用于对文本文档及其他媒体进行语义搜索；它把数据表示成高维向量，再通过比较向量相似度找出相似文档。
-
-作为应用开发者，如果掌握了这些有关存储引擎内部机制的知识，就能更好地判断哪种工具最适合自己的应用。需要调整数据库的调优参数时，这种理解也让你能够设想参数调高或调低会产生怎样的影响。
-
-尽管本章无法让你成为某一种存储引擎的调优专家，但希望它已经提供了足够的概念和词汇，让你能够读懂自己所选数据库的文档。
+{{< fig num="4-11" id="fig_vector_hnsw" src="/fig/ddia_0411.png" caption="Tìm trong chỉ mục (*index*) HNSW mục cơ sở dữ liệu gần nhất với một vector truy vấn cho trước." class="ddia-figure ddia-figure--wide" width="2658" height="1452" />}}
 
 
+Nhiều cơ sở dữ liệu vector phổ biến hiện thực chỉ mục (*index*) IVF và HNSW. Thư viện Faiss của Facebook cung cấp nhiều biến thể của cả hai [^101], và pgvector của PostgreSQL cũng hỗ trợ cả hai loại chỉ mục (*index*) [^102]. Chi tiết đầy đủ của thuật toán IVF và HNSW nằm ngoài phạm vi cuốn sách, nhưng các bài báo giới thiệu chúng là nguồn tham khảo tốt [^103] [^104].
 
-### 参考文献
+## Tóm tắt {#summary}
+
+Trong chương này, ta đã cố đi sâu vào cách cơ sở dữ liệu xử lý việc lưu trữ và truy xuất. Điều gì xảy ra khi bạn lưu dữ liệu vào cơ sở dữ liệu, và điều gì xảy ra khi bạn truy vấn lại dữ liệu đó sau này?
+
+[“Hệ thống phân tích và hệ thống tác nghiệp”](/ch1#sec_introduction_analytics) đã giới thiệu sự phân biệt giữa xử lý giao dịch (OLTP) và phân tích (OLAP). Chương này cho thấy storage engine tối ưu cho OLTP rất khác với storage engine tối ưu cho phân tích:
+
+* Hệ thống OLTP được tối ưu cho lượng lớn yêu cầu, mỗi yêu cầu chỉ đọc và ghi một số ít bản ghi và cần phản hồi nhanh. Các bản ghi thường được truy cập qua khóa chính hoặc chỉ mục phụ (*secondary index*). Các chỉ mục (*index*) này thường là ánh xạ có thứ tự từ khóa sang bản ghi, và cũng hỗ trợ truy vấn khoảng.
+* Hệ thống phân tích như kho dữ liệu được tối ưu cho các truy vấn đọc phức tạp phải quét một lượng lớn bản ghi. Chúng thường dùng bố cục lưu trữ theo cột có nén để giảm tối đa lượng dữ liệu truy vấn phải đọc từ đĩa, và dùng biên dịch just-in-time hoặc vector hóa truy vấn để giảm tối đa thời gian CPU xử lý dữ liệu.
+
+Về phía OLTP, ta đã thấy storage engine thuộc hai trường phái tư tưởng chính:
+
+* Trường phái log-structured chỉ cho phép ghi nối vào file và xóa các file lỗi thời, không bao giờ cập nhật file đã ghi. SSTable, LSM-tree, RocksDB, Cassandra, HBase, ScyllaDB, Lucene và các hệ thống khác đều thuộc loại này. Nói chung, storage engine log-structured cung cấp thông lượng ghi cao.
+* Trường phái cập nhật tại chỗ coi đĩa là một tập các trang kích thước cố định có thể ghi đè. B-tree là ví dụ tiêu biểu nhất của triết lý này, được dùng trong mọi cơ sở dữ liệu quan hệ OLTP lớn và nhiều cơ sở dữ liệu phi quan hệ. Theo kinh nghiệm, B-tree thường hợp với đọc hơn, có thông lượng đọc cao hơn và thời gian phản hồi ngắn hơn so với lưu trữ log-structured.
+
+Sau đó, ta xem xét các chỉ mục (*index*) có thể tìm kiếm đồng thời nhiều điều kiện: chỉ mục đa chiều (*multidimensional index*) như R-tree có thể tìm điểm trên bản đồ theo cả kinh độ lẫn vĩ độ, còn chỉ mục tìm kiếm (*search index*) toàn văn có thể tìm nhiều từ khóa xuất hiện trong cùng một đoạn văn bản. Cuối cùng, cơ sở dữ liệu vector dùng để tìm kiếm ngữ nghĩa trên tài liệu văn bản và các phương tiện khác. Chúng biểu diễn dữ liệu thành các vector nhiều chiều và tìm tài liệu tương tự bằng cách so sánh độ tương đồng giữa các vector.
+
+Là lập trình viên ứng dụng, nếu nắm được cơ chế bên trong của storage engine, bạn sẽ đánh giá tốt hơn công cụ nào phù hợp nhất với ứng dụng của mình. Khi cần điều chỉnh các tham số tinh chỉnh của cơ sở dữ liệu, hiểu biết này cũng giúp bạn hình dung việc tăng hay giảm một tham số sẽ có tác động ra sao.
+
+Dù chương này không thể biến bạn thành chuyên gia tinh chỉnh một storage engine cụ thể, hy vọng nó đã cung cấp đủ khái niệm và từ vựng để bạn đọc hiểu tài liệu của cơ sở dữ liệu mình chọn.
+
+
+
+### Tài liệu tham khảo
 
 [^1]: Nikolay Samokhvalov. [How partial, covering, and multicolumn indexes may slow down UPDATEs in PostgreSQL](https://postgres.ai/blog/20211029-how-partial-and-covering-indexes-affect-update-performance-in-postgresql). *postgres.ai*, October 2021. Archived at [perma.cc/PBK3-F4G9](https://perma.cc/PBK3-F4G9)
 [^2]: Goetz Graefe. [Modern B-Tree Techniques](https://doi.org/10.1561/1900000028). *Foundations and Trends in Databases*, volume 3, issue 4, pages 203–402, August 2011. [doi:10.1561/1900000028](https://doi.org/10.1561/1900000028)
