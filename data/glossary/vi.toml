@@ -3516,3 +3516,11 @@ en = "business intelligence"
 vi = "business intelligence"
 keep = true
 note = "Thường gọi tắt là BI; không có bản dịch Việt phổ biến."
+
+[[term]]
+en = "performance"
+vi = "hiệu năng"
+
+[[term]]
+en = "redundancy"
+vi = "dư thừa"

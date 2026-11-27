@@ -1,6 +1,4 @@
 ---
-draft: true
-book_status: draft
 translationKey: ddia-v2-ch2
 title: Định nghĩa yêu cầu phi chức năng
 book_kind: chapter
@@ -14,38 +12,38 @@ breadcrumbs: false
 
 ![](/map/ch01.png)
 
-> *互联网做得太好了，以至于大多数人将它看作像太平洋这样的自然资源，而不是什么人工产物。上一次出现这种规模且几乎不出错的技术，是什么时候？*
+> *Internet được làm tốt đến mức hầu hết mọi người coi nó như một nguồn tài nguyên thiên nhiên như Thái Bình Dương, chứ không phải một sản phẩm do con người tạo ra. Lần gần nhất có một công nghệ ở quy mô như vậy mà gần như không mắc lỗi là khi nào?*
 >
-> [艾伦・凯](https://web.archive.org/web/20120712231854/http://www.drdobbs.com/architecture-and-design/interview-with-alan-kay/240003442)，
-> 接受 *Dr Dobb’s Journal* 采访（2012 年）
+> [Alan Kay](https://web.archive.org/web/20120712231854/http://www.drdobbs.com/architecture-and-design/interview-with-alan-kay/240003442),
+> trả lời phỏng vấn *Dr Dobb’s Journal* (2012)
 
-构建应用程序时，你会面对一张需求清单。其中排在最前面的，很可能是应用必须提供的功能：需要哪些页面和按钮，每项操作要完成什么，才能实现软件的目的。这些就是 *功能需求（functional requirements）*。
+Khi xây dựng một ứng dụng, bạn sẽ đối mặt với một danh sách yêu cầu. Đứng đầu danh sách đó rất có thể là các chức năng mà ứng dụng phải cung cấp: cần những màn hình và nút bấm nào, mỗi thao tác phải làm được gì để đạt mục đích của phần mềm. Đó là các *yêu cầu chức năng* (*functional requirements*).
 
-此外，你可能还有一些 *非功能性需求（nonfunctional requirements）*：例如，应用应当快速、可靠、安全、符合法律规定，而且易于维护。这些要求未必会明确写下来，因为它们看似理所当然，但其重要性丝毫不亚于应用的功能：一个慢得让人无法忍受，或是很不可靠的应用，几乎等于不存在。
+Ngoài ra, bạn có thể còn có những *yêu cầu phi chức năng* (*nonfunctional requirements*): chẳng hạn, ứng dụng phải nhanh, đáng tin cậy, an toàn, tuân thủ pháp luật và dễ bảo trì. Những yêu cầu này thường không được viết ra rõ ràng vì chúng có vẻ hiển nhiên, nhưng tầm quan trọng của chúng không hề kém chức năng của ứng dụng: một ứng dụng chậm đến mức không chịu nổi, hoặc quá thiếu tin cậy, gần như coi như không tồn tại.
 
-安全性等许多非功能性需求超出了本书的范围。不过，本章会讨论其中几项，并帮助你准确表述自己的系统需要达到什么要求：
+Nhiều yêu cầu phi chức năng, như bảo mật, nằm ngoài phạm vi của cuốn sách này. Tuy nhiên, chương này sẽ bàn một số yêu cầu trong đó và giúp bạn diễn đạt chính xác hệ thống của mình cần đạt những gì:
 
-* 如何定义和衡量系统的 *性能*（*performance*；参见[“描述性能”](/ch2#sec_introduction_percentiles)）；
-* 服务 *可靠*（*reliable*）意味着什么——也就是即使出了问题，仍能继续正确工作（参见[“可靠性与容错”](/ch2#sec_introduction_reliability)）；
-* 随着系统负载增长，能否高效增加计算能力，使系统具备 *可伸缩性*（*scalability*；参见[“可伸缩性”](/ch2#sec_introduction_scalability)）；以及
-* 如何让系统在长期使用中更易维护（参见[“可维护性”](/ch2#sec_introduction_maintainability)）。
+* Cách định nghĩa và đo *hiệu năng* (*performance*) của hệ thống (xem [“Mô tả hiệu năng”](/ch2#sec_introduction_percentiles));
+* Một dịch vụ *đáng tin cậy* (*reliable*) nghĩa là gì — tức là vẫn tiếp tục hoạt động đúng ngay cả khi có sự cố (xem [“Độ tin cậy và khả năng chịu lỗi”](/ch2#sec_introduction_reliability));
+* Khả năng tăng năng lực tính toán một cách hiệu quả khi tải của hệ thống tăng, giúp hệ thống có *khả năng mở rộng* (*scalability*, xem [“Khả năng mở rộng”](/ch2#sec_introduction_scalability)); và
+* Cách làm cho hệ thống dễ bảo trì hơn trong quá trình sử dụng lâu dài (xem [“Khả năng bảo trì”](/ch2#sec_introduction_maintainability)).
 
-后续章节深入讨论数据密集型系统的实现细节时，还会用到本章引入的术语。不过，抽象定义读起来难免枯燥。为了让这些概念更加具体，我们先从一个社交网络服务的实现案例讲起，以此说明性能与可伸缩性在实践中意味着什么。
+Các thuật ngữ giới thiệu trong chương này còn được dùng lại ở những chương sau, khi ta đi sâu vào chi tiết triển khai của các hệ thống chuyên sâu về dữ liệu. Tuy nhiên, những định nghĩa trừu tượng khó tránh khỏi khô khan. Để các khái niệm cụ thể hơn, ta bắt đầu bằng một ví dụ triển khai dịch vụ mạng xã hội, qua đó minh họa hiệu năng và khả năng mở rộng có ý nghĩa gì trong thực tế.
 
 
-## 案例研究：社交网络首页时间线 {#sec_introduction_twitter}
+## Nghiên cứu tình huống: dòng thời gian trang chủ của mạng xã hội {#sec_introduction_twitter}
 
-假设你的任务是实现一个类似 X（原 Twitter）的社交网络，用户可以发帖，也可以关注其他用户。这里的实现会比真实服务简单得多 [^1] [^2] [^3]，但足以说明大规模系统会遇到的一些问题。
+Giả sử nhiệm vụ của bạn là xây dựng một mạng xã hội giống X (trước đây là Twitter), trong đó người dùng có thể đăng bài và theo dõi người dùng khác. Cách triển khai ở đây sẽ đơn giản hơn nhiều so với dịch vụ thật [^1] [^2] [^3], nhưng cũng đủ để minh họa một số vấn đề mà hệ thống quy mô lớn gặp phải.
 
-假设用户每天发布 5 亿条帖子，平均每秒 5,700 条；偶尔，发帖速率会飙升至每秒 150,000 条 [^4]。再假设每位用户平均关注 200 人，也有 200 名关注者（实际分布范围非常广：大多数人只有寥寥几名关注者，而巴拉克・奥巴马等少数名人则有超过一亿名关注者）。
+Giả sử mỗi ngày người dùng đăng 500 triệu bài, trung bình 5.700 bài mỗi giây. Thỉnh thoảng, tốc độ đăng bài có thể vọt lên 150.000 bài mỗi giây [^4]. Giả sử thêm rằng mỗi người dùng trung bình theo dõi 200 người và cũng có 200 người theo dõi (thực tế phân bố rất rộng: đa số chỉ có vài người theo dõi, còn một số ít người nổi tiếng như Barack Obama có hơn một trăm triệu người theo dõi).
 
-### 表示用户、帖子与关注关系 {#id20}
+### Biểu diễn người dùng, bài đăng và quan hệ theo dõi {#id20}
 
-假设我们把所有数据都保存在关系数据库中，如{{< xref fig="2-1" page="/ch2" anchor="fig_twitter_relational" >}}图 2-1{{< /xref >}}所示：一张表存储用户，一张表存储帖子，还有一张表存储关注关系。
+Giả sử ta lưu toàn bộ dữ liệu trong một cơ sở dữ liệu quan hệ, như {{< xref fig="2-1" page="/ch2" anchor="fig_twitter_relational" >}}Hình 2-1{{< /xref >}}: một bảng lưu người dùng, một bảng lưu bài đăng và một bảng lưu quan hệ theo dõi.
 
-{{< fig num="2-1" id="fig_twitter_relational" src="/fig/ddia_0201.png" caption="一个允许用户相互关注的社交网络的简单关系模式。" class="ddia-figure ddia-figure--panorama" width="1772" height="542" />}}
+{{< fig num="2-1" id="fig_twitter_relational" src="/fig/ddia_0201.png" caption="Lược đồ quan hệ đơn giản cho một mạng xã hội cho phép người dùng theo dõi lẫn nhau." class="ddia-figure ddia-figure--panorama" width="1772" height="542" />}}
 
-假设这个社交网络需要支持的主要读操作是 *首页时间线（home timeline）*，用来展示你所关注的人最近发布的帖子（为简单起见，我们忽略广告、来自未关注用户的推荐帖，以及其他扩展功能）。可以用下面这条 SQL 查询来获取某位用户的首页时间线：
+Giả sử thao tác đọc chính mà mạng xã hội này cần hỗ trợ là *home timeline* — hiển thị các bài đăng gần đây của những người bạn theo dõi (để đơn giản, ta bỏ qua quảng cáo, bài gợi ý từ người dùng chưa theo dõi và các tính năng mở rộng khác). Có thể lấy home timeline của một người dùng bằng truy vấn SQL sau:
 
 ```sql
 SELECT posts.*, users.* FROM posts
@@ -56,347 +54,347 @@ SELECT posts.*, users.* FROM posts
     LIMIT 1000
 ```
 
-执行这条查询时，数据库先用 `follows` 表找出 `current_user` 关注的所有人，再查找这些用户最近发布的帖子，并按时间戳排序，取出其中最新的 1,000 条。
+Khi thực thi truy vấn này, cơ sở dữ liệu dùng bảng `follows` để tìm tất cả những người mà `current_user` theo dõi, tra các bài đăng gần đây của những người dùng đó, rồi sắp xếp theo dấu thời gian để lấy 1.000 bài mới nhất.
 
-帖子讲究时效，因此假设某人发帖之后，我们希望其关注者能在 5 秒内看到。一个办法是，只要用户在线，客户端就每隔 5 秒重复执行一次上述查询（这称为 *轮询（polling）*）。如果同时在线且已登录的用户有 1,000 万，就意味着每秒要执行 200 万次查询。即使延长轮询间隔，这个数字仍然很大。
+Bài đăng rất cần tính kịp thời, nên giả sử sau khi ai đó đăng bài, ta muốn những người theo dõi họ thấy bài trong vòng 5 giây. Một cách là mỗi khi người dùng còn trực tuyến, client lặp lại truy vấn trên mỗi 5 giây (gọi là *polling*). Nếu có 10 triệu người dùng đang trực tuyến và đăng nhập cùng lúc, điều đó có nghĩa là mỗi giây phải chạy 2 triệu truy vấn. Kể cả kéo dài khoảng cách giữa các lần polling, con số này vẫn rất lớn.
 
-而且，这条查询本身开销不小：如果你关注了 200 人，数据库就要分别取出这 200 人最近发布的帖子，再把这些列表合并起来。每秒 200 万次时间线查询，意味着数据库每秒要查询某个发帖者的近期帖子 4 亿次——这是个惊人的数字，而且还只是平均情况。有些用户关注了数万个账户，为他们执行这条查询的代价极高，也很难保证速度。
+Hơn nữa, bản thân truy vấn này cũng không rẻ: nếu bạn theo dõi 200 người, cơ sở dữ liệu phải lấy các bài đăng gần đây của từng người trong 200 người đó, rồi gộp các danh sách lại. Với 2 triệu truy vấn timeline mỗi giây, cơ sở dữ liệu phải tra bài đăng gần đây của một người đăng 400 triệu lần mỗi giây — một con số kinh người, mà đó còn mới chỉ là trường hợp trung bình. Có người dùng theo dõi hàng chục nghìn tài khoản. Chạy truy vấn này cho họ cực kỳ tốn kém và cũng khó đảm bảo tốc độ.
 
-### 时间线的物化与更新 {#sec_introduction_materializing}
+### Vật chất hóa và cập nhật timeline {#sec_introduction_materializing}
 
-怎样才能做得更好？首先，与其让客户端轮询，不如由服务器把新帖子主动推送给当前在线的关注者。其次，可以预先计算上述查询的结果，使首页时间线请求直接由缓存提供。
+Làm sao để làm tốt hơn? Thứ nhất, thay vì để client polling, tốt hơn là để máy chủ chủ động đẩy bài đăng mới đến những người theo dõi đang trực tuyến. Thứ hai, ta nên tính trước kết quả của truy vấn trên, để yêu cầu lấy home timeline được phục vụ trực tiếp từ cache.
 
-设想我们为每位用户保存一个数据结构，其中装着他们的首页时间线，也就是他们所关注的人最近发布的帖子。每当有人发帖，我们就找出他的所有关注者，把这条帖子插入每位关注者的首页时间线，就像把信投进一个个邮箱。这样，用户登录时只需把预先计算好的时间线交给他们即可。若要接收时间线上的新帖通知，客户端只需订阅不断加入其首页时间线的帖子流。
+Hãy hình dung ta lưu cho mỗi người dùng một cấu trúc dữ liệu chứa home timeline của họ, tức các bài đăng gần đây của những người họ theo dõi. Mỗi khi có người đăng bài, ta tìm tất cả những người theo dõi họ rồi chèn bài đăng đó vào home timeline của từng người, giống như bỏ thư vào từng hộp thư. Như vậy, khi người dùng đăng nhập, ta chỉ cần đưa họ timeline đã tính sẵn. Để nhận thông báo về bài mới trên timeline, client chỉ cần đăng ký theo dõi luồng bài đăng liên tục được thêm vào home timeline của người đó.
 
-这种方法的缺点是，每次发帖都要完成更多工作，因为首页时间线是需要随之更新的 *衍生数据（derived data）*。整个过程如{{< xref fig="2-2" page="/ch2" anchor="fig_twitter_timelines" >}}图 2-2{{< /xref >}}所示。当一个初始请求引发多个下游请求时，我们用 *扇出（fan-out）* 来表示请求数量被放大的倍数。
+Nhược điểm của cách này là mỗi lần đăng bài phải làm nhiều việc hơn, vì home timeline là *dữ liệu dẫn xuất* (*derived data*) cần được cập nhật theo. Toàn bộ quá trình được minh họa ở {{< xref fig="2-2" page="/ch2" anchor="fig_twitter_timelines" >}}Hình 2-2{{< /xref >}}. Khi một yêu cầu ban đầu kéo theo nhiều yêu cầu phía sau, ta dùng *fan-out* để chỉ hệ số khuếch đại số lượng yêu cầu.
 
-{{< fig num="2-2" id="fig_twitter_timelines" src="/fig/ddia_0202.png" caption="扇出——把新帖子投递给发帖用户的每一位关注者。" class="ddia-figure ddia-figure--wide" width="1772" height="638" />}}
+{{< fig num="2-2" id="fig_twitter_timelines" src="/fig/ddia_0202.png" caption="Fan-out — chuyển bài đăng mới đến từng người theo dõi của người đăng." class="ddia-figure ddia-figure--wide" width="1772" height="638" />}}
 
-以每秒 5,700 条帖子的速率计算，如果每条帖子平均要送达 200 名关注者（也就是扇出系数为 200），每秒就要完成略多于 100 万次首页时间线写入。这个数字依然很大，但与另一种方案每秒 4 亿次按发帖者查询近期帖子的操作相比，已经节省了很多工作。
+Với tốc độ 5.700 bài mỗi giây, nếu mỗi bài trung bình được gửi đến 200 người theo dõi (tức hệ số fan-out là 200), mỗi giây cần thực hiện hơn 1 triệu lần ghi home timeline một chút. Con số này vẫn lớn, nhưng so với 400 triệu lần tra bài đăng gần đây theo người đăng mỗi giây của phương án kia thì đã tiết kiệm được nhiều công việc.
 
-如果某个特殊事件使发帖速率骤增，我们无须立刻完成所有时间线投递；可以先把投递任务放入队列，并接受帖子暂时要过一会儿才会出现在关注者的时间线上。即使出现这种负载高峰，时间线仍然可以快速加载，因为读取只需访问缓存。
+Nếu một sự kiện đặc biệt khiến tốc độ đăng bài tăng vọt, ta không cần chuyển phát mọi timeline ngay lập tức. Có thể đưa các tác vụ chuyển phát vào hàng đợi và chấp nhận việc bài đăng tạm thời sẽ xuất hiện chậm hơn một chút trên timeline của người theo dõi. Ngay cả khi có đỉnh tải như vậy, timeline vẫn tải nhanh, vì việc đọc chỉ cần truy cập cache.
 
-这种预先计算并不断更新查询结果的过程称为 *物化（materialization）*，时间线缓存就是一个 *物化视图（materialized view）* 的例子（我们会在[“维护物化视图”](/ch12#sec_stream_mat_view)中进一步讨论这个概念）。物化视图加快了读取，代价则是写入时要做更多工作。对大多数用户而言，写入成本并不高，但社交网络还必须考虑一些极端情况：
+Quá trình tính trước và liên tục cập nhật kết quả truy vấn như vậy gọi là *vật chất hóa* (*materialization*), và cache timeline là một ví dụ về *khung nhìn vật chất hóa* (*materialized view*) (ta sẽ bàn thêm khái niệm này ở [“Duy trì khung nhìn vật chất hóa”](/ch12#sec_stream_mat_view)). Khung nhìn vật chất hóa giúp đọc nhanh hơn, đổi lại là khi ghi phải làm nhiều việc hơn. Với đa số người dùng, chi phí ghi không cao, nhưng mạng xã hội còn phải tính đến một số trường hợp cực đoan:
 
-* 如果一位用户关注了非常多的账户，而且这些账户发帖频繁，那么写入其物化时间线的速率会很高。不过，这位用户多半也不会读完时间线中的所有帖子，因此可以丢弃其中一部分时间线写入，只向用户展示所关注账户发布帖子的一个样本 [^5]。
-* 如果一位拥有海量关注者的名人发帖，我们就要完成大量工作，把这条帖子插入数百万人的首页时间线。在这种情况下，丢弃部分写入是不可接受的。一种解决办法是把名人帖子与其他人的帖子分开处理：不必费力把名人帖子加入数百万条时间线，而是将其单独存储，等读取时再与物化时间线合并。即使采用这类优化，社交网络要承载名人账户仍可能需要大量基础设施 [^6]。
+* Nếu một người dùng theo dõi rất nhiều tài khoản và các tài khoản đó đăng bài thường xuyên, tốc độ ghi vào timeline vật chất hóa của họ sẽ rất cao. Tuy nhiên, người dùng này nhiều khả năng cũng không đọc hết các bài trong timeline, nên có thể bỏ bớt một phần các lần ghi timeline và chỉ hiển thị cho họ một mẫu các bài đăng từ những tài khoản họ theo dõi [^5].
+* Nếu một người nổi tiếng có lượng người theo dõi khổng lồ đăng bài, ta phải làm rất nhiều việc để chèn bài đó vào home timeline của hàng triệu người. Trong trường hợp này, bỏ bớt các lần ghi là không chấp nhận được. Một giải pháp là xử lý bài đăng của người nổi tiếng tách khỏi bài đăng của người khác: thay vì cố công thêm bài của họ vào hàng triệu timeline, ta lưu riêng và gộp với timeline vật chất hóa khi đọc. Dù đã áp dụng những tối ưu như vậy, để phục vụ các tài khoản nổi tiếng, mạng xã hội vẫn có thể cần rất nhiều hạ tầng [^6].
 
-## 描述性能 {#sec_introduction_percentiles}
+## Mô tả hiệu năng {#sec_introduction_percentiles}
 
-讨论软件性能时，通常会考虑两类主要指标：
+Khi bàn về hiệu năng phần mềm, người ta thường xét hai loại chỉ số chính:
 
-响应时间（response time）
-: 从用户发出请求到收到所需响应所经过的时间。计量单位是秒（或毫秒、微秒）。
+*thời gian phản hồi* (*response time*)
+: Khoảng thời gian từ lúc người dùng gửi yêu cầu đến lúc nhận được phản hồi cần thiết. Đơn vị đo là giây (hoặc mili giây, micro giây).
 
-吞吐量（throughput）
-: 系统每秒处理的请求数或数据量。对于给定的硬件资源，系统能处理的吞吐量存在上限，也就是 *最大吞吐量*（*maximum throughput*）。计量单位通常写成“每秒多少个……”。
+*thông lượng* (*throughput*)
+: Số yêu cầu hoặc lượng dữ liệu hệ thống xử lý được mỗi giây. Với một lượng tài nguyên phần cứng cho trước, thông lượng hệ thống xử lý được có giới hạn trên, gọi là *thông lượng tối đa* (*maximum throughput*). Đơn vị đo thường viết dưới dạng “bao nhiêu … mỗi giây”.
 
-在社交网络案例中，“每秒帖子数”和“每秒时间线写入数”是吞吐量指标；“加载首页时间线所需的时间”和“帖子送达关注者所需的时间”则是响应时间指标。
+Trong tình huống mạng xã hội, “số bài đăng mỗi giây” và “số lần ghi timeline mỗi giây” là các chỉ số thông lượng, còn “thời gian cần để tải home timeline” và “thời gian để bài đăng đến được người theo dõi” là các chỉ số thời gian phản hồi.
 
-吞吐量和响应时间之间往往存在联系，{{< xref fig="2-3" page="/ch2" anchor="fig_throughput" >}}图 2-3{{< /xref >}}勾勒了在线服务中二者的一种典型关系。请求吞吐量较低时，服务的响应时间也很短；随着负载增大，响应时间随之上升。这是 *排队*（*queueing*）造成的：当请求到达负载很高的系统时，CPU 很可能正在处理先前的请求，新来的请求只好等到前一个处理完毕。当吞吐量逐渐逼近硬件的处理极限时，排队延迟会急剧增加。
+Giữa thông lượng và thời gian phản hồi thường có mối liên hệ. {{< xref fig="2-3" page="/ch2" anchor="fig_throughput" >}}Hình 2-3{{< /xref >}} phác họa một mối quan hệ điển hình ở dịch vụ trực tuyến. Khi thông lượng yêu cầu thấp, thời gian phản hồi của dịch vụ ngắn. Khi tải tăng, thời gian phản hồi tăng theo. Nguyên nhân là *xếp hàng* (*queueing*): khi một yêu cầu đến một hệ thống đang tải cao, rất có thể CPU đang xử lý các yêu cầu trước đó, nên yêu cầu mới phải chờ đến khi yêu cầu trước xử lý xong. Khi thông lượng tiến gần giới hạn xử lý của phần cứng, độ trễ xếp hàng tăng vọt.
 
-{{< fig num="2-3" id="fig_throughput" src="/fig/ddia_0203.png" caption="当服务的吞吐量接近其处理能力上限时，排队会使响应时间急剧增加。" class="ddia-figure ddia-figure--wide" width="2953" height="1018" />}}
+{{< fig num="2-3" id="fig_throughput" src="/fig/ddia_0203.png" caption="Khi thông lượng của dịch vụ tiến gần giới hạn năng lực xử lý, xếp hàng khiến thời gian phản hồi tăng vọt." class="ddia-figure ddia-figure--wide" width="2953" height="1018" />}}
 
 
 <a id="sidebar_metastable"></a>
 
-> [!TIP] 当过载系统无法恢复时
+> [!TIP] Khi hệ thống quá tải không thể phục hồi
 >
-> 当系统濒临过载、吞吐量已被推到极限附近时，有时会陷入恶性循环：系统效率越来越低，因而变得更加过载。例如，等待处理的请求排起长队，响应时间可能因此增长到客户端超时并重发请求。请求速率随之进一步上升，让问题愈演愈烈——这就是 *重试风暴（retry storm）*。即使负载随后下降，系统也可能一直停留在过载状态，直到重启或以其他方式重置。这种现象称为 *亚稳态故障（metastable failure）*，它可能导致生产系统严重中断 [^7] [^8]。
+> Khi hệ thống gần quá tải và thông lượng bị đẩy đến sát giới hạn, đôi khi nó rơi vào một vòng luẩn quẩn: hệ thống ngày càng kém hiệu quả nên càng quá tải. Chẳng hạn, nếu hàng dài các yêu cầu đang chờ xử lý, thời gian phản hồi có thể tăng đến mức client hết thời gian chờ (timeout) và gửi lại yêu cầu. Tốc độ yêu cầu vì thế tăng thêm, khiến vấn đề càng trầm trọng — đây là *retry storm*. Ngay cả khi tải sau đó giảm xuống, hệ thống vẫn có thể mắc kẹt trong trạng thái quá tải cho đến khi được khởi động lại hoặc đặt lại bằng cách khác. Hiện tượng này gọi là *metastable failure*, và có thể gây gián đoạn nghiêm trọng cho hệ thống production [^7] [^8].
 >
-> 为了避免重试压垮服务，可以在客户端逐渐延长并随机扰动连续重试之间的等待时间（*指数退避*，*exponential backoff* [^9] [^10]）。还可以采用 *熔断器*（*circuit breaker*）[^11] [^12] 或 *令牌桶*（*token bucket*）算法 [^13]，暂时停止向最近曾返回错误或发生超时的服务发送请求。服务器也可以在察觉自己接近过载时主动拒绝请求（*负载卸除*，*load shedding* [^14]），并在响应中要求客户端降低发送速率（*背压*，*backpressure* [^1] [^15]）。排队算法和负载均衡算法的选择同样会产生影响 [^16]。
+> Để tránh việc gửi lại làm sập dịch vụ, có thể tăng dần và ngẫu nhiên hóa khoảng chờ giữa các lần thử lại liên tiếp ở phía client (*exponential backoff* [^9] [^10]). Cũng có thể dùng thuật toán *circuit breaker* [^11] [^12] hoặc *token bucket* [^13] để tạm ngừng gửi yêu cầu đến dịch vụ vừa trả lỗi hoặc timeout gần đây. Máy chủ cũng có thể chủ động từ chối yêu cầu khi nhận thấy mình sắp quá tải (*load shedding* [^14]), và trong phản hồi yêu cầu client giảm tốc độ gửi (*backpressure* [^1] [^15]). Việc chọn thuật toán xếp hàng và cân bằng tải cũng có ảnh hưởng [^16].
 
-在各项性能指标中，用户通常最关心响应时间；吞吐量则决定了所需的计算资源（例如服务器数量），从而决定处理特定工作负载的成本。如果吞吐量可能增长到超出当前硬件的处理能力，就需要扩充容量。如果增加计算资源能够显著提高系统的最大吞吐量，我们就称这个系统具有 *可伸缩性（scalability）*。
+Trong các chỉ số hiệu năng, người dùng thường quan tâm nhất đến thời gian phản hồi, còn thông lượng quyết định lượng tài nguyên tính toán cần thiết (ví dụ số máy chủ), do đó quyết định chi phí để xử lý một khối lượng công việc nhất định. Nếu thông lượng có thể tăng vượt khả năng xử lý của phần cứng hiện tại, cần mở rộng năng lực. Nếu việc tăng tài nguyên tính toán giúp nâng đáng kể thông lượng tối đa của hệ thống, ta nói hệ thống có *khả năng mở rộng* (*scalability*).
 
-本节主要关注响应时间；我们会在[“可伸缩性”](/ch2#sec_introduction_scalability)一节回头讨论吞吐量与可伸缩性。
+Phần này chủ yếu tập trung vào thời gian phản hồi. Ta sẽ quay lại thông lượng và khả năng mở rộng ở mục [“Khả năng mở rộng”](/ch2#sec_introduction_scalability).
 
-### 延迟与响应时间 {#id23}
+### Độ trễ và thời gian phản hồi {#id23}
 
-“延迟”和“响应时间”有时会被混为一谈，但本书将按下面的特定含义使用这几个术语（如{{< xref fig="2-4" page="/ch2" anchor="fig_response_time" >}}图 2-4{{< /xref >}}所示）：
+“Độ trễ” và “thời gian phản hồi” đôi khi bị dùng lẫn lộn, nhưng cuốn sách này dùng các thuật ngữ đó theo nghĩa cụ thể sau (như {{< xref fig="2-4" page="/ch2" anchor="fig_response_time" >}}Hình 2-4{{< /xref >}}):
 
-* *响应时间*（*response time*）是客户端看到的时间，其中包括系统各处产生的全部延误。
-* *服务时间*（*service time*）是服务真正用于处理用户请求的时间。
-* *排队延迟*（*queueing delay*）可能发生在流程中的多个位置。例如，请求到达后，也许必须等到 CPU 空闲才能开始处理；如果同一台机器上的其他任务正在通过出站网络接口发送大量数据，响应数据包也可能先在缓冲区中等待。
-* *延迟*（*latency*）泛指请求没有得到实际处理的时间，也就是请求处于 *潜伏（latent）* 状态的时间。具体来说，*网络延迟*（*network latency*）或 *网络时延*（*network delay*）是请求和响应在网络中传输所花的时间。
+* *Thời gian phản hồi* (*response time*) là thời gian mà client nhìn thấy, bao gồm mọi độ trễ phát sinh ở bất cứ đâu trong hệ thống.
+* *Thời gian phục vụ* (*service time*) là khoảng thời gian dịch vụ thực sự dùng để xử lý yêu cầu của người dùng.
+* *Độ trễ xếp hàng* (*queueing delay*) có thể xảy ra ở nhiều chỗ trong quy trình. Chẳng hạn, sau khi yêu cầu đến, có thể nó phải đợi đến khi CPU rảnh mới bắt đầu được xử lý. Gói dữ liệu phản hồi cũng có thể phải chờ trong bộ đệm trước, nếu các tác vụ khác trên cùng máy đang gửi lượng lớn dữ liệu qua giao diện mạng đầu ra.
+* *Độ trễ* (*latency*) nói chung là khoảng thời gian yêu cầu không được xử lý thực sự, tức thời gian yêu cầu ở trạng thái *tiềm ẩn* (*latent*). Cụ thể, *độ trễ mạng* (*network latency*, còn gọi là *network delay*) là thời gian yêu cầu và phản hồi di chuyển trong mạng.
 
-{{< fig num="2-4" id="fig_response_time" src="/fig/ddia_0204.png" caption="响应时间、服务时间、网络延迟和排队延迟。" class="ddia-figure ddia-figure--wide" width="2953" height="1018" />}}
+{{< fig num="2-4" id="fig_response_time" src="/fig/ddia_0204.png" caption="Thời gian phản hồi, thời gian phục vụ, độ trễ mạng và độ trễ xếp hàng." class="ddia-figure ddia-figure--wide" width="2953" height="1018" />}}
 
-在{{< xref fig="2-4" page="/ch2" anchor="fig_response_time" >}}图 2-4{{< /xref >}}中，时间从左向右流逝；参与通信的每个节点用一条水平线表示，请求或响应消息则画成从一个节点指向另一个节点的粗斜箭头。本书后面还会经常遇到这种图示方式。
+Trong {{< xref fig="2-4" page="/ch2" anchor="fig_response_time" >}}Hình 2-4{{< /xref >}}, thời gian trôi từ trái sang phải. Mỗi node tham gia giao tiếp được vẽ bằng một đường ngang, còn thông điệp yêu cầu hoặc phản hồi được vẽ thành mũi tên xiên đậm từ node này sang node khác. Ta sẽ thường gặp cách vẽ này ở các phần sau của sách.
 
-即使反复发送同一个请求，每次的响应时间也可能相差很大。许多因素都会带来随机的额外延迟，例如：上下文切换到后台进程、网络丢包和 TCP 重传、垃圾回收暂停、缺页迫使系统从磁盘读取数据、服务器机架的机械振动 [^17]，等等。我们会在[“超时和无界延迟”](/ch9#sec_distributed_queueing)中进一步讨论这个问题。
+Ngay cả khi gửi đi gửi lại cùng một yêu cầu, thời gian phản hồi mỗi lần cũng có thể chênh lệch rất nhiều. Nhiều yếu tố có thể gây thêm độ trễ ngẫu nhiên, chẳng hạn: chuyển ngữ cảnh sang một tiến trình nền, mất gói mạng và truyền lại TCP, tạm dừng do thu gom rác, lỗi trang buộc hệ thống đọc dữ liệu từ đĩa, rung cơ học của giá đặt máy chủ [^17], v.v. Ta sẽ bàn thêm vấn đề này ở [“Timeout và độ trễ không giới hạn”](/ch9#sec_distributed_queueing).
 
-响应时间的波动很大一部分往往来自排队延迟。服务器同时能处理的任务数量有限（例如受 CPU 核数限制），因此只需少数几个慢请求，就足以阻碍后续请求，这种现象称为 *队头阻塞（head-of-line blocking）*。即使后续请求本身的服务时间很短，客户端看到的总体响应时间仍会很长，因为它们要等待先前的请求完成。排队延迟不属于服务时间，所以在客户端测量响应时间十分重要。
+Phần lớn dao động của thời gian phản hồi thường đến từ độ trễ xếp hàng. Máy chủ chỉ xử lý được đồng thời một số tác vụ có hạn (ví dụ bị giới hạn bởi số nhân CPU), nên chỉ cần vài yêu cầu chậm là đủ chặn các yêu cầu phía sau, hiện tượng này gọi là *head-of-line blocking*. Dù các yêu cầu sau tự thân có thời gian phục vụ ngắn, thời gian phản hồi tổng thể mà client thấy vẫn dài, vì chúng phải chờ các yêu cầu trước hoàn tất. Độ trễ xếp hàng không thuộc thời gian phục vụ, nên việc đo thời gian phản hồi ở phía client là rất quan trọng.
 
-### 平均值、中位数与分位数 {#id24}
+### Trung bình, trung vị và phân vị {#id24}
 
-由于每次请求的响应时间都不一样，我们不能只把它看成一个数字，而应将其视为一组可测量数值的 *分布（distribution）*。在{{< xref fig="2-5" page="/ch2" anchor="fig_lognormal" >}}图 2-5{{< /xref >}}中，每根灰色柱条代表一次服务请求，柱条的高度表示这次请求所花的时间。大多数请求都相当快，但偶尔会出现耗时长得多的 *异常值*（*outlier*）。网络延迟的变化也称为 *抖动（jitter）*。
+Vì thời gian phản hồi mỗi lần yêu cầu đều khác nhau, ta không nên chỉ coi nó là một con số, mà phải xem nó là một *phân bố* (*distribution*) các giá trị đo được. Trong {{< xref fig="2-5" page="/ch2" anchor="fig_lognormal" >}}Hình 2-5{{< /xref >}}, mỗi thanh màu xám đại diện cho một yêu cầu dịch vụ, chiều cao thanh cho biết yêu cầu đó mất bao lâu. Hầu hết yêu cầu khá nhanh, nhưng thỉnh thoảng có những *giá trị ngoại lai* (*outlier*) mất lâu hơn nhiều. Sự biến thiên của độ trễ mạng còn gọi là *jitter*.
 
-{{< fig num="2-5" id="fig_lognormal" src="/fig/ddia_0205.png" caption="用 100 次服务请求的响应时间样本说明平均值和分位数。" class="ddia-figure ddia-figure--panorama" width="2953" height="902" />}}
+{{< fig num="2-5" id="fig_lognormal" src="/fig/ddia_0205.png" caption="Minh họa trung bình và phân vị bằng mẫu thời gian phản hồi của 100 yêu cầu dịch vụ." class="ddia-figure ddia-figure--panorama" width="2953" height="902" />}}
 
-服务通常会报告 *平均*（*mean*）响应时间，也就是 *算术平均值*（*arithmetic mean*）：把所有响应时间相加，再除以请求数。平均响应时间有助于估算吞吐量的上限 [^18]。不过，如果你想知道“典型”的响应时间，平均值就不是很好的指标，因为它没有告诉你究竟有多少用户实际经历了这样的等待。
+Dịch vụ thường báo cáo thời gian phản hồi *trung bình* (*mean*), tức *trung bình cộng* (*arithmetic mean*): cộng mọi thời gian phản hồi rồi chia cho số yêu cầu. Thời gian phản hồi trung bình giúp ước tính giới hạn trên của thông lượng [^18]. Tuy nhiên, nếu muốn biết thời gian phản hồi “điển hình”, trung bình không phải chỉ số tốt, vì nó không cho biết thực sự có bao nhiêu người dùng đã phải chờ như vậy.
 
-通常，采用 *分位数（percentile）* 更合适。将响应时间从快到慢排列，*中位数*（*median*）就是位于正中间的值。例如，如果响应时间的中位数是 200 毫秒，就意味着一半请求用时不到 200 毫秒，另一半则需要更长时间。因此，如果想知道用户通常要等多久，中位数是个很好的指标。中位数也称为 *第 50 分位数*，有时缩写为 *p50*。
+Thông thường, dùng *phân vị* (*percentile*) sẽ phù hợp hơn. Sắp xếp thời gian phản hồi từ nhanh đến chậm, *trung vị* (*median*) là giá trị nằm chính giữa. Chẳng hạn, nếu trung vị của thời gian phản hồi là 200 mili giây, nghĩa là một nửa số yêu cầu mất dưới 200 mili giây, nửa còn lại mất lâu hơn. Vì vậy, nếu muốn biết người dùng thường phải chờ bao lâu, trung vị là chỉ số rất tốt. Trung vị còn gọi là *phân vị thứ 50*, đôi khi viết tắt là *p50*.
 
-为了弄清异常值究竟有多糟，可以观察更高的分位数。常用的有第 *95*、*99* 和 *99.9* 分位数，分别缩写为 *p95*、*p99* 和 *p999*。它们对应这样一个响应时间阈值：分别有 95%、99% 或 99.9% 的请求快于这个阈值。例如，如果第 95 分位数的响应时间是 1.5 秒，就意味着每 100 个请求中，有 95 个用时不到 1.5 秒，另外 5 个则需要 1.5 秒或更久。{{< xref fig="2-5" page="/ch2" anchor="fig_lognormal" >}}图 2-5{{< /xref >}}对此作了说明。
+Để thấy các giá trị ngoại lai tệ đến mức nào, có thể xem các phân vị cao hơn. Thường dùng phân vị thứ *95*, *99* và *99,9*, viết tắt là *p95*, *p99* và *p999*. Chúng ứng với ngưỡng thời gian phản hồi mà lần lượt 95%, 99% hoặc 99,9% số yêu cầu nhanh hơn. Chẳng hạn, nếu thời gian phản hồi ở phân vị thứ 95 là 1,5 giây, nghĩa là trong 100 yêu cầu, 95 yêu cầu mất dưới 1,5 giây, 5 yêu cầu còn lại mất 1,5 giây hoặc lâu hơn. {{< xref fig="2-5" page="/ch2" anchor="fig_lognormal" >}}Hình 2-5{{< /xref >}} minh họa điều này.
 
-响应时间的高分位数也称为 *尾延迟（tail latencies）*，它们十分重要，因为会直接影响用户对服务的体验。例如，亚马逊用第 99.9 分位数来描述内部服务的响应时间要求，尽管它只影响每 1,000 个请求中的一个。这是因为，响应最慢的客户往往是在账户中积累了最多数据的人——他们购买过很多商品，也就是最有价值的客户 [^19]。确保网站对这些客户同样快速，是维持其满意度的重要手段。
+Các phân vị cao của thời gian phản hồi còn gọi là *độ trễ đuôi* (*tail latencies*). Chúng rất quan trọng vì tác động trực tiếp đến trải nghiệm của người dùng với dịch vụ. Chẳng hạn, Amazon dùng phân vị thứ 99,9 để mô tả yêu cầu thời gian phản hồi của các dịch vụ nội bộ, dù nó chỉ ảnh hưởng đến 1 trong 1.000 yêu cầu. Lý do là những khách hàng có phản hồi chậm nhất thường là những người có nhiều dữ liệu nhất trong tài khoản — họ đã mua nhiều hàng, tức là những khách hàng giá trị nhất [^19]. Đảm bảo trang web cũng nhanh với họ là cách quan trọng để giữ họ hài lòng.
 
-另一方面，亚马逊认为，针对第 99.99 分位数（每 10,000 个请求中最慢的一个）进行优化，成本过高，收益又不足。降低极高分位数处的响应时间非常困难，因为它很容易受到不可控随机事件的影响，而且越往后收益越小。
+Mặt khác, Amazon cho rằng tối ưu cho phân vị thứ 99,99 (yêu cầu chậm nhất trong 10.000 yêu cầu) có chi phí quá cao mà lợi ích không đủ. Giảm thời gian phản hồi ở các phân vị rất cao là điều rất khó, vì nó dễ bị ảnh hưởng bởi những sự kiện ngẫu nhiên không kiểm soát được, và càng về sau lợi ích thu được càng nhỏ.
 
-> [!TIP] 响应时间对用户的影响
+> [!TIP] Tác động của thời gian phản hồi đến người dùng
 >
-> 从直觉上说，速度快的服务当然比慢的服务更受用户欢迎 [^20]。然而，要获得可靠数据，量化延迟对用户行为的影响，却出人意料地困难。
+> Theo trực giác, dịch vụ nhanh dĩ nhiên được người dùng ưa chuộng hơn dịch vụ chậm [^20]. Tuy nhiên, để có dữ liệu đáng tin cậy định lượng tác động của độ trễ lên hành vi người dùng lại khó đến bất ngờ.
 >
-> 一些经常被引用的数据并不可靠。2006 年，Google 报告称，搜索结果的响应时间从 400 毫秒增加到 900 毫秒，与流量和收入下降 20% 存在相关性 [^21]。然而，Google 在 2009 年的另一项研究中又报告说，延迟增加 400 毫秒，只使每天的搜索次数减少了 0.6% [^22]；同年，Bing 发现加载时间增加 2 秒会使广告收入减少 4.3% [^23]。这些公司似乎没有公开过更新的数据。
+> Một số số liệu hay được trích dẫn không đáng tin. Năm 2006, Google báo cáo rằng khi thời gian phản hồi của kết quả tìm kiếm tăng từ 400 mili giây lên 900 mili giây thì lưu lượng và doanh thu giảm 20% [^21]. Nhưng một nghiên cứu khác của Google năm 2009 lại báo cáo rằng độ trễ tăng thêm 400 mili giây chỉ làm số lượt tìm kiếm mỗi ngày giảm 0,6% [^22]. Cùng năm đó, Bing phát hiện thời gian tải tăng 2 giây làm doanh thu quảng cáo giảm 4,3% [^23]. Các công ty này dường như chưa công bố số liệu mới hơn.
 >
-> Akamai 一项较新的研究 [^24] 声称，响应时间增加 100 毫秒，会使电子商务网站的转化率最多下降 7%。然而仔细查看就会发现，同一项研究还显示，加载速度 *非常快* 的页面也与较低的转化率相关！这个看似矛盾的结果可以这样解释：加载最快的往往是没有有用内容的页面，例如 404 错误页面。该研究没有尝试把页面内容的影响与加载时间的影响区分开来，因此其结果恐怕没有什么意义。
+> Một nghiên cứu mới hơn của Akamai [^24] tuyên bố rằng thời gian phản hồi tăng 100 mili giây có thể làm tỷ lệ chuyển đổi của trang thương mại điện tử giảm tới 7%. Nhưng xem kỹ sẽ thấy cũng nghiên cứu đó cho thấy các trang tải *rất* nhanh cũng gắn với tỷ lệ chuyển đổi thấp hơn! Kết quả có vẻ mâu thuẫn này có thể giải thích như sau: những trang tải nhanh nhất thường là trang không có nội dung hữu ích, chẳng hạn trang lỗi 404. Nghiên cứu không cố tách tác động của nội dung trang khỏi tác động của thời gian tải, nên kết quả e rằng không có nhiều ý nghĩa.
 >
-> Yahoo 的一项研究 [^25] 在控制搜索结果质量的前提下，比较了加载较快和较慢的搜索结果的点击率。研究发现，当快、慢响应相差 1.25 秒或更久时，快速搜索获得的点击量会多出 20%～30%。
+> Một nghiên cứu của Yahoo [^25] so sánh tỷ lệ nhấp chuột giữa kết quả tìm kiếm tải nhanh và tải chậm, trong điều kiện kiểm soát chất lượng kết quả tìm kiếm. Nghiên cứu thấy rằng khi phản hồi nhanh và chậm chênh nhau từ 1,25 giây trở lên, tìm kiếm nhanh nhận được nhiều lượt nhấp hơn 20%–30%.
 
-### 响应时间指标的应用 {#sec_introduction_slo_sla}
+### Ứng dụng các chỉ số thời gian phản hồi {#sec_introduction_slo_sla}
 
-如果后端服务要为一次最终用户请求执行多次调用，那么高分位数尤其重要。即使这些调用并行发出，最终用户请求仍要等待其中最慢的一次完成。正如{{< xref fig="2-6" page="/ch2" anchor="fig_tail_amplification" >}}图 2-6{{< /xref >}}所示，只需一个慢调用，就足以拖慢整个最终用户请求。即使后端调用中只有很小一部分速度较慢，一次最终用户请求所需的后端调用越多，其中出现慢调用的概率也就越大，最终会有更高比例的用户请求变慢。这种效应称为 *尾部延迟放大（tail latency amplification）* [^26]。
+Nếu dịch vụ backend phải thực hiện nhiều lời gọi cho một yêu cầu của người dùng cuối, các phân vị cao càng quan trọng. Dù các lời gọi này được gửi song song, yêu cầu của người dùng cuối vẫn phải chờ lời gọi chậm nhất hoàn tất. Như {{< xref fig="2-6" page="/ch2" anchor="fig_tail_amplification" >}}Hình 2-6{{< /xref >}} cho thấy, chỉ cần một lời gọi chậm là đủ làm chậm cả yêu cầu của người dùng cuối. Dù chỉ một tỷ lệ nhỏ các lời gọi backend chậm, một yêu cầu của người dùng cuối cần càng nhiều lời gọi backend thì xác suất xuất hiện lời gọi chậm trong đó càng cao, và cuối cùng một tỷ lệ cao hơn các yêu cầu người dùng bị chậm. Hiệu ứng này gọi là *khuếch đại độ trễ đuôi* (*tail latency amplification*) [^26].
 
-{{< fig num="2-6" id="fig_tail_amplification" src="/fig/ddia_0206.png" caption="当一次请求需要多个后端调用时，只需一个慢调用，就会拖慢整个最终用户请求。" class="ddia-figure ddia-figure--wide" width="2880" height="1304" />}}
+{{< fig num="2-6" id="fig_tail_amplification" src="/fig/ddia_0206.png" caption="Khi một yêu cầu cần nhiều lời gọi backend, chỉ một lời gọi chậm là đủ làm chậm cả yêu cầu của người dùng cuối." class="ddia-figure ddia-figure--wide" width="2880" height="1304" />}}
 
-分位数经常出现在 *服务级别目标（SLO）* 和 *服务级别协议（SLA）* 中，用来规定服务应达到的性能和可用性 [^27]。例如，一项 SLO 可能要求服务的中位响应时间低于 200 毫秒、第 99 分位数的响应时间低于 1 秒，并要求至少 99.9% 的有效请求得到非错误响应。SLA 则是一份合同，规定未达到 SLO 时会怎样处理（例如，客户可能有权获得退款）。这至少是其基本思路；在实践中，要为 SLO 和 SLA 定义良好的可用性指标并不简单 [^28] [^29]。
+Phân vị thường xuất hiện trong *SLO* (*service level objective* — mục tiêu mức dịch vụ) và *SLA* (*service level agreement* — thỏa thuận mức dịch vụ), dùng để quy định hiệu năng và tính sẵn sàng mà dịch vụ phải đạt [^27]. Chẳng hạn, một SLO có thể yêu cầu thời gian phản hồi trung vị của dịch vụ dưới 200 mili giây, thời gian phản hồi ở phân vị thứ 99 dưới 1 giây, và ít nhất 99,9% số yêu cầu hợp lệ nhận được phản hồi không lỗi. SLA là một hợp đồng quy định điều gì xảy ra nếu không đạt SLO (ví dụ khách hàng có thể được quyền hoàn tiền). Đó ít nhất là ý tưởng cơ bản. Trong thực tế, việc định nghĩa các chỉ số tính sẵn sàng tốt cho SLO và SLA không hề đơn giản [^28] [^29].
 
 
 <a id="sidebar_percentiles"></a>
 
-> [!TIP] 计算分位数
+> [!TIP] Tính phân vị
 >
-> 如果想在服务的监控仪表板上加入响应时间分位数，就需要持续、高效地计算这些指标。例如，可以维护一个滚动窗口，记录最近 10 分钟内所有请求的响应时间；每隔一分钟，计算窗口中各个数值的中位数和其他分位数，并把这些指标绘制在图表上。
+> Nếu muốn đưa phân vị thời gian phản hồi vào bảng điều khiển giám sát của dịch vụ, bạn cần tính các chỉ số này liên tục và hiệu quả. Chẳng hạn, có thể duy trì một cửa sổ trượt ghi lại thời gian phản hồi của mọi yêu cầu trong 10 phút gần nhất. Mỗi phút, tính trung vị và các phân vị khác của các giá trị trong cửa sổ, rồi vẽ các chỉ số đó lên biểu đồ.
 >
-> 最简单的实现是保存时间窗口内所有请求的响应时间列表，并每分钟对它排序一次。如果这样做效率太低，也有一些算法能够以极低的 CPU 和内存开销，算出相当准确的分位数近似值。用于估算分位数的开源库包括 HdrHistogram、t-digest [^30] [^31]、OpenHistogram [^32] 和 DDSketch [^33]。
+> Cách cài đặt đơn giản nhất là lưu danh sách thời gian phản hồi của mọi yêu cầu trong cửa sổ thời gian, và sắp xếp nó mỗi phút một lần. Nếu cách này kém hiệu quả, có những thuật toán tính xấp xỉ phân vị khá chính xác với chi phí CPU và bộ nhớ rất thấp. Các thư viện mã nguồn mở để ước lượng phân vị gồm HdrHistogram, t-digest [^30] [^31], OpenHistogram [^32] và DDSketch [^33].
 >
-> 注意，对分位数取平均值——例如为了降低时间分辨率，或合并多台机器的数据——在数学上没有意义。聚合响应时间数据的正确方法是把直方图相加 [^34]。
+> Lưu ý rằng lấy trung bình các phân vị — ví dụ để giảm độ phân giải thời gian, hoặc gộp dữ liệu từ nhiều máy — là vô nghĩa về mặt toán học. Cách đúng để tổng hợp dữ liệu thời gian phản hồi là cộng các histogram lại [^34].
 
-## 可靠性与容错 {#sec_introduction_reliability}
+## Độ tin cậy và khả năng chịu lỗi {#sec_introduction_reliability}
 
-每个人对于一个东西是否可靠，都有直观的判断。人们对可靠软件的典型期望包括：
+Ai cũng có cảm nhận trực giác về việc một thứ có đáng tin cậy hay không. Những kỳ vọng điển hình đối với phần mềm đáng tin cậy gồm:
 
-* 应用程序表现出用户所期望的功能。
-* 允许用户犯错，或以出乎意料的方式使用软件。
-* 在预期的负载和数据量下，性能足以满足所需的使用场景。
-* 系统能防止未经授权的访问和滥用。
+* Ứng dụng thực hiện đúng chức năng mà người dùng mong đợi.
+* Cho phép người dùng mắc lỗi, hoặc dùng phần mềm theo những cách không lường trước.
+* Hiệu năng đủ tốt cho trường hợp sử dụng cần thiết, dưới tải và lượng dữ liệu dự kiến.
+* Hệ thống ngăn chặn truy cập trái phép và lạm dụng.
 
-如果把这些合在一起称为“正确工作”，那么 *可靠性（reliability）* 可以粗略理解为“即使出了问题，也能继续正确工作”。为了更准确地描述所谓“出了问题”，我们要区分 *故障（fault）* 和 *失效（failure）* [^35] [^36] [^37]：
+Nếu gộp tất cả những điều này lại thành “hoạt động đúng”, thì *độ tin cậy* (*reliability*) có thể hiểu đại khái là “tiếp tục hoạt động đúng ngay cả khi có sự cố”. Để mô tả chính xác hơn thế nào là “có sự cố”, ta cần phân biệt *lỗi* (*fault*) và *hỏng hóc* (*failure*) [^35] [^36] [^37] như sau:
 
-故障
-: 系统的某个 *部分* 停止正常工作。例如，单块硬盘发生故障、单台机器崩溃，或者系统所依赖的外部服务中断。
+Lỗi
+: Một *bộ phận* của hệ thống ngừng hoạt động bình thường. Ví dụ, một ổ đĩa bị lỗi, một máy bị sập, hoặc một dịch vụ bên ngoài mà hệ thống phụ thuộc bị gián đoạn.
 
-失效
-: *整个系统* 停止向用户提供所需的服务；换言之，系统没有达到服务级别目标（SLO）。
+Hỏng hóc
+: *Toàn bộ hệ thống* ngừng cung cấp dịch vụ cần thiết cho người dùng. Nói cách khác, hệ thống không đạt được mục tiêu mức dịch vụ (SLO).
 
-故障与失效之所以容易混淆，是因为二者其实是同一件事，只是观察的层次不同。例如，如果一块硬盘停止工作，我们会说这块硬盘失效了：若整个系统只有这一块硬盘，系统也就停止了提供所需服务。然而，如果我们谈论的是一个包含许多硬盘的系统，那么单块硬盘失效从整个系统的角度看只是一项故障；只要数据在另一块硬盘上还有副本，整个系统就可能容忍这项故障。
+Lỗi và hỏng hóc dễ bị nhầm lẫn vì thực ra chúng là cùng một sự việc, chỉ khác tầng quan sát. Chẳng hạn, nếu một ổ đĩa ngừng hoạt động, ta nói ổ đĩa đó hỏng: nếu cả hệ thống chỉ có đúng ổ đĩa ấy thì hệ thống cũng ngừng cung cấp dịch vụ cần thiết. Tuy nhiên, nếu ta nói về một hệ thống gồm nhiều ổ đĩa, thì việc một ổ đĩa hỏng chỉ là một lỗi xét từ góc độ toàn hệ thống: chỉ cần dữ liệu còn bản sao trên ổ đĩa khác, cả hệ thống có thể chịu được lỗi này.
 
-### 容错 {#id27}
+### Khả năng chịu lỗi {#id27}
 
-如果某些故障发生时，系统仍能继续向用户提供所需服务，我们就称它是 *容错的（fault-tolerant）*。如果系统无法容忍某个部分出现故障，这个部分就称为 *单点故障（SPOF）*，因为它一旦发生故障，就会升级为整个系统的失效。
+Nếu hệ thống vẫn tiếp tục cung cấp dịch vụ cần thiết cho người dùng khi một số lỗi xảy ra, ta nói nó *chịu lỗi* (*fault-tolerant*). Nếu hệ thống không chịu được lỗi ở một bộ phận nào đó, bộ phận đó gọi là *SPOF* (*single point of failure*, điểm hỏng duy nhất), vì một khi nó gặp lỗi, lỗi sẽ leo thang thành hỏng hóc của cả hệ thống.
 
-以社交网络案例为例，扇出过程中可能发生这样一种故障：负责更新物化时间线的某台机器崩溃或变得不可用。要让这个过程具备容错能力，就必须确保另一台机器能接手这项任务，既不漏掉任何本应投递的帖子，也不会重复投递。（这个思想称为 *恰好一次语义（exactly-once semantics）*，我们会在[“数据库的端到端原则”](/ch13#sec_future_end_to_end)中详细讨论。）
+Lấy tình huống mạng xã hội làm ví dụ: trong quá trình fan-out có thể xảy ra lỗi khi một máy chịu trách nhiệm cập nhật timeline vật chất hóa bị sập hoặc không khả dụng. Để quá trình này chịu lỗi, phải bảo đảm một máy khác có thể tiếp quản nhiệm vụ, không bỏ sót bài đăng nào lẽ ra phải chuyển phát, cũng không chuyển phát trùng lặp. (Ý tưởng này gọi là *ngữ nghĩa exactly-once* (*exactly-once semantics*), sẽ được bàn chi tiết ở [“Nguyên lý end-to-end của cơ sở dữ liệu”](/ch13#sec_future_end_to_end).)
 
-容错能力总是针对特定类型、特定数量的故障而言。例如，一个系统也许最多能容忍两块硬盘同时失效，或三个节点中有一个崩溃。要求系统容忍任意数量的故障没有意义：如果所有节点都崩溃了，任何办法都无济于事。如果整个地球（以及上面的所有服务器）都被黑洞吞噬，要容忍这项故障就得把网站托管到太空中——祝你好运，看看这笔预算能不能获批。
+Khả năng chịu lỗi luôn nhắm đến những loại lỗi và số lượng lỗi cụ thể. Chẳng hạn, một hệ thống có thể chịu được tối đa hai ổ đĩa hỏng cùng lúc, hoặc một trong ba node bị sập. Yêu cầu hệ thống chịu được số lượng lỗi tùy ý là vô nghĩa: nếu mọi node đều sập, không cách nào cứu vãn. Nếu cả Trái Đất (cùng mọi máy chủ trên đó) bị hố đen nuốt chửng, để chịu được lỗi đó thì phải đặt website trên không gian vũ trụ — chúc bạn may mắn, xem ngân sách này có được duyệt không.
 
-反直觉的是，在这类容错系统中，通过故意触发故障来 *提高* 故障率有时反而是合理的，例如毫无预警地随机杀死某个进程。这称为 *故障注入（fault injection）*。许多严重缺陷其实源于糟糕的错误处理 [^38]；故意制造故障，可以让容错机制不断得到演练和检验，从而增强我们的信心：当故障自然发生时，系统确实能够正确处理。*混沌工程（chaos engineering）* 就是一门通过故障注入等实验来增强人们对容错机制信心的学科 [^39]。
+Phản trực giác là, trong các hệ thống chịu lỗi như vậy, đôi khi cố ý kích hoạt lỗi để *tăng* tỷ lệ lỗi lại hợp lý, ví dụ giết ngẫu nhiên một tiến trình mà không báo trước. Kỹ thuật này gọi là *chèn lỗi* (*fault injection*). Nhiều lỗi nghiêm trọng thực ra bắt nguồn từ xử lý lỗi kém [^38]. Cố ý gây lỗi giúp cơ chế chịu lỗi liên tục được diễn tập và kiểm nghiệm, từ đó tăng niềm tin rằng khi lỗi xảy ra tự nhiên, hệ thống thực sự xử lý đúng. *chaos engineering* là một ngành dùng các thí nghiệm như chèn lỗi để tăng niềm tin của con người vào cơ chế chịu lỗi [^39].
 
-虽然比起预防故障，我们通常更倾向于容忍故障，但有时预防确实胜于治疗（例如根本无药可救时）。安全问题就是如此：如果攻击者已经攻破系统并获得敏感数据，这件事无法撤销。不过，本书主要讨论的是能够补救的故障类型，下面几节会作进一步说明。
+Dù thường ta ưu tiên chịu lỗi hơn là ngăn ngừa lỗi, đôi khi phòng bệnh quả thực hơn chữa bệnh (ví dụ khi không có thuốc chữa). Vấn đề bảo mật là như vậy: nếu kẻ tấn công đã xâm nhập hệ thống và lấy được dữ liệu nhạy cảm, không thể hoàn tác việc đó. Tuy nhiên, cuốn sách này chủ yếu bàn về các loại lỗi có thể khắc phục, như các mục sau sẽ làm rõ.
 
-### 硬件与软件故障 {#sec_introduction_hardware_faults}
+### Lỗi phần cứng và phần mềm {#sec_introduction_hardware_faults}
 
-说到系统失效的原因，人们很容易首先想到硬件故障：
+Khi nói đến nguyên nhân hỏng hóc hệ thống, người ta dễ nghĩ đầu tiên đến lỗi phần cứng:
 
-* 每年大约有 2%～5% 的机械硬盘发生故障 [^40] [^41]；因此，在拥有 10,000 块硬盘的存储集群中，平均每天应该会有一块硬盘失效。近期数据表明硬盘越来越可靠，但故障率仍不容忽视 [^42]。
-* 每年大约有 0.5%～1% 的固态硬盘（SSD）发生故障 [^43]。少量比特错误会自动得到纠正 [^44]，但每块硬盘大约每年仍会发生一次无法纠正的错误，即使硬盘相当新（也就是磨损很少）也不例外；这个错误率高于机械硬盘 [^45] [^46]。
-* 电源、RAID 控制器和内存模块等其他硬件组件也会发生故障，只是没有硬盘那么频繁 [^47] [^48]。
-* 大约每 1,000 台机器中，就有一台的某个 CPU 核心偶尔会算出错误结果，原因很可能是制造缺陷 [^49] [^50] [^51]。错误计算有时会导致崩溃，有时却只是让程序返回错误的结果。
-* RAM 中的数据也可能损坏，原因既可能是宇宙射线等随机事件，也可能是永久性的物理缺陷。即使采用纠错码（ECC）内存，一年内仍会有超过 1% 的机器遇到无法纠正的错误，通常会导致机器崩溃，并且需要更换受影响的内存模块 [^52]。此外，某些病态的内存访问模式很可能导致比特翻转 [^53]。
-* 整个数据中心可能变得不可用（例如停电或网络配置错误），甚至遭到永久摧毁（例如火灾、洪水或地震 [^54]）。太阳喷发大量带电粒子所形成的太阳风暴，会在长距离导线中感应出很强的电流，可能破坏电网和海底网络电缆 [^55]。这类大规模失效虽然少见，但如果服务不能容忍整个数据中心的丢失，后果可能是灾难性的 [^56]。
+* Mỗi năm có khoảng 2%–5% ổ đĩa cơ bị hỏng [^40] [^41], do đó, trong một cụm lưu trữ có 10.000 ổ đĩa, trung bình mỗi ngày sẽ có một ổ hỏng. Dữ liệu gần đây cho thấy ổ đĩa ngày càng đáng tin cậy, nhưng tỷ lệ hỏng vẫn không thể bỏ qua [^42].
+* Mỗi năm có khoảng 0,5%–1% ổ cứng thể rắn (*SSD*) bị hỏng [^43]. Một số ít lỗi bit được tự động sửa [^44], nhưng mỗi ổ đĩa vẫn gặp khoảng một lỗi không thể sửa mỗi năm, kể cả ổ khá mới (tức ít bị mài mòn). Tỷ lệ lỗi này cao hơn ổ đĩa cơ [^45] [^46].
+* Các thành phần phần cứng khác như nguồn điện, bộ điều khiển RAID và mô-đun bộ nhớ cũng có thể hỏng, chỉ là không thường xuyên bằng ổ đĩa [^47] [^48].
+* Cứ khoảng 1.000 máy thì có một máy có một nhân CPU thỉnh thoảng tính ra kết quả sai, nhiều khả năng do lỗi chế tạo [^49] [^50] [^51]. Tính toán sai đôi khi gây sập, nhưng đôi khi chỉ khiến chương trình trả về kết quả sai.
+* Dữ liệu trong RAM cũng có thể bị hỏng, do các sự kiện ngẫu nhiên như tia vũ trụ, hoặc do khiếm khuyết vật lý vĩnh viễn. Ngay cả khi dùng bộ nhớ có mã sửa lỗi (*ECC*), mỗi năm vẫn có hơn 1% số máy gặp lỗi không thể sửa, thường khiến máy sập và cần thay mô-đun bộ nhớ bị ảnh hưởng [^52]. Ngoài ra, một số kiểu truy cập bộ nhớ bệnh lý rất có thể gây lật bit [^53].
+* Cả một trung tâm dữ liệu có thể trở nên không khả dụng (ví dụ do mất điện hoặc cấu hình mạng sai), thậm chí bị phá hủy vĩnh viễn (ví dụ do hỏa hoạn, lũ lụt hay động đất [^54]). Bão Mặt Trời — khi Mặt Trời phun ra lượng lớn hạt mang điện — có thể cảm ứng dòng điện rất mạnh trong các đường dây dài, làm hỏng lưới điện và cáp mạng dưới biển [^55]. Những sự cố quy mô lớn này tuy hiếm, nhưng nếu dịch vụ không chịu được việc mất cả trung tâm dữ liệu thì hậu quả có thể là thảm họa [^56].
 
-这些事件相当少见，因此在小型系统中，只要故障硬件很容易更换，通常不必为之过分担心。然而，在大规模系统里，硬件故障发生得足够频繁，已经成了系统正常运行的一部分。
+Những sự kiện này khá hiếm, nên với hệ thống nhỏ, miễn là phần cứng hỏng dễ thay thì thường không cần lo lắng quá mức. Tuy nhiên, trong hệ thống quy mô lớn, lỗi phần cứng xảy ra đủ thường xuyên để trở thành một phần của hoạt động bình thường của hệ thống.
 
-#### 通过冗余容忍硬件故障 {#tolerating-hardware-faults-through-redundancy}
+#### Chịu lỗi phần cứng bằng dư thừa {#tolerating-hardware-faults-through-redundancy}
 
-面对不可靠的硬件，我们通常首先想到为各个硬件组件增加冗余，以降低整个系统的失效率。磁盘可以组成 RAID（把数据分散到同一台机器的多块磁盘上，使单块磁盘失效不至于造成数据丢失）；服务器可以配备双路电源和可热插拔的 CPU；数据中心可以用电池和柴油发电机提供备用电源。这些冗余措施往往能让一台机器连续运行多年而不中断。
+Trước phần cứng không đáng tin cậy, phản ứng đầu tiên của ta thường là bổ sung *dư thừa* (*redundancy*) cho từng thành phần phần cứng để giảm tỷ lệ hỏng hóc của cả hệ thống. Đĩa có thể ghép thành RAID (phân tán dữ liệu trên nhiều đĩa của cùng một máy để một đĩa hỏng không gây mất dữ liệu); máy chủ có thể trang bị nguồn kép và CPU cắm nóng; trung tâm dữ liệu có thể dùng pin và máy phát điện diesel làm nguồn dự phòng. Những biện pháp dư thừa này thường giúp một máy chạy liên tục nhiều năm không gián đoạn.
 
-当各个组件的故障彼此独立时，冗余最有效；所谓独立，就是一项故障的发生不会改变另一项故障发生的概率。然而，实践表明，组件失效之间往往存在显著的相关性 [^41] [^57] [^58]；整个服务器机架乃至整个数据中心不可用的情况，仍然比我们希望的更加常见。
+Dư thừa hiệu quả nhất khi các lỗi của từng thành phần độc lập với nhau. Độc lập nghĩa là việc xảy ra một lỗi không làm thay đổi xác suất xảy ra lỗi khác. Tuy nhiên, thực tế cho thấy các hỏng hóc của thành phần thường có tương quan đáng kể [^41] [^57] [^58]. Tình huống cả giá máy chủ, thậm chí cả trung tâm dữ liệu không khả dụng vẫn phổ biến hơn ta mong muốn.
 
-硬件冗余可以提高单台机器的正常运行时间。不过，正如[“分布式与单节点系统”](/ch1#sec_introduction_distributed)中所述，采用分布式系统还有其他好处，例如能够容忍整个数据中心中断。因此，云系统往往不那么强调单台机器的可靠性，而是力求在软件层面容忍节点故障，让服务实现高可用。云提供商用 *可用区（availability zone）* 来标明哪些资源在物理上位于同一处；与地理位置分散的资源相比，同一地点的资源更可能同时失效。
+Dư thừa phần cứng có thể tăng thời gian hoạt động liên tục của từng máy. Tuy nhiên, như đã nói ở [“Hệ thống phân tán và hệ thống một node”](/ch1#sec_introduction_distributed), dùng hệ thống phân tán còn có những lợi ích khác, chẳng hạn chịu được việc cả trung tâm dữ liệu gián đoạn. Vì vậy, hệ thống đám mây thường không quá chú trọng độ tin cậy của từng máy, mà cố gắng chịu được lỗi node ở tầng phần mềm để dịch vụ đạt tính sẵn sàng cao. Nhà cung cấp đám mây dùng *availability zone* để cho biết những tài nguyên nào nằm cùng một chỗ về mặt vật lý. So với các tài nguyên phân tán về địa lý, tài nguyên ở cùng một chỗ có khả năng hỏng cùng lúc cao hơn.
 
-本书讨论的容错技术，旨在容忍整台机器、整个机架或整个可用区的丢失。它们通常允许一个数据中心内的机器，在另一个数据中心内的机器发生故障或变得不可达时接替其工作。我们会在[第 6 章](/ch6#ch_replication)、[第 10 章](/ch10#ch_consistency)以及本书其他多处讨论这类容错技术。
+Các kỹ thuật chịu lỗi được bàn trong sách này nhằm chịu được việc mất cả máy, cả giá máy hay cả availability zone. Chúng thường cho phép máy trong một trung tâm dữ liệu đảm nhận công việc khi máy ở trung tâm dữ liệu khác gặp lỗi hoặc không thể truy cập. Ta sẽ bàn những kỹ thuật chịu lỗi này ở [Chương 6](/ch6#ch_replication), [Chương 10](/ch10#ch_consistency) và nhiều chỗ khác trong sách.
 
-能够容忍整台机器丢失的系统，在运维上也有优势。如果需要重启机器（例如安装操作系统安全补丁），单服务器系统必须安排停机；而多节点容错系统可以逐个重启节点来安装补丁，不影响向用户提供服务。这称为 *滚动升级（rolling upgrade）*，我们会在[第 5 章](/ch5#ch_encoding)进一步讨论。
+Hệ thống chịu được việc mất cả máy cũng có lợi thế về vận hành. Nếu cần khởi động lại máy (ví dụ để cài bản vá bảo mật hệ điều hành), hệ thống một máy chủ phải lên lịch ngừng hoạt động, còn hệ thống nhiều node chịu lỗi có thể khởi động lại từng node để cài bản vá mà không ảnh hưởng đến việc phục vụ người dùng. Cách này gọi là *rolling upgrade*, sẽ được bàn thêm ở [Chương 5](/ch5#ch_encoding).
 
-#### 软件故障 {#software-faults}
+#### Lỗi phần mềm {#software-faults}
 
-尽管硬件失效之间可能存在较弱的相关性，但大体上仍然相互独立。例如，一块硬盘失效以后，同一台机器上的其他硬盘很可能还能继续正常工作一段时间。相比之下，软件故障往往高度相关，因为许多节点通常运行同一套软件，也就带有同样的缺陷 [^59] [^60]。这类故障更难预见，而且往往会比互不相关的硬件故障造成多得多的系统失效 [^47]。例如：
+Dù các hỏng hóc phần cứng có thể có tương quan yếu, nhìn chung chúng vẫn độc lập với nhau. Chẳng hạn, khi một ổ đĩa hỏng, các ổ đĩa khác trên cùng máy nhiều khả năng vẫn hoạt động bình thường thêm một thời gian. Ngược lại, lỗi phần mềm thường có tương quan rất cao, vì nhiều node thường chạy cùng một bộ phần mềm nên cũng mang cùng khiếm khuyết [^59] [^60]. Loại lỗi này khó lường trước hơn, và thường gây ra hỏng hóc hệ thống nhiều hơn hẳn so với lỗi phần cứng không liên quan [^47]. Ví dụ:
 
-* 一个软件缺陷在特定情况下导致所有节点同时失效。例如，2012 年 6 月 30 日的一次闰秒触发了 Linux 内核中的缺陷，使许多 Java 应用程序同时挂起，大量互联网服务随之中断 [^61]。另一个例子是，由于固件缺陷，某些型号的 SSD 会在恰好运行 32,768 小时（不到 4 年）后突然全部失效，盘上的数据再也无法恢复 [^62]。
-* 某个失控进程耗尽 CPU 时间、内存、磁盘空间、网络带宽或线程等共享而有限的资源 [^63]。例如，进程在处理大型请求时消耗了过多内存，可能被操作系统杀死；客户端库中的缺陷也可能产生远高于预期的请求量 [^64]。
-* 系统所依赖的某项服务变慢、失去响应，或开始返回内容损坏的响应。
-* 不同系统之间的交互产生涌现行为，而每个系统单独测试时都不会出现这种行为 [^65]。
-* 发生级联失效：一个组件的问题导致另一个组件过载并变慢，后者继而又拖垮下一个组件 [^66] [^67]。
+* Một lỗi phần mềm khiến mọi node hỏng cùng lúc trong một tình huống nhất định. Chẳng hạn, giây nhuận ngày 30 tháng 6 năm 2012 đã kích hoạt một lỗi trong nhân Linux, khiến nhiều ứng dụng Java treo đồng loạt, kéo theo nhiều dịch vụ internet gián đoạn [^61]. Một ví dụ khác: do lỗi firmware, một số mẫu SSD đột ngột hỏng đồng loạt sau đúng 32.768 giờ hoạt động (chưa đến 4 năm), và dữ liệu trên đĩa không thể khôi phục [^62].
+* Một tiến trình mất kiểm soát ngốn hết các tài nguyên dùng chung và hữu hạn như thời gian CPU, bộ nhớ, dung lượng đĩa, băng thông mạng hay luồng [^63]. Chẳng hạn, tiến trình tiêu thụ quá nhiều bộ nhớ khi xử lý một yêu cầu lớn có thể bị hệ điều hành giết. Lỗi trong thư viện client cũng có thể sinh ra lượng yêu cầu cao hơn dự kiến nhiều [^64].
+* Một dịch vụ mà hệ thống phụ thuộc trở nên chậm, mất phản hồi, hoặc bắt đầu trả về phản hồi bị hỏng nội dung.
+* Tương tác giữa các hệ thống tạo ra hành vi nảy sinh (*emergent behavior*) mà khi kiểm thử riêng từng hệ thống thì không xuất hiện [^65].
+* Hỏng hóc dây chuyền: vấn đề ở một thành phần khiến thành phần khác quá tải và chậm đi, thành phần này lại kéo sập thành phần kế tiếp [^66] [^67].
 
-引发这类软件故障的缺陷往往会潜伏很久，直到一组不同寻常的条件将其触发。这时人们才发现，软件原来对运行环境作出了某种假设；这个假设通常都成立，却最终会出于某种原因不再成立 [^68] [^69]。
+Những lỗi gây ra sự cố phần mềm như vậy thường nằm im rất lâu, cho đến khi một tập điều kiện bất thường kích hoạt chúng. Khi đó người ta mới nhận ra phần mềm đã giả định điều gì đó về môi trường chạy. Giả định này thường đúng, nhưng rồi vì lý do nào đó không còn đúng nữa [^68] [^69].
 
-软件中的系统性故障没有速效药，但许多小措施都能有所帮助：认真思考系统中的假设和交互，开展彻底的测试，隔离进程，允许进程崩溃并重启，避免重试风暴之类的反馈环路（参见[“当过载系统无法恢复时”](/ch2#sidebar_metastable)），并在生产环境中度量、监控和分析系统行为。
+Với lỗi hệ thống trong phần mềm không có thuốc đặc trị, nhưng nhiều việc nhỏ có thể giúp ích: suy nghĩ kỹ về các giả định và tương tác trong hệ thống, kiểm thử toàn diện, cô lập tiến trình, cho phép tiến trình sập và khởi động lại, tránh các vòng phản hồi như retry storm (xem [“Khi hệ thống quá tải không thể phục hồi”](/ch2#sidebar_metastable)), và đo lường, giám sát, phân tích hành vi của hệ thống trong môi trường production.
 
-### 人类与可靠性 {#id31}
+### Con người và độ tin cậy {#id31}
 
-软件系统由人设计和构建，维持系统运行的运维人员同样也是人。与机器不同，人类不只是照章行事；他们的长处正是能够发挥创造力、随机应变，把工作完成。不过，这一特点也会带来不可预测性：即使出发点再好，人也会犯错，有时还会导致系统失效。例如，一项针对大型互联网服务的研究发现，运维人员修改配置是服务中断的首要原因，而硬件故障（服务器或网络）只在 10%～25% 的中断中起了作用 [^70]。
+Hệ thống phần mềm do con người thiết kế và xây dựng, và những người vận hành giữ cho hệ thống chạy cũng là con người. Khác với máy móc, con người không chỉ làm theo quy trình. Điểm mạnh của họ chính là khả năng sáng tạo và ứng biến để hoàn thành công việc. Nhưng đặc điểm này cũng đem lại tính khó đoán: dù xuất phát điểm tốt đến đâu, con người vẫn mắc lỗi, đôi khi dẫn đến hỏng hóc hệ thống. Ví dụ, một nghiên cứu về các dịch vụ internet lớn thấy rằng việc người vận hành thay đổi cấu hình là nguyên nhân hàng đầu gây gián đoạn dịch vụ, còn lỗi phần cứng (máy chủ hoặc mạng) chỉ đóng vai trò trong 10%–25% số lần gián đoạn [^70].
 
-人们很容易把这类问题归结为“人为错误”，并幻想通过更严格的流程和更严密的规则来约束人的行为，从而解决问题。然而，把错误归咎于个人往往适得其反。所谓“人为错误”其实并不是事故的根本原因，而是人与技术共同构成的 *社会技术系统*（*sociotechnical system*）出了问题的一种症状；身处其中的人只是在竭尽所能地完成工作 [^71]。复杂系统也常常表现出涌现行为，组件之间出人意料的交互同样可能导致失效 [^72]。
+Người ta rất dễ quy những vấn đề này cho “lỗi của con người”, và ảo tưởng rằng có thể giải quyết bằng quy trình chặt hơn, quy tắc ngặt hơn để ràng buộc hành vi con người. Tuy nhiên, đổ lỗi cho cá nhân thường phản tác dụng. Cái gọi là “lỗi của con người” thực ra không phải nguyên nhân gốc của sự cố, mà là triệu chứng cho thấy *hệ thống xã hội–kỹ thuật* (*sociotechnical system*) do con người và công nghệ cùng tạo nên có vấn đề. Những người ở trong đó chỉ đang cố hết sức làm tốt công việc [^71]. Hệ thống phức tạp cũng thường thể hiện hành vi nảy sinh, và những tương tác bất ngờ giữa các thành phần cũng có thể dẫn đến hỏng hóc [^72].
 
-多种技术手段都能减小人为失误的影响，包括：彻底测试（既包括手写测试，也包括用大量随机输入进行的 *属性测试*，*property-based testing*）[^38]；提供回滚机制，以便迅速撤销配置变更；逐步发布新代码；提供详细而清晰的监控，以及用于诊断生产问题的可观测性工具（参见[“分布式系统的问题”](/ch1#sec_introduction_dist_sys_problems)）；精心设计界面，使“做正确的事”更加容易，“做错误的事”更加困难。
+Nhiều biện pháp kỹ thuật có thể giảm tác động của sai sót con người, gồm: kiểm thử toàn diện (cả kiểm thử viết tay lẫn *kiểm thử dựa trên thuộc tính*, *property-based testing*, với lượng lớn đầu vào ngẫu nhiên) [^38]; có cơ chế rollback để nhanh chóng hoàn tác thay đổi cấu hình; phát hành mã mới dần dần; giám sát chi tiết, rõ ràng cùng các công cụ quan sát được (*observability*) để chẩn đoán vấn đề trên production (xem [“Các vấn đề của hệ thống phân tán”](/ch1#sec_introduction_dist_sys_problems)); thiết kế giao diện cẩn thận để “làm điều đúng” dễ hơn và “làm điều sai” khó hơn.
 
-不过，这些措施都要投入时间和金钱。在日常经营的现实压力下，组织往往优先考虑能够创造收入的工作，而不是提高自身抵御失误能力的措施。如果必须在开发更多功能和开展更多测试之间选择，许多组织选择功能也不难理解。既然作出了这样的选择，当本可避免的错误不可避免地发生时，再去责怪犯错的人便毫无道理——真正的问题在于组织如何设定优先级。
+Tuy nhiên, những biện pháp này đều tốn thời gian và tiền bạc. Dưới áp lực thực tế của hoạt động hằng ngày, tổ chức thường ưu tiên công việc tạo ra doanh thu hơn là các biện pháp nâng cao khả năng chống sai sót của chính mình. Nếu phải chọn giữa phát triển thêm tính năng và kiểm thử thêm, nhiều tổ chức chọn tính năng cũng dễ hiểu. Đã chọn như vậy, thì khi những sai sót lẽ ra tránh được chắc chắn xảy ra, việc trách người mắc lỗi là vô lý — vấn đề thực sự nằm ở cách tổ chức đặt ưu tiên.
 
-越来越多的组织开始形成 *无责复盘（blameless postmortem）* 的文化：事故发生后，鼓励所有参与者毫无保留地讲清事情经过，不必担心受到惩罚；这样，组织中的其他人才能从中学习，避免今后再发生类似问题 [^73]。复盘过程也许会发现，业务优先级需要调整，长期遭到忽视的领域需要投入，相关人员的激励机制需要改变，或者还有其他系统性问题需要提请管理层关注。
+Ngày càng nhiều tổ chức xây dựng văn hóa *postmortem không đổ lỗi* (*blameless postmortem*): sau sự cố, mọi người tham gia được khuyến khích kể rõ đầu đuôi sự việc mà không lo bị trừng phạt, nhờ vậy, những người khác trong tổ chức mới học được từ đó và tránh để vấn đề tương tự tái diễn [^73]. Quá trình postmortem có thể phát hiện rằng cần điều chỉnh ưu tiên kinh doanh, cần đầu tư vào những mảng bị bỏ quên lâu, cần thay đổi cơ chế khuyến khích của những người liên quan, hoặc còn các vấn đề mang tính hệ thống khác cần báo cho ban quản lý.
 
-一般而言，调查事故时应当警惕过分简单的答案。“鲍勃部署这项变更时应该更加小心”无助于解决问题，“我们必须用 Haskell 重写后端”同样如此。管理层应当抓住机会，从每天使用这个社会技术系统的一线人员那里了解它究竟如何运作，再根据这些反馈采取措施加以改进 [^71]。
+Nói chung, khi điều tra sự cố nên cảnh giác với những câu trả lời quá đơn giản. “Bob lẽ ra phải cẩn thận hơn khi triển khai thay đổi này” không giúp giải quyết vấn đề, “chúng ta phải viết lại backend bằng Haskell” cũng vậy. Ban quản lý nên nắm lấy cơ hội để hiểu từ những người ở tuyến đầu — những người dùng hệ thống xã hội–kỹ thuật này mỗi ngày — xem nó thực sự vận hành ra sao, rồi dựa trên phản hồi đó hành động để cải thiện [^71].
 
 
 <a id="sidebar_reliability_importance"></a>
 
-> [!TIP] 可靠性有多重要？
+> [!TIP] Độ tin cậy quan trọng đến mức nào?
 >
-> 可靠性并不只对核电站和空中交通管制系统重要；人们同样期望更平常的应用能够可靠工作。商务应用程序中的缺陷会降低生产率（如果报告的数字有误，还会带来法律风险），电子商务网站中断则可能造成巨额收入损失，并损害企业声誉。
+> Độ tin cậy không chỉ quan trọng với nhà máy điện hạt nhân và hệ thống điều khiển không lưu. Người ta cũng mong những ứng dụng bình thường hơn hoạt động đáng tin cậy. Lỗi trong ứng dụng doanh nghiệp làm giảm năng suất (và gây rủi ro pháp lý nếu số liệu báo cáo sai), còn việc website thương mại điện tử gián đoạn có thể gây tổn thất doanh thu lớn và làm tổn hại danh tiếng doanh nghiệp.
 >
-> 对许多应用来说，暂时中断几分钟乃至几小时尚可容忍 [^74]，但永久丢失或损坏数据却会是一场灾难。设想一位家长把孩子所有的照片和视频都保存在你的照片应用中 [^75]。如果数据库突然损坏，他们会有什么感受？他们知道怎样从备份恢复吗？
+> Với nhiều ứng dụng, gián đoạn tạm thời vài phút thậm chí vài giờ vẫn chịu được [^74], nhưng mất hoặc hỏng dữ liệu vĩnh viễn thì là thảm họa. Hãy hình dung một phụ huynh lưu toàn bộ ảnh và video của con mình trong ứng dụng ảnh của bạn [^75]. Nếu cơ sở dữ liệu đột nhiên bị hỏng, họ sẽ cảm thấy thế nào? Họ có biết cách khôi phục từ bản sao lưu không?
 >
-> 英国邮局的 Horizon 丑闻，是不可靠的软件伤害人的另一个例子。1999 至 2019 年间，数百名经营英国邮局网点的人被判盗窃或欺诈罪，只因会计软件显示他们的账目存在短缺。最终人们发现，其中许多短缺其实源于软件缺陷，此后已有许多判决被撤销 [^76]。这场或许是英国历史上最大的司法不公之所以发生，是因为英格兰法律假定计算机能够正确运行，因此也假定计算机产生的证据可靠，除非有人能提出反证 [^77]。软件工程师也许会觉得“软件没有任何缺陷”的想法十分可笑，但那些因为不可靠的计算机系统而被错误定罪、遭到监禁、宣告破产，甚至自杀的人，却无法从中得到丝毫安慰。
+> Vụ bê bối Horizon của Bưu điện Anh là một ví dụ khác về phần mềm không đáng tin cậy gây hại cho con người. Từ năm 1999 đến 2019, hàng trăm người điều hành các điểm giao dịch của Bưu điện Anh bị kết tội trộm cắp hoặc gian lận chỉ vì phần mềm kế toán báo tài khoản của họ bị thiếu hụt. Cuối cùng người ta phát hiện nhiều khoản thiếu hụt thực ra do lỗi phần mềm, và nhiều bản án sau đó đã bị hủy [^76]. Vụ bất công tư pháp có lẽ lớn nhất trong lịch sử nước Anh này xảy ra vì luật pháp Anh giả định máy tính hoạt động đúng, do đó cũng giả định bằng chứng do máy tính tạo ra là đáng tin, trừ khi ai đó đưa ra được bằng chứng ngược lại [^77]. Kỹ sư phần mềm có thể thấy ý nghĩ “phần mềm không có lỗi nào” thật nực cười, nhưng điều đó chẳng an ủi được chút nào những người bị kết án oan, bị bỏ tù, bị phá sản, thậm chí tự tử vì hệ thống máy tính không đáng tin cậy.
 >
-> 在有些情况下，我们可能会为了降低开发成本而牺牲可靠性（例如为尚未验证的市场开发产品原型）。但我们必须清楚地意识到自己何时正在走捷径，并始终牢记可能造成的后果。
+> Trong một số trường hợp, ta có thể hy sinh độ tin cậy để giảm chi phí phát triển (ví dụ làm nguyên mẫu sản phẩm cho một thị trường chưa được kiểm chứng). Nhưng ta phải ý thức rõ khi nào mình đang đi đường tắt, và luôn nhớ hậu quả có thể gây ra.
 
-## 可伸缩性 {#sec_introduction_scalability}
+## Khả năng mở rộng {#sec_introduction_scalability}
 
-系统今天能可靠运行，并不意味着将来也一定能够可靠运行。系统退化的一个常见原因是负载增加：也许并发用户从 10,000 人增长到了 100,000 人，或者从 100 万人增长到了 1,000 万人；也许系统现在处理的数据量比过去大得多。
+Hệ thống hôm nay chạy đáng tin cậy không có nghĩa là tương lai cũng chắc chắn như vậy. Một nguyên nhân phổ biến khiến hệ thống suy giảm là tải tăng: có thể số người dùng đồng thời tăng từ 10.000 lên 100.000, hoặc từ 1 triệu lên 10 triệu. Cũng có thể hệ thống nay xử lý lượng dữ liệu lớn hơn nhiều so với trước.
 
-*可伸缩性（scalability）* 是描述系统应对负载增长能力的术语。讨论可伸缩性时，人们有时会说：“你又不是 Google 或 Amazon。别再担心规模问题了，用关系数据库就好。”这句话是否适用于你，要看你构建的究竟是哪一类应用。
+*Khả năng mở rộng* (*scalability*) là thuật ngữ mô tả khả năng của hệ thống ứng phó với tải tăng. Khi bàn về khả năng mở rộng, đôi khi người ta nói: “Bạn đâu phải Google hay Amazon. Đừng lo chuyện quy mô nữa, cứ dùng cơ sở dữ liệu quan hệ.” Câu này có hợp với bạn hay không tùy thuộc vào loại ứng dụng bạn đang xây dựng.
 
-如果你正在构建一个目前用户不多的新产品，例如初创公司的新业务，压倒一切的工程目标通常是让系统尽可能简单、灵活；这样，随着你逐渐了解客户的需求，就能轻松修改和调整产品功能 [^78]。在这种环境中，为将来或许才需要的假想规模忧心忡忡，只会适得其反：往好里说，对可伸缩性的投入是白费力气和过早优化；往坏里说，它会把你困在一个不灵活的设计中，让应用更难演化。
+Nếu bạn đang xây dựng một sản phẩm mới hiện chưa có nhiều người dùng, chẳng hạn một mảng kinh doanh mới của công ty khởi nghiệp, mục tiêu kỹ thuật bao trùm thường là giữ hệ thống đơn giản và linh hoạt nhất có thể, nhờ vậy, khi dần hiểu nhu cầu của khách hàng, bạn dễ dàng sửa đổi, điều chỉnh tính năng sản phẩm [^78]. Trong môi trường này, lo lắng về quy mô giả định mà tương lai có thể mới cần chỉ phản tác dụng: nhẹ thì công sức đầu tư cho khả năng mở rộng là uổng phí và tối ưu hóa sớm, nặng thì nó nhốt bạn vào một thiết kế thiếu linh hoạt, khiến ứng dụng khó tiến hóa hơn.
 
-这是因为，可伸缩性并不是一个一维的标签。简单地说“X 是可伸缩的”或“Y 无法伸缩”毫无意义。讨论可伸缩性，真正要考虑的是下面这些问题：
+Đó là vì khả năng mở rộng không phải một nhãn một chiều. Nói đơn giản “X có khả năng mở rộng” hay “Y không mở rộng được” là vô nghĩa. Khi bàn về khả năng mở rộng, điều thực sự cần cân nhắc là những câu hỏi sau:
 
-* “如果系统按某种方式增长，我们有哪些应对选项？”
-* “我们如何增加计算资源来承载额外负载？”
-* “按当前的增长预期，什么时候会达到现有架构的极限？”
+* “Nếu hệ thống tăng trưởng theo một cách nào đó, ta có những lựa chọn ứng phó nào?”
+* “Làm thế nào để thêm tài nguyên tính toán đáp ứng tải phát sinh?”
+* “Với kỳ vọng tăng trưởng hiện tại, khi nào ta chạm giới hạn của kiến trúc hiện có?”
 
-如果应用大受欢迎，因而需要处理不断增长的负载，你会逐渐知道性能瓶颈在哪里，也就清楚系统需要沿着哪些维度扩展。到那时，再开始认真考虑可伸缩性技术也不迟。
+Nếu ứng dụng rất được ưa chuộng và do đó phải xử lý tải ngày càng tăng, bạn sẽ dần biết nút thắt hiệu năng nằm ở đâu, và hiểu hệ thống cần mở rộng theo những chiều nào. Đến lúc đó mới bắt đầu nghiêm túc cân nhắc các kỹ thuật mở rộng cũng chưa muộn.
 
-### 描述负载 {#id33}
+### Mô tả tải {#id33}
 
-首先，我们需要简明地描述系统当前的负载；只有这样，才能继续讨论增长问题（例如负载翻倍会发生什么）。这种描述通常是某项吞吐量指标，例如服务每秒收到的请求数、每天新增多少 GB 数据，或每小时完成的购物车结账次数。有时，我们关心的是某个变量的峰值，例如[“案例研究：社交网络首页时间线”](/ch2#sec_introduction_twitter)中的同时在线用户数。
+Trước hết, ta cần mô tả ngắn gọn tải hiện tại của hệ thống, chỉ khi đó mới bàn tiếp được vấn đề tăng trưởng (ví dụ điều gì xảy ra khi tải tăng gấp đôi). Mô tả này thường là một chỉ số thông lượng nào đó, chẳng hạn số yêu cầu dịch vụ nhận mỗi giây, lượng GB dữ liệu mới mỗi ngày, hay số lần thanh toán giỏ hàng hoàn tất mỗi giờ. Đôi khi ta quan tâm đến giá trị đỉnh của một biến, ví dụ số người dùng trực tuyến đồng thời trong [“Nghiên cứu tình huống: dòng thời gian trang chủ của mạng xã hội”](/ch2#sec_introduction_twitter).
 
-负载往往还有其他统计特征，它们同样会影响访问模式，进而影响系统对可伸缩性的要求。例如，你可能需要知道数据库的读写比例、缓存命中率，或每位用户拥有的数据项数量（例如社交网络案例中的关注者人数）。有时平均情况最重要，有时瓶颈却由少数极端情况主导。一切都取决于具体应用的细节。
+Tải thường còn có các đặc trưng thống kê khác, cũng ảnh hưởng đến mẫu truy cập và do đó ảnh hưởng đến yêu cầu mở rộng của hệ thống. Chẳng hạn, bạn có thể cần biết tỷ lệ đọc/ghi của cơ sở dữ liệu, tỷ lệ cache trúng (cache hit), hoặc số mục dữ liệu mỗi người dùng có (ví dụ số người theo dõi trong tình huống mạng xã hội). Đôi khi trường hợp trung bình là quan trọng nhất, đôi khi nút thắt lại bị chi phối bởi một số ít trường hợp cực đoan. Tất cả tùy thuộc chi tiết của ứng dụng cụ thể.
 
-描述好系统负载以后，就可以研究负载增加时会发生什么。我们可以从两个角度来看：
+Sau khi mô tả được tải hệ thống, ta có thể nghiên cứu điều gì xảy ra khi tải tăng. Có thể xét từ hai góc độ:
 
-* 以某种方式增加负载，而系统资源（CPU、内存、网络带宽等）保持不变，系统性能会受到什么影响？
-* 以某种方式增加负载，而你希望性能保持不变，需要增加多少资源？
+* Tăng tải theo một cách nào đó trong khi tài nguyên hệ thống (CPU, bộ nhớ, băng thông mạng, v.v.) giữ nguyên, hiệu năng hệ thống bị ảnh hưởng ra sao?
+* Tăng tải theo một cách nào đó và bạn muốn hiệu năng giữ nguyên, cần tăng thêm bao nhiêu tài nguyên?
 
-通常，我们的目标是在满足 SLA 性能要求（参见[“响应时间指标的应用”](/ch2#sec_introduction_slo_sla)）的同时，尽可能降低系统的运行成本。所需的计算资源越多，成本就越高。某些硬件也许比另一些更具性价比，而随着新型硬件出现，这些因素也会随时间变化。
+Thông thường, mục tiêu của ta là giữ chi phí vận hành hệ thống ở mức thấp nhất có thể trong khi vẫn đáp ứng yêu cầu hiệu năng của SLA (xem [“Ứng dụng các chỉ số thời gian phản hồi”](/ch2#sec_introduction_slo_sla)). Cần càng nhiều tài nguyên tính toán thì chi phí càng cao. Một số phần cứng có thể có hiệu quả chi phí tốt hơn số khác, và khi phần cứng mới xuất hiện, những yếu tố này cũng thay đổi theo thời gian.
 
-如果资源增加一倍，就能在性能不变的情况下处理两倍负载，我们称系统具备 *线性可伸缩性*（*linear scalability*），这通常是一件好事。偶尔，由于规模经济或峰值负载分布得更加均匀，不到两倍的资源也能处理两倍的负载 [^79] [^80]。更常见的情况是，成本增长得比线性更快，造成这种低效的原因可能有很多。例如，系统拥有大量数据时，即使写入请求本身大小相同，处理一次写入所需的工作也可能多于数据量较小时。
+Nếu tăng gấp đôi tài nguyên mà xử lý được gấp đôi tải với hiệu năng không đổi, ta nói hệ thống có *khả năng mở rộng tuyến tính* (*linear scalability*), và thường đó là điều tốt. Đôi khi, nhờ lợi thế kinh tế theo quy mô hoặc tải đỉnh phân bố đều hơn, chưa đến gấp đôi tài nguyên cũng xử lý được gấp đôi tải [^79] [^80]. Phổ biến hơn là chi phí tăng nhanh hơn tuyến tính, và nguyên nhân gây ra sự kém hiệu quả này có thể rất nhiều. Chẳng hạn, khi hệ thống có lượng dữ liệu lớn, công việc cần để xử lý một lần ghi có thể nhiều hơn khi dữ liệu ít, dù bản thân yêu cầu ghi có cùng kích thước.
 
-### 共享内存、共享磁盘与无共享架构 {#sec_introduction_shared_nothing}
+### Kiến trúc chia sẻ bộ nhớ, chia sẻ đĩa và shared-nothing {#sec_introduction_shared_nothing}
 
-增加服务硬件资源最简单的办法，就是把服务迁移到更强大的机器上。单个 CPU 核心的速度已经不再显著提高，但你仍可以买到（或在云上租用）配有更多 CPU 核心、更大 RAM 和更多磁盘空间的机器。这种方法称为 *纵向伸缩（vertical scaling）*，也叫 *向上伸缩（scaling up）*。
+Cách đơn giản nhất để tăng tài nguyên phần cứng cho dịch vụ là chuyển dịch vụ sang một máy mạnh hơn. Tốc độ của từng nhân CPU không còn tăng đáng kể, nhưng bạn vẫn có thể mua (hoặc thuê trên đám mây) máy có nhiều nhân CPU hơn, RAM lớn hơn và nhiều dung lượng đĩa hơn. Cách này gọi là *mở rộng theo chiều dọc* (*vertical scaling*), còn gọi là *scaling up*.
 
-在单台机器上运行多个进程或线程，可以获得并行处理能力。同一进程中的所有线程都能访问同一块 RAM，因此这种方法也称为 *共享内存架构（shared-memory architecture）*。共享内存方案的问题在于，成本增长得比线性更快：硬件资源多一倍的高端机器，价格通常远远不止两倍；受各种瓶颈限制，一台规模翻倍的机器又往往处理不了两倍的负载。
+Chạy nhiều tiến trình hoặc luồng trên một máy cho phép xử lý song song. Mọi luồng trong cùng một tiến trình đều truy cập cùng một vùng RAM, nên cách này còn gọi là *kiến trúc chia sẻ bộ nhớ* (*shared-memory architecture*). Vấn đề của phương án chia sẻ bộ nhớ là chi phí tăng nhanh hơn tuyến tính: máy cao cấp có tài nguyên phần cứng gấp đôi thường đắt hơn gấp đôi nhiều, và do các nút thắt khác nhau, một máy có quy mô gấp đôi thường không xử lý nổi gấp đôi tải.
 
-另一种方案是 *共享磁盘架构（shared-disk architecture）*：多台机器分别拥有独立的 CPU 和 RAM，却把数据存储在共同访问的一组磁盘阵列中，机器与磁盘通过高速网络连接，例如 *网络附加存储（NAS）* 或 *存储区域网络（SAN）*。这种架构过去常用于本地部署的数据仓库工作负载，但资源争用和加锁开销限制了共享磁盘方案的可伸缩性 [^81]。
+Một phương án khác là *kiến trúc chia sẻ đĩa* (*shared-disk architecture*): nhiều máy có CPU và RAM riêng nhưng lưu dữ liệu trên một mảng đĩa dùng chung, máy và đĩa được nối bằng mạng tốc độ cao, ví dụ *NAS* (*network-attached storage*, lưu trữ gắn mạng) hoặc *SAN* (*storage area network*, mạng vùng lưu trữ). Kiến trúc này trước đây thường dùng cho khối lượng công việc kho dữ liệu triển khai tại chỗ, nhưng tranh chấp tài nguyên và chi phí khóa đã hạn chế khả năng mở rộng của phương án chia sẻ đĩa [^81].
 
-相比之下，*无共享架构（shared-nothing architecture）* [^82]（也称为 *水平伸缩（horizontal scaling）* 或 *向外伸缩（scaling out）*）已经广受欢迎。这种方案采用包含多个节点的分布式系统，每个节点都拥有自己的 CPU、RAM 和磁盘；节点之间的一切协调，都通过普通网络在软件层完成。
+Ngược lại, *kiến trúc shared-nothing* (*shared-nothing architecture*) [^82] (còn gọi là *mở rộng theo chiều ngang* (*horizontal scaling*) hay *scaling out*) đã trở nên rất phổ biến. Phương án này dùng một hệ thống phân tán gồm nhiều node, mỗi node có CPU, RAM và đĩa riêng. Mọi sự phối hợp giữa các node đều thực hiện ở tầng phần mềm qua mạng thông thường.
 
-无共享架构的优势是：它有望实现线性伸缩；可以使用任何性价比最好的硬件，在云端尤其如此；负载增减时更容易调整硬件资源；还可以把系统分布到多个数据中心和地域，以获得更强的容错能力。缺点则是必须显式进行分片（参见[第 7 章](/ch7#ch_sharding)），并且要面对分布式系统的全部复杂性（参见[第 9 章](/ch9#ch_distributed)）。
+Ưu điểm của kiến trúc shared-nothing là: nó có triển vọng mở rộng tuyến tính; có thể dùng bất kỳ phần cứng nào có hiệu quả chi phí tốt nhất, nhất là trên đám mây; dễ điều chỉnh tài nguyên phần cứng khi tải tăng giảm; và có thể phân bố hệ thống trên nhiều trung tâm dữ liệu và vùng địa lý để chịu lỗi tốt hơn. Nhược điểm là phải phân mảnh (sharding) tường minh (xem [Chương 7](/ch7#ch_sharding)) và phải đối mặt với toàn bộ độ phức tạp của hệ thống phân tán (xem [Chương 9](/ch9#ch_distributed)).
 
-一些云原生数据库系统把存储和事务执行拆分成不同的服务（参见[“存储与计算的分离”](/ch1#sec_introduction_storage_compute)），让多个计算节点共享同一项存储服务。这个模型与共享磁盘架构有几分相似，但避开了老式系统的可伸缩性问题：存储服务提供的不是文件系统（NAS）或块设备（SAN）抽象，而是一套针对数据库具体需求设计的专用 API [^83]。
+Một số hệ cơ sở dữ liệu cloud-native tách lưu trữ và thực thi giao dịch thành các dịch vụ khác nhau (xem [“Tách rời lưu trữ và tính toán”](/ch1#sec_introduction_storage_compute)), để nhiều node tính toán dùng chung một dịch vụ lưu trữ. Mô hình này có phần giống kiến trúc chia sẻ đĩa nhưng tránh được các vấn đề về khả năng mở rộng của hệ thống cũ: dịch vụ lưu trữ không cung cấp trừu tượng hệ thống tệp (NAS) hay thiết bị khối (SAN), mà cung cấp một bộ API chuyên dụng được thiết kế cho nhu cầu cụ thể của cơ sở dữ liệu [^83].
 
-### 可伸缩性原则 {#id35}
+### Các nguyên tắc về khả năng mở rộng {#id35}
 
-大规模系统的架构通常高度依赖具体应用，不存在一套通用、放之四海而皆准的可伸缩架构（俗称 *万金油（magic scaling sauce）*）。例如，处理每秒 100,000 个请求、每个请求 1 kB 的系统，与每分钟只处理 3 个请求、每个请求却有 2 GB 的系统，看起来会截然不同——尽管二者的数据吞吐量同为 100 MB/s。
+Kiến trúc của hệ thống quy mô lớn thường phụ thuộc rất nhiều vào ứng dụng cụ thể. Không có một kiến trúc mở rộng chung, dùng được cho mọi trường hợp (thường gọi là *magic scaling sauce*, “nước sốt thần kỳ”). Chẳng hạn, một hệ thống xử lý 100.000 yêu cầu mỗi giây, mỗi yêu cầu 1 kB, trông sẽ rất khác một hệ thống chỉ xử lý 3 yêu cầu mỗi phút, mỗi yêu cầu 2 GB — dù cả hai có cùng thông lượng dữ liệu 100 MB/s.
 
-而且，适合某个负载水平的架构，多半应付不了十倍于此的负载。如果你正在开发一个快速增长的服务，很可能每当负载增加一个数量级，就需要重新考虑架构。应用需求本身也很可能不断变化，因此提前为超过一个数量级之后的伸缩需求作规划，通常并不值得。
+Hơn nữa, kiến trúc phù hợp với một mức tải thường không đáp ứng nổi tải gấp mười lần. Nếu bạn đang phát triển một dịch vụ tăng trưởng nhanh, rất có thể mỗi khi tải tăng một bậc độ lớn, bạn lại phải xem xét lại kiến trúc. Bản thân yêu cầu của ứng dụng cũng nhiều khả năng liên tục thay đổi, nên lập kế hoạch trước cho nhu cầu mở rộng vượt quá một bậc độ lớn thường không đáng.
 
-可伸缩性有一项很好的通用原则：把系统拆分成较小的组件，使它们大体上能够彼此独立地运行。这是微服务（参见[“微服务与无服务器”](/ch1#sec_introduction_microservices)）、分片（[第 7 章](/ch7#ch_sharding)）、流处理（[第 12 章](/ch12#ch_stream)）和无共享架构背后的共同原则。不过，真正的挑战在于判断哪些东西应该放在一起，哪些东西应该拆开。其他书籍介绍了微服务的设计准则 [^84]；本书则会在[第 7 章](/ch7#ch_sharding)讨论无共享系统中的分片。
+Có một nguyên tắc chung tốt cho khả năng mở rộng: chia hệ thống thành các thành phần nhỏ hơn để chúng có thể vận hành gần như độc lập với nhau. Đây là nguyên tắc chung đằng sau microservices (xem [“Microservices và serverless”](/ch1#sec_introduction_microservices)), phân mảnh ([Chương 7](/ch7#ch_sharding)), xử lý luồng ([Chương 12](/ch12#ch_stream)) và kiến trúc shared-nothing. Tuy nhiên, thách thức thực sự là xác định cái gì nên đặt cùng nhau, cái gì nên tách ra. Các sách khác trình bày nguyên tắc thiết kế microservices [^84], còn sách này sẽ bàn về phân mảnh trong hệ thống shared-nothing ở [Chương 7](/ch7#ch_sharding).
 
-另一项好原则是，不要让系统变得比必要的更加复杂。如果单机数据库足以完成任务，它很可能比复杂的分布式配置更可取。自动伸缩系统会根据需求自动增加或移除资源，的确很酷；但如果负载相当可预测，手动伸缩的系统在运维中也许更少出现意外（参见[“运维：自动/手动再平衡”](/ch7#sec_sharding_operations)）。由 5 个服务组成的系统比由 50 个服务组成的系统更简单。优秀的架构通常务实地混合了多种方案。
+Một nguyên tắc tốt khác là đừng làm hệ thống phức tạp hơn mức cần thiết. Nếu một cơ sở dữ liệu trên một máy đủ làm việc, nó nhiều khả năng đáng chọn hơn một cấu hình phân tán phức tạp. Hệ thống tự động mở rộng (tự thêm hoặc bớt tài nguyên theo nhu cầu) quả thực rất hay, nhưng nếu tải khá dễ dự đoán, hệ thống mở rộng thủ công có thể ít gây bất ngờ hơn khi vận hành (xem [“Vận hành: cân bằng lại tự động/thủ công”](/ch7#sec_sharding_operations)). Hệ thống gồm 5 dịch vụ đơn giản hơn hệ thống gồm 50 dịch vụ. Một kiến trúc tốt thường là sự pha trộn thực dụng của nhiều phương án.
 
-## 可维护性 {#sec_introduction_maintainability}
+## Khả năng bảo trì {#sec_introduction_maintainability}
 
-软件不会磨损，也不会像机械装置那样发生材料疲劳，因此它不会以同样的方式损坏。不过，应用程序的需求经常变化，软件运行的环境也会变化（例如依赖项和底层平台），而且软件中总有缺陷需要修复。
+Phần mềm không bị mài mòn, cũng không bị mỏi vật liệu như thiết bị cơ khí, nên nó không hỏng theo cùng cách. Tuy nhiên, yêu cầu của ứng dụng thường xuyên thay đổi, môi trường chạy phần mềm cũng thay đổi (ví dụ các thư viện phụ thuộc và nền tảng bên dưới), và trong phần mềm luôn có lỗi cần sửa.
 
-众所周知，软件的大部分成本不在最初的开发阶段，而在持续的维护阶段，包括修复缺陷、保持系统正常运行、调查失效、适配新的平台、为新的使用场景进行修改、偿还技术债和添加新功能 [^85] [^86]。
+Ai cũng biết phần lớn chi phí của phần mềm không nằm ở giai đoạn phát triển ban đầu, mà ở giai đoạn bảo trì liên tục: sửa lỗi, giữ cho hệ thống chạy ổn định, điều tra hỏng hóc, thích ứng với nền tảng mới, sửa đổi cho các trường hợp sử dụng mới, trả nợ kỹ thuật và thêm tính năng mới [^85] [^86].
 
-然而，维护工作本身也很困难。一个成功运行多年的系统，很可能仍在使用如今已经没有多少工程师了解的过时技术，例如大型机和 COBOL 代码；随着人员离开组织，关于系统为何如此设计、怎样设计的组织知识可能已经丢失；维护者也许不得不修正前人留下的错误。而且，计算机系统往往与它所支撑的组织紧密交织在一起，这意味着维护这样的 *遗留（legacy）* 系统既是人的问题，也是技术问题 [^87]。
+Tuy nhiên, bản thân việc bảo trì cũng khó. Một hệ thống chạy thành công nhiều năm rất có thể vẫn dùng công nghệ lỗi thời mà nay chẳng còn mấy kỹ sư hiểu, ví dụ máy tính lớn (mainframe) và mã COBOL; khi nhân sự rời tổ chức, tri thức tổ chức về lý do và cách thiết kế hệ thống có thể đã mất; người bảo trì có khi phải sửa sai sót do người đi trước để lại. Hơn nữa, hệ thống máy tính thường gắn chặt với tổ chức mà nó phục vụ, nghĩa là việc bảo trì một hệ thống *legacy* như vậy vừa là vấn đề của con người vừa là vấn đề kỹ thuật [^87].
 
-我们今天构建的每个系统，只要足够有价值、能够长期存续，终有一天都会成为遗留系统。为了尽量减轻以后维护软件的人所承受的痛苦，我们设计软件时就应该考虑维护问题。虽然无法事先断定哪些决定会在未来制造维护难题，但本书会特别关注几项具有广泛适用性的原则：
+Mọi hệ thống ta xây dựng hôm nay, nếu đủ giá trị để tồn tại lâu dài, rồi sẽ có ngày trở thành hệ thống legacy. Để giảm tối đa nỗi khổ của những người bảo trì phần mềm về sau, ta nên cân nhắc vấn đề bảo trì ngay khi thiết kế. Dù không thể biết trước quyết định nào sẽ gây rắc rối bảo trì trong tương lai, cuốn sách này đặc biệt chú ý đến một số nguyên tắc có tính áp dụng rộng:
 
-可运维性（operability）
-: 便于组织保持系统平稳运行。
+*khả năng vận hành* (*operability*)
+: Giúp tổ chức dễ dàng giữ cho hệ thống chạy trơn tru.
 
-简单性（simplicity）
-: 采用人们熟知且前后一致的模式和结构，避免不必要的复杂度，使新工程师也能轻松理解系统。
+*tính đơn giản* (*simplicity*)
+: Dùng các mẫu và cấu trúc quen thuộc, nhất quán, tránh độ phức tạp không cần thiết, để kỹ sư mới cũng dễ hiểu hệ thống.
 
-可演化性（evolvability）
-: 便于工程师将来修改系统，在需求变化时调整和扩展系统，以适应事先没有预料到的使用场景。
+*khả năng tiến hóa* (*evolvability*)
+: Giúp kỹ sư dễ sửa đổi hệ thống trong tương lai, điều chỉnh và mở rộng hệ thống khi yêu cầu thay đổi, để thích ứng với các trường hợp sử dụng chưa lường trước.
 
-### 可运维性：让运维更轻松 {#id37}
+### Khả năng vận hành: giúp việc vận hành nhẹ nhàng hơn {#id37}
 
-我们已经在[“云时代的运维”](/ch1#sec_introduction_operations)中讨论过运维的作用，并且看到，要实现可靠运维，人的流程至少与软件工具同等重要。事实上，有人认为：“良好的运维往往能绕开糟糕（或不完整）软件的局限，但即使软件很好，糟糕的运维也无法让它可靠运行” [^60]。
+Ta đã bàn về vai trò của vận hành ở [“Vận hành trong thời đại đám mây”](/ch1#sec_introduction_operations), và thấy rằng để vận hành đáng tin cậy, quy trình của con người quan trọng ít nhất ngang với công cụ phần mềm. Thực tế có ý kiến cho rằng: “vận hành tốt thường có thể vượt qua giới hạn của phần mềm tồi (hoặc chưa đầy đủ), nhưng dù phần mềm tốt, vận hành tồi cũng không thể khiến nó chạy đáng tin cậy” [^60].
 
-大规模系统由成千上万台机器组成，纯靠人工维护，成本高得难以承受，因此自动化必不可少。然而，自动化是一把双刃剑：总会有一些边缘情况（例如罕见的故障场景）需要运维团队人工干预。自动化无法处理的恰恰是最复杂的问题，所以自动化程度越高，反而越需要一支技能 *更强* 的运维团队来解决这些问题 [^88]。
+Hệ thống quy mô lớn gồm hàng nghìn máy, nếu chỉ bảo trì thủ công thì chi phí cao đến mức không kham nổi, nên tự động hóa là thiết yếu. Tuy nhiên, tự động hóa là con dao hai lưỡi: luôn có những trường hợp biên (ví dụ kịch bản lỗi hiếm gặp) cần đội vận hành can thiệp thủ công. Những gì tự động hóa không xử lý được lại chính là các vấn đề phức tạp nhất, nên mức độ tự động hóa càng cao thì càng cần một đội vận hành có kỹ năng *giỏi hơn* để giải quyết những vấn đề đó [^88].
 
-而且，自动化系统一旦出错，往往比依靠运维人员手工完成某些操作的系统更难排查。因此，对可运维性而言，自动化并非总是越多越好。一定程度的自动化依然很重要，最佳平衡点则取决于具体应用和组织的情况。
+Hơn nữa, khi một hệ thống tự động mắc lỗi, thường khó điều tra hơn hệ thống mà người vận hành làm tay một số thao tác. Vì vậy, đối với khả năng vận hành, tự động hóa không phải lúc nào cũng càng nhiều càng tốt. Một mức tự động hóa nhất định vẫn rất quan trọng, còn điểm cân bằng tối ưu tùy thuộc tình hình của từng ứng dụng và tổ chức.
 
-良好的可运维性意味着让日常工作更加轻松，使运维团队能把精力集中在高价值的任务上。数据系统可以通过多种方式简化日常工作 [^89]：
+Khả năng vận hành tốt nghĩa là làm cho công việc thường ngày nhẹ nhàng hơn, để đội vận hành tập trung sức vào các nhiệm vụ giá trị cao. Hệ thống dữ liệu có thể đơn giản hóa công việc công việc hằng ngày theo nhiều cách [^89] như sau:
 
-* 允许监控工具检查系统的关键指标，并支持可观测性工具（参见[“分布式系统的问题”](/ch1#sec_introduction_dist_sys_problems)），以便深入了解系统运行时的行为。许多商业工具和开源工具都能在这方面提供帮助 [^90]。
-* 避免依赖任何一台机器，使机器可以下线维护，而整个系统仍能不间断地运行。
-* 提供良好的文档和易于理解的操作模型（“如果我做 X，就会发生 Y”）。
-* 提供良好的默认行为，同时允许管理员在必要时覆盖默认设置。
-* 在适当的时候自动修复，同时也允许管理员在必要时手动控制系统状态。
-* 表现出可预测的行为，尽量避免出人意料。
+* Cho phép công cụ giám sát kiểm tra các chỉ số then chốt của hệ thống, và hỗ trợ các công cụ quan sát được (xem [“Các vấn đề của hệ thống phân tán”](/ch1#sec_introduction_dist_sys_problems)) để hiểu sâu hành vi của hệ thống khi chạy. Nhiều công cụ thương mại và mã nguồn mở có thể giúp ích ở mặt này [^90].
+* Tránh phụ thuộc vào bất kỳ máy nào, để có thể cho máy ngừng hoạt động để bảo trì mà toàn hệ thống vẫn chạy liên tục.
+* Có tài liệu tốt và mô hình vận hành dễ hiểu (“nếu tôi làm X thì Y sẽ xảy ra”).
+* Có hành vi mặc định tốt, đồng thời cho phép quản trị viên ghi đè các thiết lập mặc định khi cần.
+* Tự sửa chữa khi thích hợp, đồng thời cho phép quản trị viên điều khiển thủ công trạng thái hệ thống khi cần.
+* Thể hiện hành vi dễ dự đoán, hạn chế những điều bất ngờ.
 
-### 简单性：管理复杂度 {#id38}
+### Tính đơn giản: quản lý độ phức tạp {#id38}
 
-小型软件项目可以拥有简单讨喜、富有表现力的代码；但随着项目不断扩大，代码往往变得非常复杂，难以理解。这种复杂度拖慢了每一个需要在系统上工作的人，进一步增加了维护成本。一个陷入复杂泥潭的软件项目有时被称为 *大泥球（big ball of mud）* [^91]。
+Dự án phần mềm nhỏ có thể có mã đơn giản, dễ chịu, giàu tính biểu đạt, nhưng khi dự án lớn dần, mã thường trở nên rất phức tạp và khó hiểu. Độ phức tạp này làm chậm mọi người phải làm việc trên hệ thống, và làm chi phí bảo trì tăng thêm. Một dự án phần mềm sa vào vũng lầy phức tạp đôi khi được gọi là *big ball of mud* (“cục bùn khổng lồ”) [^91].
 
-当复杂度使维护变得困难时，预算往往超支，进度也常常延误。修改复杂软件也更容易引入缺陷：系统越难理解和推理，开发人员就越容易忽略隐藏的假设、无意的后果和意外的交互 [^69]。反过来，降低复杂度可以极大提高软件的可维护性，因此简单性应该成为我们构建系统时的一项关键目标。
+Khi độ phức tạp khiến việc bảo trì trở nên khó khăn, ngân sách thường bị vượt và tiến độ thường bị chậm. Sửa đổi phần mềm phức tạp cũng dễ gây ra lỗi hơn: hệ thống càng khó hiểu và khó suy luận thì lập trình viên càng dễ bỏ sót các giả định ẩn, hậu quả ngoài ý muốn và tương tác bất ngờ [^69]. Ngược lại, giảm độ phức tạp có thể nâng cao đáng kể khả năng bảo trì của phần mềm, nên tính đơn giản cần là một mục tiêu then chốt khi ta xây dựng hệ thống.
 
-简单的系统更容易理解，因此我们应该尽可能用最简单的办法解决给定的问题。可惜，说起来容易，做起来却很难。事物是否简单往往取决于主观品味，并不存在衡量简单性的客观标准 [^92]。例如，一个系统可能把复杂实现隐藏在简单接口背后，另一个系统的实现本身很简单，却向用户暴露了更多内部细节——究竟哪一个更简单？
+Hệ thống đơn giản dễ hiểu hơn, nên ta cần giải quyết vấn đề đã cho bằng cách đơn giản nhất có thể. Tiếc là nói thì dễ, làm thì khó. Một thứ có đơn giản hay không thường phụ thuộc vào khẩu vị chủ quan, và không có tiêu chuẩn khách quan nào để đo tính đơn giản [^92]. Chẳng hạn, một hệ thống có thể giấu cách cài đặt phức tạp sau giao diện đơn giản, còn hệ thống khác có cách cài đặt tự thân đơn giản nhưng để lộ nhiều chi tiết nội bộ hơn cho người dùng — hệ thống nào đơn giản hơn?
 
-人们曾尝试把复杂度分成 *本质复杂度（essential complexity）* 和 *偶然复杂度（accidental complexity）* 两类，以此对复杂度进行推理 [^93]。按照这种思路，本质复杂度是应用程序问题领域所固有的，而偶然复杂度只因工具的局限而产生。不幸的是，这种区分也有缺陷，因为随着工具不断演进，本质复杂度与偶然复杂度之间的界限也会发生变化 [^94]。
+Người ta từng cố chia độ phức tạp thành hai loại, *độ phức tạp thiết yếu* (*essential complexity*) và *độ phức tạp phát sinh* (*accidental complexity*), để suy luận về nó [^93]. Theo cách nghĩ này, độ phức tạp thiết yếu vốn có trong miền vấn đề của ứng dụng, còn độ phức tạp phát sinh chỉ nảy sinh do giới hạn của công cụ. Không may, sự phân biệt này cũng có khiếm khuyết, vì khi công cụ không ngừng tiến hóa, ranh giới giữa độ phức tạp thiết yếu và phát sinh cũng thay đổi [^94].
 
-管理复杂度最好的工具之一是 *抽象（abstraction）*。一个好的抽象可以把大量实现细节隐藏在干净、简单易懂的外观之下，也可以广泛用于各种不同的应用。复用抽象不仅比一遍遍重新实现类似功能更加高效，也能带来更高质量的软件，因为抽象组件的质量得到改进，所有使用它的应用都会从中受益。
+Một trong những công cụ tốt nhất để quản lý độ phức tạp là *trừu tượng hóa* (*abstraction*). Một trừu tượng tốt có thể giấu vô số chi tiết cài đặt sau một bề ngoài sạch sẽ, dễ hiểu, và cũng có thể dùng rộng rãi cho nhiều ứng dụng khác nhau. Tái sử dụng trừu tượng không chỉ hiệu quả hơn so với cài đặt lại các chức năng tương tự hết lần này đến lần khác, mà còn mang lại phần mềm chất lượng cao hơn, vì khi chất lượng của thành phần trừu tượng được cải thiện, mọi ứng dụng dùng nó đều được hưởng lợi.
 
-例如，高级编程语言是一种抽象，隐藏了机器码、CPU 寄存器和系统调用。SQL 也是一种抽象，隐藏了复杂的磁盘和内存数据结构、其他客户端发出的并发请求，以及崩溃后产生的不一致。当然，使用高级语言编程时，我们仍然用到了机器码；只不过没有 *直接* 使用它，因为编程语言的抽象让我们不必考虑这些细节。
+Ví dụ, ngôn ngữ lập trình bậc cao là một trừu tượng, che giấu mã máy, thanh ghi CPU và lời gọi hệ thống. SQL cũng là một trừu tượng, che giấu các cấu trúc dữ liệu phức tạp trên đĩa và trong bộ nhớ, các yêu cầu đồng thời do client khác gửi đến, và những bất nhất phát sinh sau khi sập. Dĩ nhiên, khi lập trình bằng ngôn ngữ bậc cao, ta vẫn đang dùng mã máy, chỉ là ta không dùng nó *trực tiếp*, vì trừu tượng của ngôn ngữ lập trình giúp ta không phải nghĩ đến các chi tiết đó.
 
-为了降低应用程序代码的复杂度，可以借助 *设计模式*（*design pattern*）[^95] 和 *领域驱动设计（DDD）* [^96] 等方法来构建抽象。本书讨论的不是这类应用专用的抽象，而是数据库事务、索引和事件日志等通用抽象；你可以在它们之上构建应用。如果你想采用 DDD 等方法，也可以把它们实现于本书所述的基础之上。
+Để giảm độ phức tạp của mã ứng dụng, có thể dùng các phương pháp như *mẫu thiết kế* (*design pattern*) [^95] và *thiết kế hướng miền* (*domain-driven design*, *DDD*) [^96] để xây dựng các trừu tượng. Cuốn sách này không bàn về những trừu tượng dành riêng cho ứng dụng như vậy, mà bàn về các trừu tượng đa dụng như giao dịch cơ sở dữ liệu, chỉ mục (*index*) và nhật ký sự kiện. Bạn có thể xây dựng ứng dụng trên chúng. Nếu muốn áp dụng các phương pháp như DDD, bạn cũng có thể cài đặt chúng trên nền tảng được mô tả trong sách.
 
-### 可演化性：让变化更容易 {#sec_introduction_evolvability}
+### Khả năng tiến hóa: giúp thay đổi dễ dàng hơn {#sec_introduction_evolvability}
 
-系统的需求永远不变，基本是不可能的。更可能的情况是，需求总在变化：你了解了新的事实，出现了事先未曾预料的使用场景，业务优先级发生变化，用户要求新功能，新平台取代旧平台，法律或监管要求改变，系统增长迫使架构发生变化，等等。
+Gần như không thể có chuyện yêu cầu của hệ thống mãi không đổi. Khả năng cao hơn là yêu cầu liên tục thay đổi: bạn biết thêm sự thật mới, xuất hiện các trường hợp sử dụng chưa lường trước, ưu tiên kinh doanh thay đổi, người dùng yêu cầu tính năng mới, nền tảng mới thay thế nền tảng cũ, yêu cầu pháp lý hoặc quy định thay đổi, sự tăng trưởng của hệ thống buộc kiến trúc phải thay đổi, v.v.
 
-在组织流程方面，*敏捷（Agile）* 工作模式为适应变化提供了框架。敏捷社区还发展出了适合在频繁变化的环境中开发软件的技术工具和流程，例如测试驱动开发（TDD）和重构。本书则会寻找一些办法，在由多个特性各异的应用程序或服务组成的系统层面上提高敏捷性。
+Về quy trình tổ chức, mô hình làm việc *Agile* cung cấp khung để thích ứng với thay đổi. Cộng đồng Agile cũng phát triển các công cụ kỹ thuật và quy trình phù hợp để phát triển phần mềm trong môi trường thay đổi thường xuyên, như phát triển hướng kiểm thử (*TDD*) và tái cấu trúc (refactoring). Cuốn sách này tìm cách nâng cao tính linh hoạt ở cấp hệ thống gồm nhiều ứng dụng hoặc dịch vụ có đặc tính khác nhau.
 
-修改数据系统、使其适应不断变化的需求有多容易，与系统的简单性和抽象密切相关：松耦合、简单的系统通常比紧耦合、复杂的系统更容易修改。这个概念如此重要，因此我们用一个不同的词来指代数据系统层面的敏捷性：*可演化性（evolvability）* [^97]。
+Việc sửa đổi hệ thống dữ liệu để thích ứng với yêu cầu thay đổi dễ hay khó liên quan chặt chẽ đến tính đơn giản và trừu tượng của hệ thống: hệ thống kết nối lỏng, đơn giản thường dễ sửa đổi hơn hệ thống kết nối chặt, phức tạp. Khái niệm này quan trọng đến mức ta dùng một từ khác để chỉ tính linh hoạt ở cấp hệ thống dữ liệu: *khả năng tiến hóa* (*evolvability*) [^97].
 
-大型系统中的某些操作不可逆，因此必须极为谨慎地执行；这是让变更变得困难的一个主要因素 [^98]。例如，假设你要从一个数据库迁移到另一个数据库：如果新系统出了问题却无法切回旧系统，风险就远高于能够轻松回退的情况。尽量减少不可逆性，可以提高系统的灵活性。
+Một số thao tác trong hệ thống lớn là không thể đảo ngược, nên phải thực hiện hết sức thận trọng. Đây là một yếu tố chính khiến việc thay đổi trở nên khó khăn [^98]. Ví dụ, giả sử bạn cần di chuyển từ cơ sở dữ liệu này sang cơ sở dữ liệu khác: nếu hệ thống mới gặp vấn đề mà không thể chuyển lại hệ thống cũ, rủi ro cao hơn nhiều so với trường hợp có thể dễ dàng quay lui. Giảm thiểu tính không thể đảo ngược sẽ tăng tính linh hoạt của hệ thống.
 
-## 总结 {#summary}
+## Tóm tắt {#summary}
 
-本章考察了几种非功能性需求：性能、可靠性、可伸缩性和可维护性。在讨论这些主题的过程中，我们还遇到了贯穿全书都要用到的一些原则和术语。本章从社交网络首页时间线的实现案例入手，说明了系统规模增大时会出现的部分挑战。
+Chương này đã xem xét một số yêu cầu phi chức năng: hiệu năng, độ tin cậy, khả năng mở rộng và khả năng bảo trì. Trong quá trình bàn các chủ đề này, ta cũng gặp một số nguyên tắc và thuật ngữ sẽ được dùng xuyên suốt cuốn sách. Chương bắt đầu từ tình huống triển khai home timeline của mạng xã hội, qua đó minh họa một số thách thức xuất hiện khi quy mô hệ thống tăng.
 
-我们讨论了如何衡量性能（例如采用响应时间分位数）、如何衡量系统负载（例如采用吞吐量指标），以及怎样在 SLA 中使用这些指标。可伸缩性与此密切相关：负载增加时，怎样确保性能保持不变。我们看到了一些关于可伸缩性的通用原则，例如把一项任务拆分成彼此可以独立运行的较小部分；后续章节还会深入探讨实现可伸缩性的技术细节。
+Ta đã bàn cách đo hiệu năng (ví dụ dùng phân vị của thời gian phản hồi), cách đo tải hệ thống (ví dụ dùng các chỉ số thông lượng), và cách dùng các chỉ số này trong SLA. Khả năng mở rộng có liên quan chặt chẽ: khi tải tăng, làm sao để hiệu năng giữ nguyên. Ta đã thấy một số nguyên tắc chung về khả năng mở rộng, chẳng hạn chia một tác vụ thành các phần nhỏ hơn có thể chạy độc lập với nhau. Các chương sau sẽ đi sâu vào chi tiết kỹ thuật để đạt khả năng mở rộng.
 
-为了实现可靠性，可以采用容错技术，使系统即使有某个组件（例如硬盘、机器或另一项服务）发生故障，仍能继续提供服务。我们考察了可能发生的各种硬件故障，并把它们与软件故障区分开来；软件故障往往高度相关，因此更难处理。提高可靠性的另一方面，是增强系统抵御人为失误的能力；我们还看到，无责复盘可以帮助组织从事故中学习。
+Để đạt độ tin cậy, có thể dùng các kỹ thuật chịu lỗi, giúp hệ thống tiếp tục cung cấp dịch vụ ngay cả khi một thành phần nào đó (ví dụ ổ đĩa, máy hoặc một dịch vụ khác) gặp lỗi. Ta đã xem xét các loại lỗi phần cứng có thể xảy ra và phân biệt chúng với lỗi phần mềm. Lỗi phần mềm thường có tương quan cao nên khó xử lý hơn. Một khía cạnh khác của việc nâng cao độ tin cậy là tăng khả năng chống chịu của hệ thống trước sai sót của con người. Ta cũng thấy postmortem không đổ lỗi giúp tổ chức học hỏi từ sự cố.
 
-最后，我们讨论了可维护性的几个方面，包括为运维团队的工作提供支持、管理复杂度，以及让应用程序的功能更容易随时间演化。实现这些目标没有简单的答案，但采用人们熟知、能够提供实用抽象的构件来搭建应用程序，确实会有所帮助。本书余下部分将介绍一系列已经在实践中证明颇有价值的构件。
+Cuối cùng, ta bàn về một số khía cạnh của khả năng bảo trì, gồm hỗ trợ công việc của đội vận hành, quản lý độ phức tạp, và làm cho chức năng của ứng dụng dễ tiến hóa theo thời gian. Không có câu trả lời đơn giản để đạt các mục tiêu này, nhưng việc xây dựng ứng dụng từ những khối quen thuộc, cung cấp các trừu tượng thực dụng, quả thực có ích. Phần còn lại của sách sẽ giới thiệu một loạt khối xây dựng đã được chứng minh là có giá trị trong thực tế.
 
-### 参考文献
+### Tài liệu tham khảo
 
 [^1]: Mike Cvet. [How We Learned to Stop Worrying and Love Fan-In at Twitter](https://www.youtube.com/watch?v=WEgCjwyXvwc). At *QCon San Francisco*, December 2016. 
 [^2]: Raffi Krikorian. [Timelines at Scale](https://www.infoq.com/presentations/Twitter-Timeline-Scalability/). At *QCon San Francisco*, November 2012. Archived at [perma.cc/V9G5-KLYK](https://perma.cc/V9G5-KLYK) 

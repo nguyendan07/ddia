@@ -1,6 +1,4 @@
 ---
-draft: true
-book_status: draft
 translationKey: ddia-v2-preface
 title: Lời nói đầu
 book_kind: preface
@@ -9,78 +7,78 @@ breadcrumbs: false
 ---
 
 > [!NOTE]
-> 本页保留第一版序言译文；“本书纲要”由本站按第二版目录维护。
+> Trang này giữ nguyên bản dịch lời nói đầu của ấn bản thứ nhất; phần "Tổng quan về sách" do trang này duy trì theo mục lục ấn bản thứ hai.
 
-如果近几年从业于软件工程，特别是服务器端和后端系统开发，那么你很有可能已经被大量关于数据存储和处理的时髦词汇轰炸过了： NoSQL！大数据！Web-Scale！分片！最终一致性！ACID！CAP 定理！云服务！MapReduce！实时！
+Nếu mấy năm gần đây bạn làm kỹ thuật phần mềm, nhất là phát triển hệ thống phía máy chủ và backend, rất có thể bạn đã bị "oanh tạc" bởi hàng loạt từ thời thượng về lưu trữ và xử lý dữ liệu: NoSQL! Big Data! Web-Scale! Sharding! Nhất quán cuối cùng! ACID! Định lý CAP! Dịch vụ đám mây! MapReduce! Thời gian thực!
 
-在最近十年中，我们看到了很多有趣的进展，关于数据库，分布式系统，以及在此基础上构建应用程序的方式。这些进展有着各种各样的驱动力：
+Trong mười năm qua, chúng ta đã chứng kiến nhiều tiến bộ thú vị về cơ sở dữ liệu, hệ thống phân tán và cách xây dựng ứng dụng trên nền chúng. Những tiến bộ này có nhiều động lực khác nhau:
 
-* 谷歌、雅虎、亚马逊、脸书、领英、微软和推特等互联网公司正在和巨大的流量 / 数据打交道，这迫使他们去创造能有效应对如此规模的新工具。
-* 企业需要变得敏捷，需要低成本地检验假设，需要通过缩短开发周期和保持数据模型的灵活性，快速地响应新的市场洞察。
-* 免费和开源软件变得非常成功，在许多环境中比商业软件和定制软件更受欢迎。
-* 处理器主频几乎没有增长，但是多核处理器已经成为标配，网络也越来越快。这意味着并行化程度只增不减。
-* 即使你在一个小团队中工作，现在也可以构建分布在多台计算机甚至多个地理区域的系统，这要归功于譬如亚马逊网络服务（AWS）等基础设施即服务（IaaS）概念的践行者。
-* 许多服务都要求高可用，因停电或维护导致的服务不可用，变得越来越难以接受。
+* Các công ty internet như Google, Yahoo!, Amazon, Facebook, LinkedIn, Microsoft và Twitter đang xử lý lượng dữ liệu và lưu lượng khổng lồ, buộc họ phải tạo ra những công cụ mới để đối phó hiệu quả với quy mô đó.
+* Doanh nghiệp cần linh hoạt, kiểm chứng giả thuyết với chi phí thấp, và phản ứng nhanh trước những nhận định mới về thị trường bằng cách rút ngắn chu kỳ phát triển và giữ cho mô hình dữ liệu linh hoạt.
+* Phần mềm tự do và mã nguồn mở đã rất thành công, và trong nhiều môi trường được ưa chuộng hơn phần mềm thương mại hay phần mềm tự phát triển nội bộ.
+* Tốc độ xung nhịp CPU gần như không tăng, nhưng bộ xử lý đa nhân đã trở thành tiêu chuẩn và mạng ngày càng nhanh. Điều này có nghĩa là mức độ song song hóa chỉ tăng chứ không giảm.
+* Ngay cả khi làm việc trong một nhóm nhỏ, giờ đây bạn cũng có thể xây dựng hệ thống phân bổ trên nhiều máy, thậm chí nhiều vùng địa lý, nhờ những đơn vị tiên phong trong khái niệm hạ tầng như một dịch vụ (IaaS) như Amazon Web Services (AWS).
+* Nhiều dịch vụ ngày nay được kỳ vọng có tính sẵn sàng cao; việc ngừng hoạt động kéo dài do mất điện hay bảo trì ngày càng khó chấp nhận.
 
-*数据密集型应用（data-intensive applications）* 正在通过使用这些技术进步来推动可能性的边界。一个应用被称为 *数据密集型* 的，如果 *数据是其主要挑战*（数据量，数据复杂度或数据变化速度）—— 与之相对的是 *计算密集型*，即处理器速度是其瓶颈。
+Các *ứng dụng chuyên sâu về dữ liệu* (*data-intensive applications*) đang đẩy lùi ranh giới của những điều khả dĩ bằng cách tận dụng các tiến bộ công nghệ này. Một ứng dụng được gọi là *chuyên sâu về dữ liệu* nếu *dữ liệu là thách thức chính của nó* (khối lượng dữ liệu, độ phức tạp của dữ liệu hoặc tốc độ thay đổi của dữ liệu) — trái với *chuyên sâu về tính toán* (*compute-intensive*), nơi tốc độ bộ xử lý là điểm nghẽn.
 
-帮助数据密集型应用存储和处理数据的工具与技术，正迅速地适应这些变化。新型数据库系统（“NoSQL”）已经备受关注，而消息队列，缓存，搜索索引，批处理和流处理框架以及相关技术也非常重要。很多应用组合使用这些工具与技术。
+Các công cụ và kỹ thuật giúp ứng dụng chuyên sâu về dữ liệu lưu trữ và xử lý dữ liệu đang thích ứng nhanh chóng với những thay đổi này. Các loại hệ quản trị cơ sở dữ liệu mới ("NoSQL") đã thu hút nhiều sự chú ý, còn hàng đợi thông điệp, cache, chỉ mục tìm kiếm, các framework xử lý theo lô và xử lý luồng cùng những công nghệ liên quan cũng rất quan trọng. Nhiều ứng dụng kết hợp những công cụ và kỹ thuật này với nhau.
 
-这些生意盎然的时髦词汇体现出人们对新的可能性的热情，这是一件好事。但是作为软件工程师和架构师，如果要开发优秀的应用，我们还需要对各种层出不穷的技术及其利弊权衡有精准的技术理解。为了获得这种洞察，我们需要深挖时髦词汇背后的内容。
+Những từ thời thượng tràn ngập lĩnh vực này cho thấy sự hào hứng với các khả năng mới, và đó là điều tốt. Tuy nhiên, là kỹ sư phần mềm và kiến trúc sư, để xây dựng được những ứng dụng tốt, chúng ta còn cần hiểu biết kỹ thuật chính xác về vô số công nghệ liên tục xuất hiện cùng những đánh đổi của chúng. Để có được cái nhìn thấu đáo đó, ta cần đào sâu vào những gì nằm sau các từ thời thượng.
 
-幸运的是，在技术迅速变化的背后总是存在一些持续成立的原则，无论你使用了特定工具的哪个版本。如果你理解了这些原则，就可以领会这些工具的适用场景，如何充分利用它们，以及如何避免其中的陷阱。这正是本书的初衷。
+May mắn là, đằng sau những thay đổi công nghệ nhanh chóng luôn có những nguyên lý bền vững, vẫn đúng bất kể bạn dùng phiên bản nào của một công cụ cụ thể. Nếu hiểu những nguyên lý này, bạn có thể nắm được từng công cụ phù hợp với tình huống nào, cách khai thác chúng tốt nhất và cách tránh những cạm bẫy. Đó chính là mục đích của cuốn sách này.
 
-本书的目标是帮助你在飞速变化的数据处理和数据存储技术大观园中找到方向。本书并不是某个特定工具的教程，也不是一本充满枯燥理论的教科书。相反，我们将看到一些成功数据系统的样例：许多流行应用每天都要在生产中满足可伸缩性、性能、以及可靠性的要求，而这些技术构成了这些应用的基础。
+Mục tiêu của cuốn sách là giúp bạn định hướng trong bức tranh đa dạng và biến đổi nhanh của các công nghệ xử lý và lưu trữ dữ liệu. Đây không phải hướng dẫn cho một công cụ cụ thể nào, cũng không phải một cuốn giáo trình đầy lý thuyết khô khan. Thay vào đó, ta sẽ xem một số ví dụ về những hệ thống dữ liệu thành công: các kỹ thuật này là nền tảng của nhiều ứng dụng phổ biến, vốn hằng ngày phải đáp ứng yêu cầu về khả năng mở rộng, hiệu năng và độ tin cậy trong môi trường production.
 
-我们将深入这些系统的内部，理清它们的关键算法，讨论背后的原则和它们必须做出的权衡。在这个过程中，我们将尝试寻找 *思考* 数据系统的有效方式 —— 不仅关于它们 *如何* 工作，还包括它们 *为什么* 以这种方式工作，以及哪些问题是我们需要问的。
+Ta sẽ đi sâu vào bên trong các hệ thống đó, gỡ rối các thuật toán then chốt, thảo luận các nguyên lý đằng sau và những đánh đổi mà chúng buộc phải thực hiện. Trong hành trình này, ta sẽ cố gắng tìm những cách hiệu quả để *suy nghĩ* về hệ thống dữ liệu — không chỉ về việc chúng hoạt động *như thế nào*, mà còn *vì sao* chúng hoạt động theo cách đó, và những câu hỏi nào ta cần đặt ra.
 
-阅读本书后，你能很好地决定哪种技术适合哪种用途，并了解如何将工具组合起来，为一个良好应用架构奠定基础。本书并不足以使你从头开始构建自己的数据库存储引擎，不过幸运的是这基本上很少有必要。你将获得对系统底层发生事情的敏锐直觉，这样你就有能力推理它们的行为，做出优秀的设计决策，并追踪任何可能出现的问题。
-
-
-## 本书的目标读者
-
-如果你开发的应用具有用于存储或处理数据的某种服务器 / 后端系统，而且使用网络（例如，Web 应用、移动应用或连接到互联网的传感器），那么本书就是为你准备的。
-
-本书是为软件工程师，软件架构师，以及喜欢写代码的技术经理准备的。如果你需要对所从事系统的架构做出决策 —— 例如你需要选择解决某个特定问题的工具，并找出如何最好地使用这些工具，那么这本书对你尤有价值。但即使你无法选择你的工具，本书仍将帮助你更好地了解所使用工具的长处和短处。
-
-你应当具有一些开发 Web 应用或网络服务的经验，且应当熟悉关系型数据库和 SQL。任何你了解的非关系型数据库和其他与数据相关工具都会有所帮助，但不是必需的。对常见网络协议如 TCP 和 HTTP 的大概理解是有帮助的。编程语言或框架的选择对阅读本书没有任何不同影响。
-
-如果以下任意一条对你为真，你会发现这本书很有价值：
-
-* 你想了解如何使数据系统可伸缩，例如，支持拥有数百万用户的 Web 或移动应用。
-* 你需要提高应用程序的可用性（最大限度地减少停机时间），保持稳定运行。
-* 你正在寻找使系统在长期运行过程易于维护的方法，即使系统规模增长，需求与技术也发生变化。
-* 你对事物的运作方式有着天然的好奇心，并且希望知道一些主流网站和在线服务背后发生的事情。这本书打破了各种数据库和数据处理系统的内幕，探索这些系统设计中的智慧是非常有趣的。
-
-有时在讨论可伸缩的数据系统时，人们会说：“你又不在谷歌或亚马逊，别操心可伸缩性了，直接上关系型数据库”。这个陈述有一定的道理：为了不必要的伸缩性而设计程序，不仅会浪费不必要的精力，并且可能会把你锁死在一个不灵活的设计中。实际上这是一种 “过早优化” 的形式。不过，选择合适的工具确实很重要，而不同的技术各有优缺点。我们将看到，关系数据库虽然很重要，但绝不是数据处理的终章。
+Đọc xong cuốn sách này, bạn sẽ có khả năng quyết định công nghệ nào phù hợp với mục đích nào, và hiểu cách kết hợp các công cụ để làm nền tảng cho một kiến trúc ứng dụng tốt. Cuốn sách chưa đủ để bạn tự xây dựng một storage engine cơ sở dữ liệu từ đầu, nhưng may mắn là điều đó hầu như hiếm khi cần thiết. Bạn sẽ có trực giác nhạy bén về những gì diễn ra bên dưới hệ thống, nhờ đó đủ khả năng suy luận về hành vi của chúng, đưa ra các quyết định thiết kế tốt và lần ra mọi vấn đề có thể phát sinh.
 
 
-## 本书涉及的领域
+## Đối tượng độc giả
 
-本书并不会尝试告诉读者如何安装或使用特定的软件包或 API，因为已经有大量文档给出了详细的使用说明。相反，我们会讨论数据系统的基础 —— 各种原则与利弊权衡，并探讨了不同产品所做出的不同设计决策。
+Nếu bạn phát triển ứng dụng có một dạng máy chủ / hệ thống backend nào đó để lưu trữ hoặc xử lý dữ liệu, và ứng dụng dùng mạng (ví dụ ứng dụng web, ứng dụng di động hoặc cảm biến kết nối internet), thì cuốn sách này dành cho bạn.
 
-在电子书中包含了在线资源全文的链接。所有链接在出版时都进行了验证，但不幸的是，由于网络的自然规律，链接往往会频繁地破损。如果你遇到链接断开的情况，或者正在阅读本书的打印副本，可以使用搜索引擎查找参考文献。对于学术论文，你可以在 Google 学术中搜索标题，查找可以公开获取的 PDF 文件。或者，你也可以在 https://github.com/ept/ddia-references 中找到所有的参考资料，我们在那儿维护最新的链接。
+Sách dành cho kỹ sư phần mềm, kiến trúc sư phần mềm và các nhà quản lý kỹ thuật yêu thích việc viết mã. Sách đặc biệt hữu ích nếu bạn cần đưa ra quyết định về kiến trúc của hệ thống mình đang làm — ví dụ chọn công cụ giải quyết một vấn đề cụ thể và tìm cách dùng chúng tốt nhất. Nhưng ngay cả khi bạn không có quyền chọn công cụ, sách vẫn giúp bạn hiểu rõ hơn điểm mạnh và điểm yếu của những công cụ đang dùng.
 
-我们主要关注的是数据系统的 *架构（architecture）*，以及它们被集成到数据密集型应用中的方式。本书没有足够的空间覆盖部署、运维、安全、管理等领域 —— 这些都是复杂而重要的主题，仅仅在本书中用粗略的注解讨论这些对它们很不公平。每个领域都值得用单独的书去讲。
+Bạn nên có một số kinh nghiệm xây dựng ứng dụng web hoặc dịch vụ mạng, và nên quen thuộc với cơ sở dữ liệu quan hệ và SQL. Hiểu biết về bất kỳ cơ sở dữ liệu phi quan hệ hay công cụ nào khác liên quan đến dữ liệu sẽ có ích, nhưng không bắt buộc. Có hiểu biết chung về các giao thức mạng phổ biến như TCP và HTTP cũng hữu ích. Việc chọn ngôn ngữ lập trình hay framework không ảnh hưởng gì đến việc đọc sách này.
 
-本书中描述的许多技术都被涵盖在 *大数据（Big Data）* 这个时髦词的范畴中。然而 “大数据” 这个术语被滥用，缺乏明确定义，以至于在严肃的工程讨论中没有用处。这本书使用歧义更小的术语，如 “单节点” 之于 “分布式系统”，或 “在线 / 交互式系统” 之于 “离线 / 批处理系统”。
+Nếu bất kỳ điều nào sau đây đúng với bạn, bạn sẽ thấy cuốn sách này có giá trị:
 
-本书对 *自由和开源软件（FOSS）* 有一定偏好，因为阅读、修改和执行源码是了解某事物详细工作原理的好方法。开放的平台也可以降低供应商垄断的风险。然而在适当的情况下，我们也会讨论专有软件（闭源软件，软件即服务 SaaS，或一些在文献中描述过但未公开发行的公司内部软件）。
+* Bạn muốn tìm hiểu cách làm cho hệ thống dữ liệu có khả năng mở rộng, ví dụ để hỗ trợ ứng dụng web hoặc di động có hàng triệu người dùng.
+* Bạn cần nâng cao tính sẵn sàng của ứng dụng (giảm thiểu thời gian ngừng hoạt động) và giữ cho nó vận hành ổn định.
+* Bạn đang tìm cách làm cho hệ thống dễ bảo trì về lâu dài, ngay cả khi hệ thống lớn lên, và yêu cầu cùng công nghệ thay đổi.
+* Bạn có sự tò mò tự nhiên về cách mọi thứ vận hành, và muốn biết điều gì diễn ra phía sau các trang web và dịch vụ trực tuyến lớn. Cuốn sách này mổ xẻ phần bên trong của nhiều cơ sở dữ liệu và hệ thống xử lý dữ liệu, và khám phá trí tuệ trong thiết kế của chúng là điều rất thú vị.
 
-## 本书纲要
-
-以下为本站维护的第二版章节导航：
-
-1. [第一部分：数据系统基础](/part-i)：[第 1 章：数据系统架构中的权衡](/ch1)、[第 2 章：定义非功能性需求](/ch2)、[第 3 章：数据模型与查询语言](/ch3)、[第 4 章：存储与检索](/ch4)、[第 5 章：编码与演化](/ch5)。
-
-2. [第二部分：分布式数据](/part-ii)：[第 6 章：复制](/ch6)、[第 7 章：分片](/ch7)、[第 8 章：事务](/ch8)、[第 9 章：分布式系统的麻烦](/ch9)、[第 10 章：一致性与共识](/ch10)。
-
-3. [第三部分：衍生数据](/part-iii)：[第 11 章：批处理](/ch11)、[第 12 章：流处理](/ch12)、[第 13 章：流式系统的哲学](/ch13)、[第 14 章：做正确的事情](/ch14)。
+Đôi khi, khi bàn về hệ thống dữ liệu có khả năng mở rộng, người ta nói: "Bạn đâu phải Google hay Amazon, đừng lo về khả năng mở rộng, cứ dùng cơ sở dữ liệu quan hệ đi." Nhận định này có phần đúng: thiết kế chương trình cho khả năng mở rộng không cần thiết vừa tốn công vô ích, vừa có thể khóa bạn vào một thiết kế thiếu linh hoạt. Thực ra đây là một dạng "tối ưu hóa sớm". Tuy nhiên, chọn đúng công cụ quả thật quan trọng, và mỗi công nghệ có ưu nhược điểm riêng. Ta sẽ thấy rằng cơ sở dữ liệu quan hệ tuy quan trọng nhưng tuyệt không phải điểm cuối của việc xử lý dữ liệu.
 
 
-## 参考文献与延伸阅读
+## Phạm vi của sách
 
-本书中讨论的大部分内容已经在其它地方以某种形式出现过了 —— 会议演示文稿、研究论文、博客文章、代码、BUG 跟踪器、邮件列表以及工程习惯中。本书总结了不同来源资料中最重要的想法，并在文本中包含了指向原始文献的链接。如果你想更深入地探索一个领域，那么每章末尾的参考文献都是很好的资源，其中大部分可以免费在线获取。
+Cuốn sách này không cố hướng dẫn người đọc cách cài đặt hay dùng một gói phần mềm hoặc API cụ thể, vì đã có rất nhiều tài liệu đưa ra hướng dẫn chi tiết. Thay vào đó, ta bàn về nền tảng của hệ thống dữ liệu — các nguyên lý và đánh đổi — và khám phá những quyết định thiết kế khác nhau của từng sản phẩm.
+
+Bản sách điện tử có kèm liên kết đến toàn văn các nguồn trực tuyến. Mọi liên kết đều được kiểm tra vào thời điểm xuất bản, nhưng tiếc là do quy luật tự nhiên của web, liên kết thường xuyên bị hỏng. Nếu gặp liên kết hỏng, hoặc đang đọc bản in, bạn có thể dùng công cụ tìm kiếm để tìm tài liệu tham khảo. Với các bài báo học thuật, bạn có thể tìm tiêu đề trên Google Scholar để lấy bản PDF công khai. Hoặc bạn có thể tìm toàn bộ tài liệu tham khảo tại https://github.com/ept/ddia-references, nơi chúng tôi duy trì các liên kết mới nhất.
+
+Trọng tâm của chúng ta là *kiến trúc* (*architecture*) của các hệ thống dữ liệu và cách chúng được tích hợp vào các ứng dụng chuyên sâu về dữ liệu. Cuốn sách không đủ chỗ để bao quát các lĩnh vực triển khai, vận hành, bảo mật, quản trị — đây đều là những chủ đề phức tạp và quan trọng, nên chỉ bàn qua loa vài ghi chú trong sách này là không công bằng với chúng. Mỗi lĩnh vực xứng đáng có một cuốn sách riêng.
+
+Nhiều kỹ thuật được mô tả trong sách này nằm trong phạm trù của từ thời thượng *Big Data*. Tuy nhiên, thuật ngữ "big data" bị lạm dụng và thiếu định nghĩa rõ ràng đến mức vô dụng trong các thảo luận kỹ thuật nghiêm túc. Cuốn sách này dùng những thuật ngữ ít mơ hồ hơn, chẳng hạn "một node" đối lập với "hệ thống phân tán", hoặc "hệ thống trực tuyến / tương tác" đối lập với "hệ thống ngoại tuyến / xử lý theo lô".
+
+Sách có phần ưu ái *phần mềm tự do và mã nguồn mở* (*FOSS*), vì đọc, sửa và chạy mã nguồn là cách tốt để tìm hiểu chi tiết cách một thứ hoạt động. Các nền tảng mở cũng giảm rủi ro bị nhà cung cấp độc quyền chi phối. Tuy nhiên, khi phù hợp, ta cũng bàn về phần mềm sở hữu độc quyền (phần mềm mã nguồn đóng, phần mềm như một dịch vụ SaaS, hoặc một số phần mềm nội bộ của công ty đã được mô tả trong tài liệu nhưng chưa phát hành công khai).
+
+## Tổng quan về sách
+
+Dưới đây là mục lục các chương của ấn bản thứ hai do trang này duy trì:
+
+1. [Phần I: Nền tảng của hệ thống dữ liệu](/part-i): [Chương 1: Đánh đổi trong kiến trúc hệ thống dữ liệu](/ch1), [Chương 2: Định nghĩa yêu cầu phi chức năng](/ch2), [Chương 3: Mô hình dữ liệu và ngôn ngữ truy vấn](/ch3), [Chương 4: Lưu trữ và truy xuất](/ch4), [Chương 5: Mã hóa và tiến hóa](/ch5).
+
+2. [Phần II: Dữ liệu phân tán](/part-ii): [Chương 6: Sao chép](/ch6), [Chương 7: Phân mảnh](/ch7), [Chương 8: Giao dịch](/ch8), [Chương 9: Những rắc rối của hệ phân tán](/ch9), [Chương 10: Nhất quán và đồng thuận](/ch10).
+
+3. [Phần III: Dữ liệu dẫn xuất](/part-iii): [Chương 11: Xử lý theo lô](/ch11), [Chương 12: Xử lý luồng](/ch12), [Chương 13: Triết lý của hệ thống xử lý luồng](/ch13), [Chương 14: Làm điều đúng đắn](/ch14).
+
+
+## Tài liệu tham khảo và đọc thêm
+
+Phần lớn nội dung bàn trong sách này đã xuất hiện ở đâu đó dưới một hình thức nào đó — bài thuyết trình hội nghị, bài báo nghiên cứu, bài blog, mã nguồn, hệ thống theo dõi lỗi, danh sách thư và thực hành kỹ thuật. Cuốn sách tổng hợp những ý tưởng quan trọng nhất từ các nguồn khác nhau, và trong văn bản có kèm liên kết đến tài liệu gốc. Nếu muốn khám phá sâu hơn một lĩnh vực, phần tài liệu tham khảo ở cuối mỗi chương là nguồn rất tốt, phần lớn có thể truy cập miễn phí trực tuyến.
 
 
 ## O‘Reilly Safari
@@ -92,38 +90,38 @@ Members have access to thousands of books, training videos, Learning Paths, inte
 For more information, please visit http://oreilly.com/safari.
 
 
-## 联系我们
+## Liên hệ với chúng tôi
 
-有关本书的评论和问题，请联系出版社：
+Mọi bình luận và câu hỏi về cuốn sách xin gửi đến nhà xuất bản:
 
 O’Reilly Media, Inc.  
 1005 Gravenstein Highway North  
 Sebastopol, CA 95472  
-800-998-9938（美国或加拿大）  
-707-829-0515（国际或本地）  
-707-829-0104（传真）
+800-998-9938 (Hoa Kỳ hoặc Canada)  
+707-829-0515 (quốc tế hoặc nội hạt)  
+707-829-0104 (fax)
 
-我们为本书提供了网页，会在上面列出勘误、示例以及任何补充信息。你可以访问：*http://bit.ly/designing-data-intensive-apps*。
+Chúng tôi có một trang web cho cuốn sách, nơi liệt kê đính chính, ví dụ và mọi thông tin bổ sung. Bạn có thể truy cập: *http://bit.ly/designing-data-intensive-apps*.
 
-如需发表评论或提出技术问题，请发送邮件至：*bookquestions@oreilly.com*。
+Để bình luận hoặc đặt câu hỏi kỹ thuật, vui lòng gửi email đến: *bookquestions@oreilly.com*.
 
-有关 O’Reilly 图书、课程、会议和新闻的更多信息，请访问：*http://www.oreilly.com*。
+Để biết thêm thông tin về sách, khóa học, hội nghị và tin tức của O’Reilly, hãy truy cập: *http://www.oreilly.com*.
 
 * Facebook: [http://facebook.com/oreilly](http://facebook.com/oreilly)
 * Twitter: [http://twitter.com/oreillymedia](http://twitter.com/oreillymedia)
 * YouTube: [http://www.youtube.com/oreillymedia](http://www.youtube.com/oreillymedia)
 
 
-## 致谢
+## Lời cảm ơn
 
-本书融合了学术研究和工业实践的经验，融合并系统化了大量其他人的想法与知识。在计算领域，我们往往会被各种新鲜花样所吸引，但我认为前人完成的工作中，有太多值得我们学习的地方了。本书有 800 多处引用：文章、博客、讲座、文档等，对我来说这些都是宝贵的学习资源。我非常感谢这些材料的作者分享他们的知识。
+Cuốn sách này kết hợp kinh nghiệm từ nghiên cứu học thuật lẫn thực tiễn công nghiệp, tổng hợp và hệ thống hóa vô số ý tưởng và tri thức của người khác. Trong ngành máy tính, ta thường bị cuốn hút bởi những thứ mới lạ, nhưng tôi cho rằng công việc của những người đi trước còn rất nhiều điều đáng học. Cuốn sách có hơn 800 trích dẫn: bài viết, blog, bài giảng, tài liệu… — đối với tôi, đó đều là nguồn học tập quý giá. Tôi rất biết ơn các tác giả đã chia sẻ tri thức của mình.
 
-我也从与人交流中学到了很多东西，很多人花费了宝贵的时间与我讨论想法并耐心解释。特别感谢 Joe Adler, Ross Anderson, Peter Bailis, Márton Balassi, Alastair Beresford, Mark Callaghan, Mat Clayton, Patrick Collison, Sean Cribbs, Shirshanka Das, Niklas Ekström, Stephan Ewen, Alan Fekete, Gyula Fóra, Camille Fournier, Andres Freund, John Garbutt, Seth Gilbert, Tom Haggett, Pat Hel‐ land, Joe Hellerstein, Jakob Homan, Heidi Howard, John Hugg, Julian Hyde, Conrad Irwin, Evan Jones, Flavio Junqueira, Jessica Kerr, Kyle Kingsbury, Jay Kreps, Carl Lerche, Nicolas Liochon, Steve Loughran, Lee Mallabone, Nathan Marz, Caitie McCaffrey, Josie McLellan, Christopher Meiklejohn, Ian Meyers, Neha Narkhede, Neha Narula, Cathy O’Neil, Onora O’Neill, Ludovic Orban, Zoran Perkov, Julia Powles, Chris Riccomini, Henry Robinson, David Rosenthal, Jennifer Rullmann, Matthew Sackman, Martin Scholl, Amit Sela, Gwen Shapira, Greg Spurrier, Sam Stokes, Ben Stopford, Tom Stuart, Diana Vasile, Rahul Vohra, Pete Warden, 以及 Brett Wooldridge.
+Tôi cũng học được rất nhiều từ những cuộc trò chuyện, khi nhiều người đã dành thời gian quý báu để thảo luận ý tưởng và kiên nhẫn giải thích với tôi. Đặc biệt cảm ơn Joe Adler, Ross Anderson, Peter Bailis, Márton Balassi, Alastair Beresford, Mark Callaghan, Mat Clayton, Patrick Collison, Sean Cribbs, Shirshanka Das, Niklas Ekström, Stephan Ewen, Alan Fekete, Gyula Fóra, Camille Fournier, Andres Freund, John Garbutt, Seth Gilbert, Tom Haggett, Pat Hel‐ land, Joe Hellerstein, Jakob Homan, Heidi Howard, John Hugg, Julian Hyde, Conrad Irwin, Evan Jones, Flavio Junqueira, Jessica Kerr, Kyle Kingsbury, Jay Kreps, Carl Lerche, Nicolas Liochon, Steve Loughran, Lee Mallabone, Nathan Marz, Caitie McCaffrey, Josie McLellan, Christopher Meiklejohn, Ian Meyers, Neha Narkhede, Neha Narula, Cathy O’Neil, Onora O’Neill, Ludovic Orban, Zoran Perkov, Julia Powles, Chris Riccomini, Henry Robinson, David Rosenthal, Jennifer Rullmann, Matthew Sackman, Martin Scholl, Amit Sela, Gwen Shapira, Greg Spurrier, Sam Stokes, Ben Stopford, Tom Stuart, Diana Vasile, Rahul Vohra, Pete Warden, và Brett Wooldridge.
 
-更多人通过审阅草稿并提供反馈意见在本书的创作过程中做出了无价的贡献。我要特别感谢 Raul Agepati, Tyler Akidau, Mattias Andersson, Sasha Baranov, Veena Basavaraj, David Beyer, Jim Brikman, Paul Carey, Raul Castro Fernandez, Joseph Chow, Derek Elkins, Sam Elliott, Alexander Gallego, Mark Grover, Stu Halloway, Heidi Howard, Nicola Kleppmann, Stefan Kruppa, Bjorn Madsen, Sander Mak, Stefan Podkowinski, Phil Potter, Hamid Ramazani, Sam Stokes, 以及 Ben Summers。当然对于本书中的任何遗留错误或难以接受的见解，我都承担全部责任。
+Nhiều người khác đã đóng góp vô giá trong quá trình viết sách bằng cách đọc duyệt bản thảo và đưa ra ý kiến phản hồi. Tôi đặc biệt cảm ơn Raul Agepati, Tyler Akidau, Mattias Andersson, Sasha Baranov, Veena Basavaraj, David Beyer, Jim Brikman, Paul Carey, Raul Castro Fernandez, Joseph Chow, Derek Elkins, Sam Elliott, Alexander Gallego, Mark Grover, Stu Halloway, Heidi Howard, Nicola Kleppmann, Stefan Kruppa, Bjorn Madsen, Sander Mak, Stefan Podkowinski, Phil Potter, Hamid Ramazani, Sam Stokes, và Ben Summers. Dĩ nhiên, mọi sai sót còn sót lại hay quan điểm khó chấp nhận trong sách đều do tôi hoàn toàn chịu trách nhiệm.
 
-为了帮助这本书落地，并且耐心地处理我缓慢的写作和不寻常的要求，我要对编辑 Marie Beaugureau，Mike Loukides，Ann Spencer 和 O'Reilly 的所有团队表示感谢。我要感谢 Rachel Head 帮我找到了合适的术语。我要感谢 Alastair Beresford，Susan Goodhue，Neha Narkhede 和 Kevin Scott，在其他工作事务之外给了我充分地创作时间和自由。
+Để cuốn sách có thể ra đời, và kiên nhẫn đối phó với tốc độ viết chậm cùng những yêu cầu khác thường của tôi, tôi xin cảm ơn các biên tập viên Marie Beaugureau, Mike Loukides, Ann Spencer và toàn bộ đội ngũ O'Reilly. Tôi xin cảm ơn Rachel Head đã giúp tôi tìm được thuật ngữ phù hợp. Tôi xin cảm ơn Alastair Beresford, Susan Goodhue, Neha Narkhede và Kevin Scott đã dành cho tôi thời gian và sự tự do để viết, bên ngoài các công việc khác.
 
-特别感谢 Shabbir Diwan 和 Edie Freedman，他们非常用心地为各章配了地图。他们提出了不落俗套的灵感，创作了这些地图，美丽而引人入胜，真是太棒了。
+Đặc biệt cảm ơn Shabbir Diwan và Edie Freedman, những người đã dày công vẽ bản đồ cho từng chương. Họ đưa ra những ý tưởng không theo lối mòn và tạo ra các bản đồ đẹp, cuốn hút, thật tuyệt vời.
 
-最后我要表达对家人和朋友们的爱，没有他们，我将无法走完这个将近四年的写作历程。你们是最棒的。
+Cuối cùng, tôi gửi lời yêu thương đến gia đình và bạn bè, nếu không có họ, tôi đã không thể đi hết hành trình viết sách gần bốn năm này. Các bạn là tuyệt nhất.
