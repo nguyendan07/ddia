@@ -1,6 +1,4 @@
 ---
-draft: true
-book_status: draft
 translationKey: ddia-v2-ch1
 title: Đánh đổi trong kiến trúc hệ thống dữ liệu
 book_kind: chapter
@@ -12,400 +10,401 @@ breadcrumbs: false
 
 <a id="ch_tradeoffs"></a>
 
-> *没有解决方案，只有权衡取舍。[…] 你只能尽力做出最佳权衡，也只能期望如此。*
+> *Không có giải pháp nào, chỉ có những sự đánh đổi. […] Bạn chỉ có thể cố gắng đạt được sự đánh đổi tốt nhất có thể, và cũng chỉ có thể hy vọng như vậy.*
 >
-> [Thomas Sowell](https://www.youtube.com/watch?v=2YUtKr8-_Fg)，与 Fred Barnes 的访谈（2005 年）
+> [Thomas Sowell](https://www.youtube.com/watch?v=2YUtKr8-_Fg), trả lời phỏng vấn Fred Barnes (2005)
 
-如今，数据是许多应用开发的核心。随着 Web 应用、移动应用、软件即服务（SaaS）和云服务的普及，在共享的服务器端数据基础设施中存储众多用户的数据，已经司空见惯。用户活动、业务交易、设备和传感器产生的数据都需要保存下来，以供分析。用户与应用交互时，既会读取已存储的数据，也会产生更多数据。
+Ngày nay, dữ liệu nằm ở trung tâm của rất nhiều ứng dụng. Cùng với sự phổ biến của ứng dụng web, ứng dụng di động, phần mềm như một dịch vụ (SaaS) và các dịch vụ đám mây, việc lưu dữ liệu của nhiều người dùng trong một hạ tầng dữ liệu dùng chung phía máy chủ đã trở nên quen thuộc. Dữ liệu từ hoạt động của người dùng, giao dịch kinh doanh, thiết bị và cảm biến đều cần được lưu lại để phục vụ phân tích. Khi người dùng tương tác với ứng dụng, họ vừa đọc dữ liệu đã lưu, vừa tạo ra thêm dữ liệu.
 
-少量数据可以在单台机器上存储和处理，通常比较容易应付。然而，随着数据量或查询速率增长，数据就需要分布到多台机器上，由此带来许多挑战。应用需求变得更加复杂之后，把所有数据放在一个系统里也不再够用，可能需要组合多个能力各异的存储或处理系统。
+Một lượng dữ liệu nhỏ có thể lưu trữ và xử lý trên một máy duy nhất, thường khá dễ đối phó. Tuy nhiên, khi khối lượng dữ liệu hoặc tốc độ truy vấn tăng lên, dữ liệu cần được phân bổ trên nhiều máy, kéo theo nhiều thách thức. Khi yêu cầu của ứng dụng trở nên phức tạp hơn, việc đặt toàn bộ dữ liệu vào một hệ thống cũng không còn đủ. Có thể cần kết hợp nhiều hệ thống lưu trữ hoặc xử lý với những khả năng khác nhau.
 
-如果数据管理是开发应用时面临的主要挑战之一，我们就称这种应用为 *数据密集型*（*data-intensive*）应用 [^1]。*计算密集型*（*compute-intensive*）系统的难点在于如何将某项极其庞大的计算并行化；而对数据密集型应用来说，我们通常更关心如何存储和处理海量数据、如何管理数据变更、如何在故障和并发面前保证一致性，以及如何维持服务的高可用性。
+Nếu quản lý dữ liệu là một trong những thách thức chính khi phát triển ứng dụng, ta gọi đó là ứng dụng *chuyên sâu về dữ liệu* (*data-intensive*) [^1]. Với hệ thống *chuyên sâu về tính toán* (*compute-intensive*), khó khăn nằm ở việc song song hóa một phép tính cực lớn, còn với ứng dụng chuyên sâu về dữ liệu, ta thường quan tâm hơn đến việc lưu trữ và xử lý lượng dữ liệu khổng lồ, quản lý các thay đổi của dữ liệu, bảo đảm tính nhất quán khi có lỗi và đồng thời xảy ra, cũng như duy trì tính sẵn sàng cao của dịch vụ.
 
-这类应用通常由一些标准构件搭建而成，它们提供各种常用功能。例如，许多应用都需要：
+Các ứng dụng như vậy thường được xây dựng từ những khối chuẩn, cung cấp các chức năng thông dụng. Chẳng hạn, nhiều ứng dụng cần:
 
-* 存储数据，以便自己或其他应用日后能够再次找到（*数据库*，*database*）
-* 记住开销昂贵的操作结果，加快读取速度（*缓存*，*cache*）
-* 允许用户按关键字搜索数据，或以各种方式过滤数据（*搜索索引*，*search index*）
-* 在事件和数据变更发生后立即处理（*流处理*，*stream processing*）
-* 定期处理累积的大批量数据（*批处理*，*batch processing*）
+* Lưu dữ liệu để chính chúng, hoặc ứng dụng khác, có thể tìm lại sau này (*cơ sở dữ liệu* (*database*))
+* Ghi nhớ kết quả của một thao tác tốn kém để đọc nhanh hơn (*cache*)
+* Cho phép người dùng tìm dữ liệu theo từ khóa, hoặc lọc dữ liệu theo nhiều cách (*chỉ mục tìm kiếm* (*search index*))
+* Xử lý ngay khi có sự kiện hoặc thay đổi dữ liệu (*xử lý luồng* (*stream processing*))
+* Định kỳ xử lý một lượng lớn dữ liệu đã tích lũy (*xử lý theo lô* (*batch processing*))
 
-构建应用时，我们通常会选用几个软件系统或服务（例如数据库和 API），再用应用代码把它们拼接起来。如果你的用途恰好是这些数据系统原本就为之设计的，整个过程可能相当容易。
+Khi xây dựng ứng dụng, ta thường chọn vài hệ thống phần mềm hoặc dịch vụ (ví dụ cơ sở dữ liệu và API) rồi ghép chúng lại bằng mã ứng dụng. Nếu mục đích sử dụng của bạn đúng với điều các hệ thống dữ liệu này vốn được thiết kế cho, việc đó có thể khá dễ dàng.
 
-但是，随着应用要实现的目标越来越高，挑战也随之而来。数据库系统种类繁多，特性各异，适用目的也各不相同——该选择哪一种？缓存有不同的做法，搜索索引也有多种构建方式，诸如此类——该如何权衡？你必须判断哪些工具和方法最适合手头的任务；而当一项工作无法由单个工具独立完成时，把多个工具组合起来也可能很困难。
+Nhưng khi mục tiêu của ứng dụng ngày càng cao, thách thức cũng xuất hiện. Có rất nhiều hệ thống cơ sở dữ liệu với đặc tính khác nhau, phù hợp với những mục đích khác nhau — nên chọn cái nào? Cache có nhiều cách làm, chỉ mục tìm kiếm (*search index*) cũng có nhiều cách xây dựng, và còn nhiều lựa chọn tương tự — làm sao cân nhắc? Bạn phải xác định công cụ và cách tiếp cận nào phù hợp nhất với công việc trước mắt, và khi một việc không thể do một công cụ đơn lẻ đảm nhiệm, việc kết hợp nhiều công cụ cũng có thể khó khăn.
 
-本书将帮助你决定采用哪些技术，以及如何组合这些技术。正如你将看到的，并不存在一种从根本上优于其他方案的做法；每种方案都有利有弊。本书会教你提出恰当的问题来评估和比较数据系统，从而找出最能满足特定应用需求的方案。
+Cuốn sách này sẽ giúp bạn quyết định dùng công nghệ nào và kết hợp chúng ra sao. Như bạn sẽ thấy, không có cách tiếp cận nào vượt trội hẳn so với các cách còn lại. Mỗi phương án đều có ưu và nhược điểm. Cuốn sách sẽ dạy bạn đặt những câu hỏi đúng để đánh giá và so sánh các hệ thống dữ liệu, từ đó tìm ra phương án đáp ứng tốt nhất nhu cầu của một ứng dụng cụ thể.
 
-我们的旅程从当今组织使用数据的一些典型方式开始。这里的许多思想源自 *企业软件*（*enterprise software*），也就是大型组织（例如大公司和政府机构）的软件需求与工程实践。因为在过去，只有大型组织才拥有如此庞大的数据量，需要复杂的技术方案；只要数据量足够小，用电子表格保存就行了！不过近年来，小公司和初创企业管理海量数据、构建数据密集型系统，也已变得十分普遍。
+Hành trình của chúng ta bắt đầu từ một số cách điển hình mà các tổ chức ngày nay sử dụng dữ liệu. Nhiều ý tưởng ở đây bắt nguồn từ *phần mềm doanh nghiệp* (*enterprise software*), tức nhu cầu phần mềm và thực tiễn kỹ thuật của các tổ chức lớn như tập đoàn và cơ quan chính phủ. Vì trước đây, chỉ các tổ chức lớn mới có lượng dữ liệu đồ sộ đến mức cần những giải pháp công nghệ phức tạp, còn khi dữ liệu đủ nhỏ thì cứ lưu bằng bảng tính! Tuy nhiên, những năm gần đây, các công ty nhỏ và startup quản lý khối lượng dữ liệu lớn, xây dựng hệ thống chuyên sâu về dữ liệu, cũng đã trở nên rất phổ biến.
 
-数据系统的一项关键挑战是：不同的人需要用数据做截然不同的事情。在一家公司里，你和你的团队有自己的一套优先事项；另一个团队即使在处理同一份数据，也可能有完全不同的目标。而且，这些目标未必得到明确表达，因而很容易造成误解，并引发对正确方案的争论。
+Một thách thức then chốt của hệ thống dữ liệu là: những người khác nhau cần làm những việc hoàn toàn khác nhau với dữ liệu. Trong một công ty, bạn và nhóm của bạn có những ưu tiên riêng. Một nhóm khác, dù đang xử lý cùng một dữ liệu, có thể có mục tiêu hoàn toàn khác. Hơn nữa, các mục tiêu này thường không được nói rõ, nên rất dễ gây hiểu lầm và tranh cãi về hướng đi đúng.
 
-为了帮助你了解有哪些选择，本章将比较几组相对的概念，并探讨它们之间的权衡：
+Để giúp bạn hiểu các lựa chọn, chương này so sánh một số cặp khái niệm đối lập và bàn về sự đánh đổi giữa chúng:
 
-* 事务型系统与分析型系统有何区别（[“分析型与事务型系统”](/ch1#sec_introduction_analytics)）；
-* 云服务与自托管系统各有哪些利弊（[“云服务与自托管”](/ch1#sec_introduction_cloud)）；
-* 何时应当从单节点系统转向分布式系统（[“分布式与单节点系统”](/ch1#sec_introduction_distributed)）；以及
-* 如何在业务需求与用户权利之间取得平衡（[“数据系统、法律与社会”](/ch1#sec_introduction_compliance)）。
+* Hệ thống tác nghiệp và hệ thống phân tích khác nhau thế nào ([“Hệ thống phân tích và hệ thống tác nghiệp”](/ch1#sec_introduction_analytics));
+* Dịch vụ đám mây và hệ thống self-hosted có những ưu nhược điểm gì ([“Dịch vụ đám mây và self-hosted”](/ch1#sec_introduction_cloud));
+* Khi nào nên chuyển từ hệ thống một node sang hệ thống phân tán ([“Hệ thống phân tán và hệ thống một node”](/ch1#sec_introduction_distributed)); và
+* Cân bằng giữa nhu cầu kinh doanh và quyền của người dùng ra sao ([“Hệ thống dữ liệu, pháp luật và xã hội”](/ch1#sec_introduction_compliance)).
 
-此外，本章还会提供阅读本书其余部分所需的术语。
+Ngoài ra, chương này cũng cung cấp các thuật ngữ cần thiết để đọc phần còn lại của cuốn sách.
 
-> [!TIP] 术语：前端与后端
+> [!TIP] Thuật ngữ: frontend và backend
 >
-> 本书讨论的许多内容都与 *后端开发*（*backend development*）有关。以 Web 应用为例，运行在浏览器中的客户端代码称为 *前端*（*frontend*），处理用户请求的服务器端代码则称为 *后端*（*backend*）。移动应用与前端相似：它们负责提供用户界面，并且常常经由互联网与服务器端后端通信。前端有时也会在用户设备上管理本地数据 [^2]，但数据基础设施面临的最大挑战往往在后端：前端只需处理一个用户的数据，而后端要代表 *所有* 用户管理数据。
+> Nhiều nội dung trong cuốn sách này liên quan đến *phát triển backend* (*backend development*). Lấy ứng dụng web làm ví dụ, mã phía client chạy trong trình duyệt được gọi là *frontend*, còn mã phía máy chủ xử lý yêu cầu của người dùng được gọi là *backend*. Ứng dụng di động giống frontend ở chỗ: chúng cung cấp giao diện người dùng và thường giao tiếp với backend phía máy chủ qua Internet. Đôi khi frontend cũng quản lý dữ liệu cục bộ trên thiết bị của người dùng [^2], nhưng thách thức lớn nhất của hạ tầng dữ liệu thường nằm ở backend: frontend chỉ xử lý dữ liệu của một người dùng, còn backend quản lý dữ liệu thay mặt *tất cả* người dùng.
 >
-> 后端服务通常可以通过 HTTP（有时是 WebSocket）访问。它一般由一些应用代码组成：这些代码在一个或多个数据库中读写数据，有时也与缓存、消息队列等其他数据系统交互；这些系统可以统称为 *数据基础设施*（*data infrastructure*）。应用代码通常是 *无状态*（*stateless*）的，也就是说，处理完一个 HTTP 请求后，它就会忘掉有关该请求的一切。任何需要在请求之间持久保存的信息，都必须存放在客户端或服务器端的数据基础设施中。
+> Dịch vụ backend thường truy cập được qua HTTP (đôi khi là WebSocket). Nó thường gồm một số mã ứng dụng đọc ghi dữ liệu trong một hoặc nhiều cơ sở dữ liệu, và đôi khi tương tác với các hệ thống dữ liệu khác như cache, hàng đợi tin nhắn. Các hệ thống này có thể gọi chung là *hạ tầng dữ liệu* (*data infrastructure*). Mã ứng dụng thường là *stateless*, nghĩa là sau khi xử lý xong một yêu cầu HTTP, nó quên mọi thứ về yêu cầu đó. Bất kỳ thông tin nào cần giữ lại giữa các yêu cầu đều phải lưu ở client hoặc trong hạ tầng dữ liệu phía máy chủ.
 
 
-## 分析型与事务型系统 {#sec_introduction_analytics}
+## Hệ thống phân tích và hệ thống tác nghiệp {#sec_introduction_analytics}
 
-如果你在企业中从事数据系统工作，很可能会遇到几类与数据打交道的人。第一类是 *后端工程师*（*backend engineer*），负责构建处理数据读取和更新请求的服务。这些服务通常直接面向外部用户，或通过其他服务间接为外部用户提供功能（参见[“微服务与无服务器”](/ch1#sec_introduction_microservices)）；有时也只供组织内其他部门使用。
+Nếu bạn làm việc với hệ thống dữ liệu trong một doanh nghiệp, rất có thể bạn sẽ gặp vài nhóm người làm việc với dữ liệu. Nhóm đầu tiên là *kỹ sư backend* (*backend engineer*), người xây dựng các dịch vụ xử lý yêu cầu đọc và cập nhật dữ liệu. Các dịch vụ này thường phục vụ trực tiếp người dùng bên ngoài, hoặc gián tiếp thông qua các dịch vụ khác (xem [“Microservices và serverless”](/ch1#sec_introduction_microservices)), đôi khi chúng chỉ dành cho các bộ phận khác trong tổ chức dùng.
 
-除了管理后端服务的团队，通常还有两类人需要访问组织的数据：*业务分析师*（*business analyst*）根据组织的活动生成报表，帮助管理层做出更好的决策，这就是 *商业智能*（BI）；*数据科学家*（*data scientist*）则从数据中寻找新的洞见，或者利用数据分析和机器学习/AI 构建面向用户的产品功能，例如电商网站上“购买了 X 的人也购买了 Y”的推荐、风险评分或垃圾邮件过滤等预测分析，以及搜索结果排名。
+Ngoài các nhóm quản lý dịch vụ backend, thường còn hai nhóm người khác cần truy cập dữ liệu của tổ chức: *chuyên viên phân tích nghiệp vụ* (*business analyst*) tạo báo cáo dựa trên hoạt động của tổ chức để giúp ban quản lý ra quyết định tốt hơn — đây là *business intelligence* (BI); còn *nhà khoa học dữ liệu* (*data scientist*) tìm kiếm những hiểu biết mới từ dữ liệu, hoặc dùng phân tích dữ liệu và học máy/AI để xây dựng các tính năng hướng tới người dùng, chẳng hạn gợi ý kiểu “người mua X cũng mua Y” trên trang thương mại điện tử, phân tích dự đoán như chấm điểm rủi ro hay lọc thư rác, và xếp hạng kết quả tìm kiếm.
 
-业务分析师和数据科学家使用的工具不同，工作方式也不同，但仍有一些共同之处：两者都要进行 *分析*（*analytics*），也就是查看用户和后端服务产生的数据，但通常不会修改这些数据（纠正错误或许除外）。他们可能会创建衍生数据集，以某种方式处理原始数据。由此形成了两类相互分离的系统——本书将始终沿用这种区分：
+Chuyên viên phân tích nghiệp vụ và nhà khoa học dữ liệu dùng các công cụ khác nhau và làm việc theo cách khác nhau, nhưng vẫn có điểm chung: cả hai đều thực hiện *phân tích dữ liệu* (*analytics*), nghĩa là xem xét dữ liệu do người dùng và các dịch vụ backend tạo ra, nhưng thường không sửa đổi dữ liệu đó (có thể trừ việc sửa lỗi). Họ có thể tạo các tập dữ liệu dẫn xuất, xử lý dữ liệu gốc theo một cách nào đó. Điều này dẫn đến hai loại hệ thống tách biệt nhau — sự phân biệt mà cuốn sách này sẽ dùng xuyên suốt:
 
-* *事务型系统*（*operational system*）由创建数据的后端服务和数据基础设施组成，例如直接为外部用户提供服务。应用代码根据用户执行的操作，读取和修改数据库中的数据。
-* *分析型系统*（*analytical system*）服务于业务分析师和数据科学家。它们保存事务型系统数据的只读副本，并针对分析所需的数据处理方式进行优化。
+* *Hệ thống tác nghiệp* (*operational system*) gồm các dịch vụ backend tạo ra dữ liệu và hạ tầng dữ liệu đi kèm, ví dụ phục vụ trực tiếp người dùng bên ngoài. Mã ứng dụng đọc và sửa dữ liệu trong cơ sở dữ liệu dựa trên các thao tác của người dùng.
+* *Hệ thống phân tích* (*analytical system*) phục vụ chuyên viên phân tích nghiệp vụ và nhà khoa học dữ liệu. Chúng giữ bản sao chỉ đọc của dữ liệu từ các hệ thống tác nghiệp, và được tối ưu cho các kiểu xử lý dữ liệu mà phân tích cần.
 
-正如下一节将要说明的，事务型系统与分析型系统往往有充分的理由彼此分离。随着这两类系统日趋成熟，又出现了两个专业角色：*数据工程师*（*data engineer*）与 *分析工程师*（*analytics engineer*）。数据工程师懂得如何集成事务型系统和分析型系统，并对组织的数据基础设施承担更广泛的责任 [^3]。分析工程师则对数据进行建模和转换，使其更便于组织内的业务分析师和数据科学家使用 [^4]。
+Như phần tiếp theo sẽ giải thích, hệ thống tác nghiệp và hệ thống phân tích thường có lý do chính đáng để tách rời nhau. Khi hai loại hệ thống này ngày càng trưởng thành, hai vai trò chuyên biệt mới xuất hiện: *kỹ sư dữ liệu* (*data engineer*) và *analytics engineer*. Kỹ sư dữ liệu biết cách tích hợp hệ thống tác nghiệp với hệ thống phân tích, và chịu trách nhiệm rộng hơn về hạ tầng dữ liệu của tổ chức [^3]. Analytics engineer mô hình hóa và biến đổi dữ liệu để chuyên viên phân tích nghiệp vụ và nhà khoa học dữ liệu trong tổ chức dễ dùng hơn [^4].
 
-许多工程师专攻事务型或分析型系统中的一类。不过，本书会同时涵盖两者，因为它们都在组织的数据生命周期中扮演重要角色。我们将深入探讨为内部和外部用户提供服务所需的数据基础设施，帮助你更好地与分界线另一侧的同事合作。
+Nhiều kỹ sư chuyên về một trong hai loại hệ thống. Tuy nhiên, cuốn sách này sẽ đề cập cả hai, vì cả hai đều đóng vai trò quan trọng trong vòng đời dữ liệu của một tổ chức. Chúng ta sẽ đi sâu vào hạ tầng dữ liệu cần có để phục vụ người dùng nội bộ và bên ngoài, giúp bạn phối hợp tốt hơn với đồng nghiệp ở phía bên kia ranh giới.
 
-### 事务处理与分析的特征 {#sec_introduction_oltp}
+### Đặc điểm của xử lý giao dịch và phân tích {#sec_introduction_oltp}
 
-在商业数据处理的早期，每次写入数据库通常都对应一笔 *商业交易*：完成一笔销售、向供应商下订单、发放员工工资，等等。后来，数据库的应用扩展到不涉及金钱往来的领域，*事务*（*transaction*）这个名称却沿用下来，用来指构成一个逻辑单元的一组读写操作。
+Trong những ngày đầu của xử lý dữ liệu thương mại, mỗi lần ghi vào cơ sở dữ liệu thường tương ứng với một *giao dịch kinh doanh*: hoàn tất một lần bán hàng, đặt hàng với nhà cung cấp, trả lương nhân viên, v.v. Về sau, cơ sở dữ liệu được dùng cho cả những lĩnh vực không liên quan đến tiền bạc, nhưng tên gọi *giao dịch* (*transaction*) vẫn được giữ lại để chỉ một nhóm thao tác đọc và ghi tạo thành một đơn vị logic.
 
 > [!NOTE]
-> [第 8 章](/ch8#ch_transactions)会详细探讨“事务”的含义。本章则宽泛地用这个词指代低延迟的读写操作。
+> [Chương 8](/ch8#ch_transactions) sẽ bàn chi tiết ý nghĩa của “giao dịch”. Chương này dùng từ đó theo nghĩa rộng, chỉ các thao tác đọc và ghi có độ trễ thấp.
 
-尽管数据库开始处理形形色色的数据——社交媒体帖子、游戏中的操作、地址簿联系人，等等——基本访问模式仍与处理商业交易相似。事务型系统通常按某个键查找少量记录（称为 *点查询*，*point query*），再根据用户输入插入、更新或删除记录。由于这些应用具有交互性，这种访问模式称为 *联机事务处理*（OLTP）。
+Mặc dù cơ sở dữ liệu bắt đầu được dùng cho đủ loại dữ liệu — bài đăng mạng xã hội, hành động trong trò chơi, liên hệ trong sổ địa chỉ, v.v. — mô hình truy cập cơ bản vẫn giống với việc xử lý giao dịch kinh doanh. Hệ thống tác nghiệp thường tra cứu một lượng nhỏ bản ghi theo một khóa nào đó (gọi là *truy vấn điểm*, *point query*), rồi chèn, cập nhật hoặc xóa bản ghi dựa trên đầu vào của người dùng. Vì các ứng dụng này có tính tương tác, mô hình truy cập đó được gọi là *xử lý giao dịch trực tuyến* (OLTP).
 
-与此同时，数据库也越来越多地用于分析，而分析的访问模式与 OLTP 大相径庭。分析查询通常会扫描海量记录，计算计数、总和或平均值等聚合统计量，而不是把一条条记录返回给用户。例如，连锁超市的业务分析师可能想回答下面的问题：
+Trong khi đó, cơ sở dữ liệu cũng ngày càng được dùng để phân tích, và mô hình truy cập của phân tích rất khác OLTP. Truy vấn phân tích thường quét một lượng lớn bản ghi và tính các thống kê tổng hợp như đếm, tổng hoặc trung bình, thay vì trả từng bản ghi cho người dùng. Chẳng hạn, chuyên viên phân tích nghiệp vụ của một chuỗi siêu thị có thể muốn trả lời các câu hỏi sau:
 
-* 我们每家商店在一月份的总收入是多少？
-* 在我们最近的促销期间，我们比平时多卖出了多少香蕉？
-* 哪个品牌的婴儿食品最常与 X 品牌尿布一起购买？
+* Tổng doanh thu của từng cửa hàng trong tháng Một là bao nhiêu?
+* Trong đợt khuyến mãi gần đây, chúng ta bán được nhiều hơn bình thường bao nhiêu chuối?
+* Nhãn hiệu thức ăn trẻ em nào thường được mua cùng nhất với tã nhãn hiệu X?
 
-这类查询产生的报表是商业智能的重要依据，可以帮助管理层决定下一步行动。为了把这种数据库使用模式与事务处理区分开来，人们称之为 *联机分析处理*（OLAP）[^5]。OLTP 与分析之间的界线并不总是泾渭分明，但{{< xref tbl="1-1" page="/ch1" anchor="tab_oltp_vs_olap" >}}表 1-1{{< /xref >}}列出了二者的一些典型特征。
+Báo cáo do các truy vấn này tạo ra là cơ sở quan trọng của business intelligence, giúp ban quản lý quyết định hành động tiếp theo. Để phân biệt kiểu dùng cơ sở dữ liệu này với xử lý giao dịch, người ta gọi nó là *xử lý phân tích trực tuyến* (OLAP) [^5]. Ranh giới giữa OLTP và phân tích không phải lúc nào cũng rõ ràng, nhưng {{< xref tbl="1-1" page="/ch1" anchor="tab_oltp_vs_olap" >}}Bảng 1-1{{< /xref >}} liệt kê một số đặc điểm điển hình của hai loại này.
 
-| 属性 | 事务型系统（OLTP） | 分析型系统（OLAP） |
-|------|--------------------|--------------------|
-| 主要读取模式 | 点查询（按键读取单条记录） | 聚合大量记录 |
-| 主要写入模式 | 创建、更新和删除单条记录 | 批量导入（ETL）或事件流 |
-| 人类用户示例 | Web 或移动应用的最终用户 | 为决策提供支持的内部分析师 |
-| 机器用途示例 | 检查某项操作是否获得授权 | 检测欺诈或滥用模式 |
-| 查询类型 | 由应用预先定义的一组固定查询 | 分析师可以任意查询 |
-| 数据表示的内容 | 数据的最新状态（当前时点） | 一段时间内发生的事件历史 |
-| 数据集规模 | GB 至 TB | TB 至 PB |
-{#tab_oltp_vs_olap num="1-1" caption="事务型系统与分析型系统的特征比较"}
+| Thuộc tính | Hệ thống tác nghiệp (OLTP) | Hệ thống phân tích (OLAP) |
+|------------|----------------------------|---------------------------|
+| Kiểu đọc chính | Truy vấn điểm (đọc từng bản ghi theo khóa) | Tổng hợp trên nhiều bản ghi |
+| Kiểu ghi chính | Tạo, cập nhật và xóa từng bản ghi | Nhập hàng loạt (ETL) hoặc luồng sự kiện |
+| Ví dụ người dùng là con người | Người dùng cuối của ứng dụng web hoặc di động | Chuyên viên phân tích nội bộ, hỗ trợ ra quyết định |
+| Ví dụ mục đích sử dụng của máy | Kiểm tra một thao tác có được ủy quyền hay không | Phát hiện mẫu gian lận hoặc lạm dụng |
+| Kiểu truy vấn | Một tập truy vấn cố định, do ứng dụng định sẵn | Chuyên viên phân tích có thể truy vấn tùy ý |
+| Dữ liệu biểu diễn | Trạng thái mới nhất của dữ liệu (thời điểm hiện tại) | Lịch sử các sự kiện đã xảy ra theo thời gian |
+| Kích thước tập dữ liệu | GB đến TB | TB đến PB |
+{#tab_oltp_vs_olap num="1-1" caption="So sánh đặc điểm của hệ thống tác nghiệp và hệ thống phân tích"}
 
 > [!NOTE]
-> OLAP 中的 *联机*（online）含义并不明确；它大概是指查询并非只用于预定义报表，分析师还会以交互方式使用 OLAP 系统进行探索性查询。
+> Nghĩa của *trực tuyến* (online) trong OLAP không rõ ràng. Có lẽ nó ám chỉ rằng truy vấn không chỉ dùng cho các báo cáo định sẵn, mà chuyên viên phân tích còn dùng hệ thống OLAP một cách tương tác để truy vấn khám phá.
 
-事务型系统一般不允许用户自行编写 SQL 查询并提交给数据库执行，否则用户可能读取或修改自己无权访问的数据。用户也可能写出执行开销很高的查询，影响其他用户使用数据库。因此，OLTP 系统主要执行写在应用代码中的一组固定查询，只在维护或排查故障时偶尔运行一次性自定义查询。分析数据库则不同：它通常允许用户自由手写任意 SQL 查询，也可以通过 Tableau、Looker 或 Microsoft Power BI 等数据可视化或仪表盘工具自动生成查询。
+Hệ thống tác nghiệp thường không cho phép người dùng tự viết truy vấn SQL rồi gửi cho cơ sở dữ liệu thực thi, vì như vậy họ có thể đọc hoặc sửa dữ liệu mà họ không có quyền truy cập. Người dùng cũng có thể viết những truy vấn có chi phí thực thi cao, ảnh hưởng đến việc dùng cơ sở dữ liệu của người dùng khác. Vì vậy, hệ thống OLTP chủ yếu thực thi một tập truy vấn cố định được viết sẵn trong mã ứng dụng, chỉ thỉnh thoảng mới chạy truy vấn tùy chỉnh một lần khi bảo trì hoặc xử lý sự cố. Cơ sở dữ liệu phân tích thì khác: thường cho phép người dùng tự do viết tay các truy vấn SQL tùy ý, hoặc tự động sinh truy vấn thông qua các công cụ trực quan hóa dữ liệu hay bảng điều khiển như Tableau, Looker hoặc Microsoft Power BI.
 
-还有一类系统专为分析型负载（即聚合大量记录的查询）而设计，却嵌入在面向用户的产品中。这类用途称为 *产品分析*（*product analytics*）或 *实时分析*（*real-time analytics*），为此设计的系统包括 Pinot、Druid 和 ClickHouse [^6]。
+Còn có một loại hệ thống được thiết kế cho tải phân tích (tức truy vấn tổng hợp nhiều bản ghi) nhưng lại nhúng vào sản phẩm hướng tới người dùng. Cách dùng này gọi là *phân tích sản phẩm* (*product analytics*) hoặc *phân tích thời gian thực* (*real-time analytics*). Các hệ thống được thiết kế cho mục đích đó gồm Pinot, Druid và ClickHouse [^6].
 
-### 数据仓库 {#sec_introduction_dwh}
+### Kho dữ liệu {#sec_introduction_dwh}
 
-起初，同一套数据库既用于事务处理，也用于分析查询。事实证明，SQL 在这方面非常灵活，两类查询都能胜任。不过到了 20 世纪 80 年代末和 90 年代初，企业开始不再使用 OLTP 系统进行分析，转而在一个独立的数据库系统上运行分析查询。这个独立的数据库称为 *数据仓库*（*data warehouse*）。
+Ban đầu, cùng một cơ sở dữ liệu được dùng cho cả xử lý giao dịch lẫn truy vấn phân tích. SQL tỏ ra rất linh hoạt, làm tốt cả hai loại truy vấn. Tuy nhiên, vào cuối những năm 1980 và đầu những năm 1990, các doanh nghiệp bắt đầu ngừng dùng hệ thống OLTP để phân tích, mà chuyển sang chạy truy vấn phân tích trên một hệ thống cơ sở dữ liệu riêng. Cơ sở dữ liệu riêng này được gọi là *kho dữ liệu* (*data warehouse*).
 
-一家大型企业可能拥有几十乃至上百个联机事务处理系统：支撑面向客户的网站，控制实体店的销售终端（收银系统），跟踪仓库库存，规划车辆路线，管理供应商和员工，以及执行许多其他任务。每个系统都很复杂，都需要专门的团队维护，因此最终大多彼此独立运行。
+Một doanh nghiệp lớn có thể có hàng chục, thậm chí hàng trăm hệ thống xử lý giao dịch trực tuyến: hệ thống hỗ trợ website hướng tới khách hàng, hệ thống điều khiển điểm bán hàng (máy tính tiền) ở cửa hàng, hệ thống theo dõi tồn kho trong kho hàng, hệ thống lập lộ trình cho đội xe, hệ thống quản lý nhà cung cấp và nhân viên, cùng nhiều tác vụ khác. Mỗi hệ thống đều phức tạp, cần một nhóm chuyên trách bảo trì, nên cuối cùng phần lớn chúng vận hành độc lập với nhau.
 
-通常不宜让业务分析师和数据科学家直接查询这些 OLTP 系统，原因有以下几点：
+Thông thường, không nên để chuyên viên phân tích nghiệp vụ và nhà khoa học dữ liệu truy vấn trực tiếp các hệ thống OLTP này, vì những lý do sau:
 
-* 所需数据可能散落在多个事务型系统中，很难通过一条查询组合这些数据集；这个问题称为 *数据孤岛*（*data silo*）。
-* 适合 OLTP 的模式和数据布局不太适合分析（参见[“星型与雪花型：分析模式”](/ch3#sec_datamodels_analytics)）。
-* 分析查询的开销可能很高；在 OLTP 数据库上运行它们，会影响其他用户的性能。
-* 出于安全或合规方面的考虑，OLTP 系统可能位于一个不允许用户直接访问的独立网络中。
+* Dữ liệu cần dùng có thể nằm rải rác ở nhiều hệ thống tác nghiệp, khó kết hợp các tập dữ liệu đó trong một truy vấn duy nhất. Vấn đề này gọi là *silo dữ liệu* (*data silo*).
+* Lược đồ và cách bố trí dữ liệu phù hợp với OLTP lại không phù hợp lắm với phân tích (xem [“Mô hình hình sao và bông tuyết: lược đồ cho phân tích”](/ch3#sec_datamodels_analytics)).
+* Truy vấn phân tích có thể rất tốn kém: chạy chúng trên cơ sở dữ liệu OLTP sẽ ảnh hưởng đến hiệu năng của những người dùng khác.
+* Vì lý do bảo mật hoặc tuân thủ, hệ thống OLTP có thể nằm trong một mạng riêng không cho người dùng truy cập trực tiếp.
 
-相比之下，*数据仓库* 是一个独立的数据库，分析师可以尽情查询，而不会影响 OLTP 系统的运行 [^7]。正如[第 4 章](/ch4#ch_storage)将要介绍的，数据仓库的存储方式往往与 OLTP 数据库截然不同，以便针对分析中常见的查询类型进行优化。
+Ngược lại, *kho dữ liệu* là một cơ sở dữ liệu riêng mà chuyên viên phân tích có thể truy vấn thoải mái mà không ảnh hưởng đến hoạt động của hệ thống OLTP [^7]. Như [Chương 4](/ch4#ch_storage) sẽ giới thiệu, kho dữ liệu thường lưu trữ dữ liệu theo cách rất khác cơ sở dữ liệu OLTP, nhằm tối ưu cho các kiểu truy vấn phổ biến trong phân tích.
 
-数据仓库保存着企业各个 OLTP 系统中数据的只读副本。数据先从 OLTP 数据库中抽取出来（通过定期转储或连续的更新流），再转换成便于分析的模式并加以清理，最后载入数据仓库。把数据送入数据仓库的这一过程称为 *提取—转换—加载*（ETL），如{{< xref fig="1-1" page="/ch1" anchor="fig_dwh_etl" >}}图 1-1{{< /xref >}}所示。有时也会对调 *转换* 与 *加载* 两步的顺序，即先加载数据，再在数据仓库内转换；这便成了 *ELT*。
+Kho dữ liệu chứa bản sao chỉ đọc của dữ liệu từ các hệ thống OLTP khác nhau của doanh nghiệp. Dữ liệu trước tiên được trích xuất từ cơ sở dữ liệu OLTP (bằng cách kết xuất định kỳ hoặc qua luồng cập nhật liên tục), rồi được chuyển đổi sang lược đồ thuận tiện cho phân tích và được làm sạch, cuối cùng được nạp vào kho dữ liệu. Quá trình đưa dữ liệu vào kho dữ liệu này gọi là *trích xuất—chuyển đổi—nạp* (ETL), như minh họa ở {{< xref fig="1-1" page="/ch1" anchor="fig_dwh_etl" >}}Hình 1-1{{< /xref >}}. Đôi khi thứ tự của hai bước *chuyển đổi* và *nạp* bị đảo lại, tức nạp dữ liệu trước rồi mới chuyển đổi bên trong kho dữ liệu. Cách này được gọi là *ELT*.
 
-{{< fig num="1-1" id="fig_dwh_etl" src="/fig/ddia_0101.png" caption="将数据通过 ETL 导入数据仓库的简化示意图。" class="ddia-figure ddia-figure--standard" width="2953" height="2099" />}}
+{{< fig num="1-1" id="fig_dwh_etl" src="/fig/ddia_0101.png" caption="Sơ đồ đơn giản hóa việc đưa dữ liệu vào kho dữ liệu bằng ETL." class="ddia-figure ddia-figure--standard" width="2953" height="2099" />}}
 
-有时，ETL 流程的数据源是外部 SaaS 产品，例如客户关系管理（CRM）、电子邮件营销或信用卡处理系统。此时，你无法直接访问原始数据库，只能通过软件供应商的 API 获取数据。把这些外部系统的数据导入自己的数据仓库，就能进行 SaaS API 本身无法支持的分析。针对 SaaS API 的 ETL，通常由 Fivetran、Singer 或 AirByte 等专业数据连接器服务实现。
+Đôi khi nguồn dữ liệu của quy trình ETL là các sản phẩm SaaS bên ngoài, ví dụ hệ thống quản lý quan hệ khách hàng (CRM), tiếp thị qua email hoặc xử lý thẻ tín dụng. Khi đó, bạn không thể truy cập trực tiếp cơ sở dữ liệu gốc, mà chỉ lấy được dữ liệu qua API của nhà cung cấp phần mềm. Đưa dữ liệu của các hệ thống bên ngoài này vào kho dữ liệu của chính mình cho phép thực hiện những phân tích mà bản thân API của SaaS không hỗ trợ. ETL cho API của SaaS thường được thực hiện bởi các dịch vụ kết nối dữ liệu chuyên dụng như Fivetran, Singer hoặc AirByte.
 
-有些数据库系统提供 *混合事务/分析处理*（HTAP），目标是在单个系统中同时支持 OLTP 和分析，无需通过 ETL 把数据从一个系统送入另一个系统 [^8] [^9]。然而，许多 HTAP 系统内部仍由一个 OLTP 系统和一个独立的分析系统耦合而成，只是共同隐藏在统一接口之后。因此，要理解这类系统的工作原理，二者的区别依然重要。
+Một số hệ thống cơ sở dữ liệu cung cấp *xử lý giao dịch/phân tích kết hợp* (HTAP), với mục tiêu hỗ trợ cả OLTP lẫn phân tích trong một hệ thống duy nhất, không cần ETL để chuyển dữ liệu từ hệ thống này sang hệ thống khác [^8] [^9]. Tuy nhiên, nhiều hệ thống HTAP bên trong vẫn gồm một hệ thống OLTP và một hệ thống phân tích riêng được ghép lại, chỉ là cùng ẩn sau một giao diện thống nhất. Vì vậy, để hiểu cách các hệ thống này hoạt động, sự khác biệt giữa hai loại vẫn rất quan trọng.
 
-此外，即使已有 HTAP，由于事务型系统和分析型系统的目标与需求不同，把它们分开依然很常见。特别是，每个事务型系统各自拥有数据库通常被视为良好实践（参见[“微服务与无服务器”](/ch1#sec_introduction_microservices)），这样可能产生数百个独立的事务型数据库；而企业通常只设一个数据仓库，以便业务分析师在一条查询中组合多个事务型系统的数据。
+Hơn nữa, ngay cả khi đã có HTAP, việc tách riêng hệ thống tác nghiệp và hệ thống phân tích vẫn rất phổ biến, vì mục tiêu và yêu cầu của chúng khác nhau. Đặc biệt, việc mỗi hệ thống tác nghiệp có cơ sở dữ liệu riêng thường được coi là thực hành tốt (xem [“Microservices và serverless”](/ch1#sec_introduction_microservices)), có thể dẫn đến hàng trăm cơ sở dữ liệu tác nghiệp riêng biệt, còn doanh nghiệp thường chỉ có một kho dữ liệu, để chuyên viên phân tích nghiệp vụ kết hợp dữ liệu từ nhiều hệ thống tác nghiệp trong một truy vấn.
 
-因此，HTAP 并不能取代数据仓库。它适合的是另一类场景：同一个应用既要运行扫描大量数据行的分析查询，又要低延迟地读取和更新单条记录。例如，欺诈检测就可能具有这样的工作负载 [^10]。
+Do đó, HTAP không thay thế được kho dữ liệu. Nó phù hợp với một loại tình huống khác: cùng một ứng dụng vừa cần chạy truy vấn phân tích quét nhiều dòng dữ liệu, vừa cần đọc và cập nhật từng bản ghi với độ trễ thấp. Chẳng hạn, phát hiện gian lận có thể có tải công việc như vậy [^10].
 
-事务型系统与分析型系统的分离，体现了一种更广泛的趋势：随着工作负载要求越来越高，系统也日益专门化，针对特定负载进行优化。通用系统应付少量数据绰绰有余；但规模越大，系统往往越专门化 [^11]。
+Việc tách hệ thống tác nghiệp khỏi hệ thống phân tích phản ánh một xu hướng rộng hơn: khi yêu cầu của tải công việc ngày càng cao, hệ thống ngày càng chuyên biệt hóa, được tối ưu cho từng loại tải cụ thể. Hệ thống đa dụng đủ sức xử lý lượng dữ liệu nhỏ, nhưng quy mô càng lớn, hệ thống thường càng chuyên biệt [^11].
 
-#### 从数据仓库到数据湖 {#from-data-warehouse-to-data-lake}
+#### Từ kho dữ liệu đến data lake {#from-data-warehouse-to-data-lake}
 
-数据仓库通常采用 *关系* 数据模型，并通过 SQL 查询（参见[第 3 章](/ch3#ch_datamodels)），有时还会配合专门的商业智能软件。这种模型很适合业务分析师所需的查询，却不太适合数据科学家的需求；他们可能需要完成下面的工作：
+Kho dữ liệu thường dùng mô hình dữ liệu *quan hệ* và được truy vấn bằng SQL (xem [Chương 3](/ch3#ch_datamodels)), đôi khi kèm phần mềm business intelligence chuyên dụng. Mô hình này rất phù hợp với các truy vấn mà chuyên viên phân tích nghiệp vụ cần, nhưng lại không phù hợp lắm với nhu cầu của nhà khoa học dữ liệu, những người có thể phải làm các việc sau:
 
-* 把数据转换成适合训练机器学习模型的形式。这通常要把数据库表中的行列转换为数值向量或矩阵，其中的数值称为 *特征*（*feature*）。以尽可能提高训练后模型性能的方式完成这种转换，称为 *特征工程*（*feature engineering*）；它通常需要编写难以用 SQL 表达的定制代码。
-* 对文本数据（例如商品评论）应用自然语言处理技术，尝试从中提取结构化信息（例如作者表达的情绪，或提到了哪些主题）。同样，他们也可能要用计算机视觉技术从照片中提取结构化信息。
+* Chuyển đổi dữ liệu thành dạng thích hợp để huấn luyện mô hình học máy. Việc này thường đòi hỏi biến các hàng và cột của bảng cơ sở dữ liệu thành vector hoặc ma trận số, trong đó các giá trị được gọi là *đặc trưng* (*feature*). Thực hiện phép chuyển đổi này sao cho hiệu năng của mô hình sau huấn luyện cao nhất có thể được gọi là *kỹ thuật đặc trưng* (*feature engineering*). Nó thường cần viết mã tùy biến khó diễn đạt bằng SQL.
+* Áp dụng kỹ thuật xử lý ngôn ngữ tự nhiên lên dữ liệu văn bản (ví dụ đánh giá sản phẩm) để cố gắng trích xuất thông tin có cấu trúc (ví dụ cảm xúc tác giả bày tỏ, hoặc các chủ đề được nhắc đến). Tương tự, họ cũng có thể cần dùng thị giác máy tính để trích xuất thông tin có cấu trúc từ ảnh.
 
-尽管人们一直尝试为 SQL 数据模型加入机器学习算子 [^12]，也在关系模型的基础上构建高效的机器学习系统 [^13]，许多数据科学家仍不愿在数据仓库这样的关系数据库中工作。他们往往更喜欢 pandas、scikit-learn 等 Python 数据分析库，R 等统计分析语言，以及 Spark 等分布式分析框架 [^14]。我们将在[“数据框、矩阵与数组”](/ch3#sec_datamodels_dataframes)中进一步讨论这些工具。
+Dù đã có nhiều nỗ lực đưa các toán tử học máy vào mô hình dữ liệu SQL [^12], cũng như xây dựng hệ thống học máy hiệu quả trên nền mô hình quan hệ [^13], nhiều nhà khoa học dữ liệu vẫn không muốn làm việc trong cơ sở dữ liệu quan hệ như kho dữ liệu. Họ thường thích các thư viện phân tích dữ liệu Python như pandas và scikit-learn, các ngôn ngữ phân tích thống kê như R, và các framework phân tích phân tán như Spark [^14]. Chúng ta sẽ bàn thêm về các công cụ này ở [“DataFrame, ma trận và mảng”](/ch3#sec_datamodels_dataframes).
 
-因此，组织需要以适合数据科学家使用的形式提供数据。解决方案是 *数据湖*（*data lake*）：一个集中的数据存储库，保存一切可能对分析有用的数据副本，这些数据通过 ETL 流程从事务型系统取得。数据湖与数据仓库的区别在于，它只保存文件，并不强制规定文件格式或数据模型。数据湖中的文件可以是一批数据库记录，以 Avro 或 Parquet 等文件格式编码（参见[第 5 章](/ch5#ch_encoding)）；也完全可以是文本、图像、视频、传感器读数、稀疏矩阵、特征向量、基因组序列，或任何其他类型的数据 [^15]。数据湖不仅更加灵活，而且往往比关系数据存储更便宜，因为它可以使用对象存储等廉价通用的文件存储（参见[“云原生系统架构”](/ch1#sec_introduction_cloud_native)）。
+Vì vậy, tổ chức cần cung cấp dữ liệu dưới dạng phù hợp với nhà khoa học dữ liệu. Giải pháp là *data lake*: một kho dữ liệu tập trung, chứa bản sao của mọi dữ liệu có thể hữu ích cho phân tích, lấy từ các hệ thống tác nghiệp qua quy trình ETL. Điểm khác biệt giữa data lake và kho dữ liệu là data lake chỉ chứa tệp, không áp đặt định dạng tệp hay mô hình dữ liệu cụ thể. Tệp trong data lake có thể là một tập bản ghi cơ sở dữ liệu được mã hóa theo định dạng như Avro hay Parquet (xem [Chương 5](/ch5#ch_encoding)), mà cũng hoàn toàn có thể là văn bản, hình ảnh, video, số liệu cảm biến, ma trận thưa, vector đặc trưng, chuỗi bộ gen hoặc bất kỳ loại dữ liệu nào khác [^15]. Data lake không chỉ linh hoạt hơn mà còn thường rẻ hơn kho lưu trữ dữ liệu quan hệ, vì có thể dùng kho lưu trữ tệp thông dụng, giá rẻ như lưu trữ đối tượng (xem [“Kiến trúc hệ thống cloud-native”](/ch1#sec_introduction_cloud_native)).
 
-ETL 流程已经泛化为 *数据管道*（*data pipeline*）；在某些情况下，数据湖成为事务型系统通往数据仓库途中的一站。数据湖以事务型系统产生的“原始”形态保存数据，不把它们转换成关系数据仓库的模式。这种做法的好处是，每个数据消费者都可以把原始数据转换成最适合自己需求的形式。它有一个诙谐的名字——*寿司原则*（*sushi principle*）：“原始数据更好”[^16]。
+Quy trình ETL đã được tổng quát hóa thành *pipeline dữ liệu* (*data pipeline*). Trong một số trường hợp, data lake trở thành một chặng trên đường từ hệ thống tác nghiệp đến kho dữ liệu. Data lake lưu dữ liệu ở dạng “thô” do hệ thống tác nghiệp tạo ra, không chuyển đổi chúng sang lược đồ của kho dữ liệu quan hệ. Lợi ích của cách làm này là mỗi bên tiêu thụ dữ liệu có thể biến dữ liệu thô thành dạng phù hợp nhất với nhu cầu của mình. Cách làm này có một cái tên hóm hỉnh — *nguyên tắc sushi* (*sushi principle*): “dữ liệu thô thì tốt hơn” [^16].
 
-除了把数据从数据湖载入独立的数据仓库，也可以直接针对数据湖中的文件运行典型的数据仓库工作负载（SQL 查询和业务分析），并与数据科学和机器学习工作负载并存。这种架构称为 *数据湖仓*（*data lakehouse*）；它需要在数据湖的文件存储之上增加查询执行引擎和元数据层（例如模式管理）[^17]。
+Ngoài việc nạp dữ liệu từ data lake vào kho dữ liệu riêng, còn có thể chạy trực tiếp các tải công việc kiểu kho dữ liệu (truy vấn SQL và phân tích nghiệp vụ) trên các tệp trong data lake, song song với các tải khoa học dữ liệu và học máy. Kiến trúc này gọi là *data lakehouse*. Nó cần thêm công cụ thực thi truy vấn và một tầng siêu dữ liệu (ví dụ quản lý lược đồ) bên trên kho lưu trữ tệp của data lake [^17].
 
-Apache Hive、Spark SQL、Presto 和 Trino 都采用了这种方法。
+Apache Hive, Spark SQL, Presto và Trino đều dùng cách tiếp cận này.
 
-#### 超越数据湖 {#beyond-the-data-lake}
+#### Vượt ra ngoài data lake {#beyond-the-data-lake}
 
-随着分析实践日益成熟，组织也越来越重视分析系统与数据管道的管理和运维，例如 DataOps 宣言就体现了这种趋势 [^18]。其中包括治理、隐私，以及遵守 GDPR、CCPA 等法规的问题；我们将在[“数据系统、法律与社会”](/ch1#sec_introduction_compliance)和[“立法与自律”](/ch14#sec_future_legislation)中讨论这些问题。
+Khi thực tiễn phân tích ngày càng trưởng thành, các tổ chức cũng chú trọng hơn đến việc quản lý và vận hành hệ thống phân tích cùng pipeline dữ liệu, thể hiện ở Tuyên ngôn DataOps chẳng hạn [^18]. Điều này bao gồm quản trị, quyền riêng tư và việc tuân thủ các quy định như GDPR và CCPA. Chúng ta sẽ bàn về các vấn đề này ở [“Hệ thống dữ liệu, pháp luật và xã hội”](/ch1#sec_introduction_compliance) và [“Lập pháp và tự điều chỉnh”](/ch14#sec_future_legislation).
 
-此外，分析数据的提供形式越来越多，不仅包括文件和关系表，还包括事件流（参见[第 12 章](/ch12#ch_stream)）。采用基于文件的分析时，可以定期（例如每天）重新运行分析，以响应数据的变化；流处理则能让分析系统快得多，通常在几秒内便对事件作出响应。具体是否值得采用流处理，要看应用对时效性的要求。例如，它可以用来识别并阻止潜在的欺诈或滥用活动。
+Ngoài ra, dữ liệu phân tích ngày càng được cung cấp không chỉ dưới dạng tệp và bảng quan hệ mà còn dưới dạng luồng sự kiện (xem [Chương 12](/ch12#ch_stream)). Với phân tích dựa trên tệp, có thể chạy lại phân tích định kỳ (ví dụ mỗi ngày) để phản ứng với thay đổi của dữ liệu, còn xử lý luồng cho phép hệ thống phân tích phản hồi nhanh hơn nhiều, thường chỉ trong vài giây sau khi có sự kiện. Có nên dùng xử lý luồng hay không còn phụ thuộc vào yêu cầu về tính kịp thời của ứng dụng. Chẳng hạn, nó có thể được dùng để nhận diện và ngăn chặn hoạt động gian lận hoặc lạm dụng tiềm ẩn.
 
-有时，分析系统的输出还会提供给事务型系统，这个过程有时称为 *反向 ETL*（*reverse ETL*）[^19]。例如，在分析系统中训练好的机器学习模型可以部署到生产环境，向最终用户生成“购买了 X 的人也购买了 Y”之类的推荐。分析系统中这类投入实际应用的输出也称为 *数据产品*（*data product*）[^20]。机器学习模型可以借助 TFX、Kubeflow 或 MLflow 等专用工具部署到事务型系统。
+Đôi khi, đầu ra của hệ thống phân tích còn được cung cấp ngược lại cho hệ thống tác nghiệp, quá trình này đôi khi được gọi là *reverse ETL* [^19]. Ví dụ, một mô hình học máy được huấn luyện trong hệ thống phân tích có thể được triển khai lên môi trường production để sinh gợi ý kiểu “người mua X cũng mua Y” cho người dùng cuối. Những đầu ra của hệ thống phân tích được đưa vào dùng thực tế như vậy còn được gọi là *sản phẩm dữ liệu* (*data product*) [^20]. Mô hình học máy có thể được triển khai lên hệ thống tác nghiệp bằng các công cụ chuyên dụng như TFX, Kubeflow hoặc MLflow.
 
-### 记录系统与衍生数据 {#sec_introduction_derived}
+### Hệ thống ghi nhận gốc và dữ liệu dẫn xuất {#sec_introduction_derived}
 
-除了区分事务型系统与分析型系统，本书还区分 *记录系统*（*system of record*）与 *衍生数据系统*（*derived data system*）。这组术语很有用，可以帮助你理清数据在系统中的流向：
+Bên cạnh việc phân biệt hệ thống tác nghiệp và hệ thống phân tích, cuốn sách này còn phân biệt *hệ thống ghi nhận gốc* (*system of record*) với *hệ thống dữ liệu dẫn xuất* (*derived data system*). Cặp thuật ngữ này hữu ích, giúp bạn nắm rõ luồng dữ liệu đi qua các hệ thống:
 
-记录系统
-:   记录系统也称 *权威数据源*（*source of truth*），保存某类数据的权威或 *规范*（*canonical*）版本。新数据到来时，例如用户输入，首先写入这里。每项事实只表示一次，通常采用 *规范化*（*normalized*）表示（参见[“规范化、反规范化与连接”](/ch3#sec_datamodels_normalization)）。如果其他系统与记录系统的数据不一致，那么按照定义，应以记录系统中的值为准。
+Hệ thống ghi nhận gốc
+:   Hệ thống ghi nhận gốc, còn gọi là *nguồn sự thật* (*source of truth*), giữ phiên bản có thẩm quyền hay phiên bản *chuẩn* (*canonical*) của một loại dữ liệu. Khi có dữ liệu mới đến, ví dụ do người dùng nhập, nó được ghi vào đây đầu tiên. Mỗi sự kiện chỉ được biểu diễn một lần, thường theo dạng *chuẩn hóa* (*normalized*) (xem [“Chuẩn hóa, phi chuẩn hóa và phép nối”](/ch3#sec_datamodels_normalization)). Nếu một hệ thống khác không khớp với hệ thống ghi nhận gốc, thì theo định nghĩa, giá trị trong hệ thống ghi nhận gốc là đúng.
 
-衍生数据系统
-:   衍生系统中的数据，是以另一个系统中的现有数据为基础，经过某种转换或处理而得到的结果。衍生数据即使丢失，也可以从原始数据源重新创建。缓存就是一个典型例子：若数据在缓存中，便可直接返回；若缓存中没有所需数据，则可以退回底层数据库读取。反规范化值、索引、物化视图、转换后的数据表示，以及在数据集上训练的模型，也都属于这一类。
+Hệ thống dữ liệu dẫn xuất
+:   Dữ liệu trong hệ thống dẫn xuất là kết quả của việc lấy dữ liệu sẵn có từ một hệ thống khác rồi chuyển đổi hoặc xử lý theo một cách nào đó. Nếu dữ liệu dẫn xuất bị mất, bạn có thể tạo lại nó từ nguồn dữ liệu gốc. Cache là một ví dụ điển hình: nếu dữ liệu có trong cache thì trả về ngay, còn nếu cache không có thì quay lại đọc từ cơ sở dữ liệu bên dưới. Giá trị phi chuẩn hóa, chỉ mục (*index*), khung nhìn vật chất hóa, biểu diễn dữ liệu đã chuyển đổi và các mô hình được huấn luyện trên tập dữ liệu cũng thuộc loại này.
 
-从技术上讲，衍生数据是 *冗余*（*redundant*）的，因为它复制了现有信息。但是，要让读查询获得良好性能，这种冗余往往不可或缺。你可以从同一个数据源衍生出多个不同的数据集，从不同“视角”观察数据。
+Về mặt kỹ thuật, dữ liệu dẫn xuất là *dư thừa* (*redundant*), vì nó lặp lại thông tin đã có. Nhưng để truy vấn đọc có hiệu năng tốt, sự dư thừa này thường không thể thiếu. Bạn có thể dẫn xuất nhiều tập dữ liệu khác nhau từ cùng một nguồn, cho phép nhìn dữ liệu từ các “góc độ” khác nhau.
 
-分析型系统通常属于衍生数据系统，因为它们消费的是在别处创建的数据。事务型服务则可能同时包含记录系统和衍生数据系统：记录系统是数据首先写入的主数据库，衍生数据系统则是加快常见读取操作的索引和缓存，尤其适用于记录系统无法高效回答的查询。
+Hệ thống phân tích thường là hệ thống dẫn xuất, vì chúng tiêu thụ dữ liệu được tạo ra ở nơi khác. Dịch vụ tác nghiệp có thể gồm cả hệ thống ghi nhận gốc lẫn hệ thống dẫn xuất: hệ thống ghi nhận gốc là cơ sở dữ liệu chính nơi dữ liệu được ghi trước tiên, còn hệ thống dẫn xuất là các chỉ mục (*index*) và cache giúp tăng tốc các thao tác đọc phổ biến, nhất là với những truy vấn mà hệ thống ghi nhận gốc không trả lời hiệu quả được.
 
-大多数数据库、存储引擎和查询语言，本身并不天然是记录系统或衍生系统。数据库只是工具，如何使用由你决定。一个系统究竟属于哪一类，取决于它在应用中的用法，而不是采用了什么工具。明确哪些数据衍生自哪些其他数据，可以让原本令人困惑的系统架构变得清晰。
+Đa số cơ sở dữ liệu, công cụ lưu trữ và ngôn ngữ truy vấn không tự nhiên thuộc loại ghi nhận gốc hay dẫn xuất. Cơ sở dữ liệu chỉ là công cụ, dùng thế nào là do bạn quyết định. Một hệ thống thuộc loại nào phụ thuộc vào cách nó được dùng trong ứng dụng của bạn, chứ không phụ thuộc vào công cụ nó dùng. Làm rõ dữ liệu nào dẫn xuất từ dữ liệu nào có thể khiến một kiến trúc hệ thống vốn rối rắm trở nên rõ ràng.
 
-如果一个系统的数据衍生自另一个系统，那么每当记录系统中的原始数据发生变化，就需要有相应流程更新衍生数据。遗憾的是，许多数据库在设计时都假定应用只会使用这一个数据库，因而很难集成多个系统并传播这类更新。我们将在[“数据集成”](/ch13#sec_future_integration)中讨论 *数据集成*（*data integration*）的各种方法；借助这些方法，可以组合多个数据系统，完成单个系统无法独力完成的任务。
+Nếu dữ liệu của một hệ thống dẫn xuất từ hệ thống khác, thì mỗi khi dữ liệu gốc trong hệ thống ghi nhận gốc thay đổi, cần có quy trình tương ứng để cập nhật dữ liệu dẫn xuất. Đáng tiếc là nhiều cơ sở dữ liệu được thiết kế với giả định rằng ứng dụng chỉ dùng mỗi nó, nên rất khó tích hợp nhiều hệ thống và lan truyền các cập nhật như vậy. Chúng ta sẽ bàn về các cách *tích hợp dữ liệu* (*data integration*) ở [“Tích hợp dữ liệu”](/ch13#sec_future_integration), nhờ đó có thể kết hợp nhiều hệ thống dữ liệu để làm những việc mà một hệ thống đơn lẻ không tự làm được.
 
-至此，我们对分析与事务处理的比较告一段落。下一节要讨论的另一项权衡，你可能已经见过许多人反复争论。
+Đến đây, phần so sánh giữa phân tích và xử lý giao dịch của chúng ta kết thúc. Phần tiếp theo bàn về một sự đánh đổi khác mà có lẽ bạn đã thấy nhiều người tranh luận mãi.
 
 
-## 云服务与自托管 {#sec_introduction_cloud}
+## Dịch vụ đám mây và self-hosted {#sec_introduction_cloud}
 
-无论组织要做什么，最先遇到的问题之一总是：应当由内部完成，还是外包出去？应当自建，还是购买？
+Bất kể tổ chức cần làm gì, một trong những câu hỏi đầu tiên luôn là: nên tự làm bên trong, hay thuê ngoài? Nên tự xây dựng, hay mua?
 
-归根结底，这取决于业务的优先事项。管理学中通常认为，属于组织核心能力或竞争优势的事情应当在内部完成；非核心、例行或司空见惯的事情则应交给供应商 [^21]。举一个极端的例子：大多数公司都不会自行发电（能源公司除外，这里也不考虑应急备用电源），因为从电网购电更加便宜。
+Suy cho cùng, điều này tùy thuộc vào ưu tiên kinh doanh. Quan điểm quản trị thông thường cho rằng những việc thuộc năng lực cốt lõi hay lợi thế cạnh tranh của tổ chức nên làm nội bộ, còn những việc không cốt lõi, thường lệ hoặc phổ biến thì nên giao cho nhà cung cấp [^21]. Lấy một ví dụ cực đoan: hầu hết các công ty không tự phát điện (trừ công ty năng lượng, và ở đây cũng chưa tính nguồn điện dự phòng khẩn cấp), vì mua điện từ lưới điện rẻ hơn.
 
-对软件来说，有两个重要决定：由谁来构建，又由谁来部署。两项工作都可以按不同程度外包，从而形成{{< xref fig="1-2" page="/ch1" anchor="fig_cloud_spectrum" >}}图 1-2{{< /xref >}}所示的一条连续谱。一个极端是完全定制的软件，由你自行编写并在内部运行；另一个极端是广泛使用的云服务或软件即服务（SaaS）产品，由外部供应商开发和运维，你只能通过 Web 界面或 API 使用。
+Với phần mềm, có hai quyết định quan trọng: ai xây dựng, và ai triển khai. Cả hai việc đều có thể thuê ngoài ở các mức độ khác nhau, tạo nên một dải liên tục như {{< xref fig="1-2" page="/ch1" anchor="fig_cloud_spectrum" >}}Hình 1-2{{< /xref >}}. Ở một đầu là phần mềm hoàn toàn tùy biến, do bạn tự viết và tự chạy nội bộ, còn ở đầu kia là dịch vụ đám mây hay sản phẩm phần mềm như một dịch vụ (SaaS) được dùng rộng rãi, do nhà cung cấp bên ngoài phát triển và vận hành, bạn chỉ dùng được qua giao diện web hoặc API.
 
-{{< fig num="1-2" id="fig_cloud_spectrum" src="/fig/ddia_0102.png" caption="软件类型及其运维方式的连续谱。" class="ddia-figure ddia-figure--panorama" width="1772" height="392" />}}
+{{< fig num="1-2" id="fig_cloud_spectrum" src="/fig/ddia_0102.png" caption="Dải liên tục của các loại phần mềm và cách vận hành chúng." class="ddia-figure ddia-figure--panorama" width="1772" height="392" />}}
 
-这条连续谱的中间，是由你 *自托管*（*self-hosted*）的现成软件（可以是开源软件，也可以是商业软件），也就是由你亲自部署。例如，下载 MySQL 并安装到一台由你掌控的服务器上。这台服务器可以是你自己的硬件——通常称为 *本地部署*（*on-premises*），即使它实际位于租用的数据中心机架里，并不真的在你的自有场所——也可以是云中的虚拟机，即 *基础设施即服务*（IaaS）。这条连续谱上还有更多中间位置，例如采用开源软件，但运行自己修改过的版本。
+Nằm giữa dải này là phần mềm có sẵn (có thể là mã nguồn mở hoặc thương mại) mà bạn tự vận hành theo kiểu *self-hosted*, tức tự mình triển khai. Ví dụ, bạn tải MySQL về và cài lên một máy chủ do bạn kiểm soát. Máy chủ này có thể là phần cứng của chính bạn — thường gọi là *on-premises*, ngay cả khi thực tế nó nằm trong tủ rack của một trung tâm dữ liệu thuê chứ không thật sự ở cơ sở của bạn — hoặc là máy ảo trên đám mây, tức *hạ tầng như một dịch vụ* (IaaS). Trên dải này còn nhiều vị trí trung gian khác, ví dụ dùng phần mềm mã nguồn mở nhưng chạy phiên bản do chính bạn sửa đổi.
 
-与这条连续谱相互独立的另一个问题是：无论在云端还是本地，究竟要 *如何* 部署服务，例如是否采用 Kubernetes 之类的编排框架。不过，部署工具的选择不在本书讨论范围内，因为还有其他因素对数据系统架构的影响更大。
+Một câu hỏi độc lập với dải liên tục này là: triển khai dịch vụ *như thế nào*, dù trên đám mây hay tại chỗ, chẳng hạn có dùng framework điều phối như Kubernetes hay không. Tuy nhiên, việc chọn công cụ triển khai nằm ngoài phạm vi cuốn sách này, vì còn những yếu tố khác ảnh hưởng đến kiến trúc hệ thống dữ liệu nhiều hơn.
 
-### 云服务的利弊 {#sec_introduction_cloud_tradeoffs}
+### Ưu và nhược điểm của dịch vụ đám mây {#sec_introduction_cloud_tradeoffs}
 
-使用云服务而不是自行运行同类软件，本质上就是把软件的运维外包给云服务商。采用云服务既有充分的支持理由，也有充分的反对理由。云服务商声称，与自建基础设施相比，使用它们的服务能够节省时间和金钱，还能让你行动得更快。
+Dùng dịch vụ đám mây thay vì tự chạy phần mềm tương tự, về bản chất là thuê nhà cung cấp đám mây vận hành phần mềm đó. Có cả những lý do thuyết phục để ủng hộ lẫn phản đối việc dùng dịch vụ đám mây. Các nhà cung cấp đám mây tuyên bố rằng dùng dịch vụ của họ giúp tiết kiệm thời gian và tiền bạc, đồng thời cho phép bạn hành động nhanh hơn so với tự xây dựng hạ tầng.
 
-云服务究竟是否比自托管更便宜、更省事，很大程度上取决于你掌握的技能和系统承受的工作负载。如果你已经熟悉所需系统的部署和运维，而且负载相当容易预测（也就是所需机器数量不会剧烈波动），那么购买自己的机器并自行运行软件，往往更加便宜 [^22] [^23]。
+Dịch vụ đám mây có thực sự rẻ hơn và đỡ công hơn self-hosted hay không phụ thuộc rất nhiều vào kỹ năng bạn có và tải công việc của hệ thống. Nếu bạn đã quen triển khai và vận hành hệ thống cần dùng, và tải khá dễ dự đoán (tức số máy cần thiết không dao động mạnh), thì mua máy riêng và tự chạy phần mềm thường rẻ hơn [^22] [^23].
 
-反过来，如果你需要一个自己还不会部署和运维的系统，那么采用云服务，通常比从头学习如何自行管理更加容易、快捷。如果还必须专门招聘和培训人员来维护、运维这个系统，成本可能会非常高。使用云服务时仍然需要运维团队（参见[“云时代的运维”](/ch1#sec_introduction_operations)），但把基础系统管理外包出去，可以让团队专注于更高层次的问题。
+Ngược lại, nếu bạn cần một hệ thống mà mình chưa biết triển khai và vận hành, thì dùng dịch vụ đám mây thường dễ và nhanh hơn so với tự học cách quản lý từ đầu. Nếu còn phải riêng tuyển dụng và đào tạo nhân sự để bảo trì, vận hành hệ thống, chi phí có thể rất cao. Dùng dịch vụ đám mây vẫn cần một đội vận hành (xem [“Vận hành trong thời đại đám mây”](/ch1#sec_introduction_operations)), nhưng thuê ngoài việc quản trị hệ thống nền tảng giúp đội tập trung vào các vấn đề ở tầng cao hơn.
 
-把系统运维外包给专门经营这项服务的公司，也可能得到更好的服务，因为供应商在服务众多客户的过程中积累了丰富的运维经验。另一方面，如果由你自行运维，就能针对自己的特定工作负载配置和调优服务；云服务商不太可能愿意为你进行这样的定制。
+Thuê ngoài việc vận hành hệ thống cho công ty chuyên cung cấp dịch vụ đó cũng có thể cho chất lượng tốt hơn, vì nhà cung cấp tích lũy được nhiều kinh nghiệm vận hành khi phục vụ rất nhiều khách hàng. Mặt khác, nếu tự vận hành, bạn có thể cấu hình và tinh chỉnh dịch vụ cho đúng tải công việc riêng của mình. Nhà cung cấp đám mây khó có khả năng sẵn lòng tùy biến như vậy cho bạn.
 
-如果系统负载随时间大幅波动，云服务尤其有价值。假如机器按峰值负载配置，但计算资源在大多数时候都处于闲置状态，系统的成本效益就会很差。在这种情况下，云服务的优势在于，可以更加容易地随着需求变化增加或减少计算资源。
+Dịch vụ đám mây đặc biệt có giá trị nếu tải của hệ thống biến động mạnh theo thời gian. Nếu máy được cấp phát theo tải đỉnh, nhưng tài nguyên tính toán phần lớn thời gian nằm không, hiệu quả chi phí của hệ thống sẽ rất kém. Trong trường hợp này, ưu điểm của dịch vụ đám mây là có thể dễ dàng tăng hoặc giảm tài nguyên tính toán khi nhu cầu thay đổi.
 
-例如，分析型系统的负载通常变化极大：要快速执行一项大型分析查询，需要同时动用大量计算资源；但查询完成后，这些资源就会闲置，直到用户发出下一项查询。预定义查询（例如日报）可以排队并调度执行，从而平滑负载；但对交互式查询而言，越是希望迅速得到结果，工作负载的波动就越大。如果数据集庞大到必须投入大量计算资源才能快速查询，使用云服务可以节省成本，因为闲置资源可以归还服务商，而不必任其空置。数据集较小时，这种差别就没那么显著。
+Chẳng hạn, tải của hệ thống phân tích thường biến thiên rất lớn: để thực thi nhanh một truy vấn phân tích lớn, cần huy động đồng thời rất nhiều tài nguyên tính toán, nhưng khi truy vấn xong, các tài nguyên này nằm không cho đến khi người dùng gửi truy vấn tiếp theo. Truy vấn định sẵn (ví dụ báo cáo hằng ngày) có thể xếp hàng và lập lịch để làm phẳng tải, nhưng với truy vấn tương tác, càng muốn có kết quả nhanh thì tải công việc càng biến động. Nếu tập dữ liệu lớn đến mức phải dùng nhiều tài nguyên tính toán mới truy vấn nhanh được, dùng dịch vụ đám mây có thể tiết kiệm chi phí, vì tài nguyên nhàn rỗi có thể trả lại cho nhà cung cấp thay vì để không. Với tập dữ liệu nhỏ, sự khác biệt này không đáng kể.
 
-云服务最大的缺点是你无法掌控它：
+Nhược điểm lớn nhất của dịch vụ đám mây là bạn không kiểm soát được nó:
 
-* 如果服务缺少你需要的功能，你只能客气地询问供应商是否愿意添加；通常无法自己动手实现。
-* 如果服务宕机，你只能等它恢复。
-* 如果你的某种使用方式触发了缺陷或性能问题，诊断起来会非常困难。对于自行运行的软件，你可以从操作系统获取性能指标和调试信息，从而了解它的行为，还可以查看服务器日志；但服务由供应商托管时，你通常无法接触这些内部信息。
-* 如果服务停止运营、价格高到无法接受，或供应商以你不喜欢的方式改动产品，你也只能任其摆布——继续运行旧版本通常不可行，因此只能被迫迁移到其他服务 [^24]。如果存在提供兼容 API 的替代服务，这种风险会小一些；但是许多云服务并没有标准 API，切换成本很高，因而产生了供应商锁定问题。
-* 你必须相信云服务商能够保护数据安全，这可能会增加遵守隐私和安全法规的难度。
+* Nếu dịch vụ thiếu tính năng bạn cần, bạn chỉ có thể lịch sự hỏi nhà cung cấp có sẵn lòng bổ sung không, nhưng thường bạn không thể tự triển khai.
+* Nếu dịch vụ ngừng hoạt động, bạn chỉ còn cách chờ nó phục hồi.
+* Nếu cách dùng của bạn kích hoạt lỗi hoặc vấn đề hiệu năng, việc chẩn đoán sẽ rất khó. Với phần mềm tự chạy, bạn có thể lấy số liệu hiệu năng và thông tin gỡ lỗi từ hệ điều hành để hiểu hành vi của nó, và có thể xem nhật ký máy chủ, nhưng khi dịch vụ do nhà cung cấp lưu trữ, bạn thường không tiếp cận được những thông tin nội bộ này.
+* Nếu dịch vụ ngừng hoạt động, giá cao đến mức không chấp nhận được, hoặc nhà cung cấp thay đổi sản phẩm theo cách bạn không thích, bạn đành phải chịu sự chi phối — tiếp tục chạy phiên bản cũ thường không khả thi, nên buộc phải chuyển sang dịch vụ khác [^24]. Nếu có dịch vụ thay thế cung cấp API tương thích thì rủi ro này nhỏ hơn, nhưng nhiều dịch vụ đám mây không có API chuẩn, chi phí chuyển đổi cao, dẫn đến vấn đề bị khóa chặt vào nhà cung cấp (vendor lock-in).
+* Bạn phải tin tưởng nhà cung cấp đám mây bảo vệ an toàn cho dữ liệu, điều này có thể làm việc tuân thủ các quy định về quyền riêng tư và bảo mật khó hơn.
 
-尽管存在这些风险，组织在云服务之上构建新应用，或者采用只在系统某些部分使用云服务的混合方案，还是越来越普遍。不过，云服务不会取代所有内部数据系统：许多老系统诞生在云计算之前；只要某项服务有现有云服务无法满足的特殊需求，内部系统仍然不可或缺。例如，高频交易等对延迟极其敏感的应用，就需要完全掌控硬件。
+Bất chấp các rủi ro này, việc các tổ chức xây dựng ứng dụng mới trên nền dịch vụ đám mây, hoặc dùng phương án lai chỉ dùng dịch vụ đám mây cho một số phần của hệ thống, ngày càng phổ biến. Tuy nhiên, dịch vụ đám mây sẽ không thay thế mọi hệ thống dữ liệu nội bộ: nhiều hệ thống cũ ra đời trước điện toán đám mây, và với bất kỳ dịch vụ nào có yêu cầu đặc thù mà dịch vụ đám mây hiện có không đáp ứng được, hệ thống nội bộ vẫn không thể thiếu. Ví dụ, các ứng dụng cực kỳ nhạy với độ trễ như giao dịch tần suất cao cần kiểm soát hoàn toàn phần cứng.
 
-### 云原生系统架构 {#sec_introduction_cloud_native}
+### Kiến trúc hệ thống cloud-native {#sec_introduction_cloud_native}
 
-云计算不仅采用了不同的经济模式——订阅服务，而不是购买硬件和软件许可证，再自行运行软件——它的兴起也从技术层面深刻影响了数据系统的实现方式。*云原生*（*cloud-native*）一词用来描述专为利用云服务优势而设计的架构。
+Điện toán đám mây không chỉ mang đến một mô hình kinh tế khác — thuê bao dịch vụ thay vì mua phần cứng và giấy phép phần mềm rồi tự chạy — mà sự trỗi dậy của nó còn tác động sâu sắc về mặt kỹ thuật đến cách hiện thực hóa các hệ thống dữ liệu. Thuật ngữ *cloud-native* dùng để mô tả kiến trúc được thiết kế để tận dụng ưu thế của dịch vụ đám mây.
 
-原则上，几乎任何可以自托管的软件都能以云服务的形式提供；事实上，许多流行的数据系统如今都有相应的托管服务。然而，从一开始就按云原生思路设计的系统已经展现出若干优势：在相同硬件上性能更好，故障恢复更快，能够迅速调整计算资源以匹配负载，并且可以支持更大的数据集 [^25] [^26] [^27]。{{< xref tbl="1-2" page="/ch1" anchor="tab_cloud_native_dbs" >}}表 1-2{{< /xref >}}列出了两类系统的一些例子。
+Về nguyên tắc, hầu như mọi phần mềm có thể self-hosted đều có thể được cung cấp như dịch vụ đám mây. Thực tế, nhiều hệ thống dữ liệu phổ biến hiện nay đã có dịch vụ được quản lý tương ứng. Tuy nhiên, những hệ thống thiết kế theo tư duy cloud-native ngay từ đầu đã cho thấy một số ưu thế: hiệu năng tốt hơn trên cùng phần cứng, phục hồi sau lỗi nhanh hơn, có thể nhanh chóng điều chỉnh tài nguyên tính toán cho khớp với tải, và hỗ trợ tập dữ liệu lớn hơn [^25] [^26] [^27]. {{< xref tbl="1-2" page="/ch1" anchor="tab_cloud_native_dbs" >}}Bảng 1-2{{< /xref >}} liệt kê một số ví dụ của hai loại hệ thống này.
 
-| 类别              | 自托管系统                  | 云原生系统                                                            |
-|------------------|----------------------------|----------------------------------------------------------------------|
-| 事务型/OLTP      | MySQL、PostgreSQL、MongoDB  | AWS Aurora [^25]、Azure SQL DB Hyperscale [^26]、Google Cloud Spanner |
-| 分析型/OLAP      | Teradata、ClickHouse、Spark | Snowflake [^27]、Google BigQuery、Azure Synapse Analytics             |
-{#tab_cloud_native_dbs num="1-2" caption="自托管数据库系统与云原生数据库系统示例"}
+| Loại                | Hệ thống self-hosted         | Hệ thống cloud-native                                                 |
+|---------------------|-----------------------------|-----------------------------------------------------------------------|
+| Tác nghiệp/OLTP     | MySQL, PostgreSQL, MongoDB  | AWS Aurora [^25], Azure SQL DB Hyperscale [^26], Google Cloud Spanner |
+| Phân tích/OLAP      | Teradata, ClickHouse, Spark | Snowflake [^27], Google BigQuery, Azure Synapse Analytics             |
+{#tab_cloud_native_dbs num="1-2" caption="Ví dụ về hệ thống cơ sở dữ liệu self-hosted và cloud-native"}
 
-#### 云服务的分层 {#layering-of-cloud-services}
+#### Các tầng của dịch vụ đám mây {#layering-of-cloud-services}
 
-许多自托管数据系统对运行环境的要求非常简单：在 Linux 或 Windows 等常规操作系统上运行，把数据存成文件系统中的文件，并通过 TCP/IP 等标准网络协议通信。少数系统依赖 GPU（用于机器学习）或 RDMA 网卡等特殊硬件，但总体而言，自托管软件使用的都是十分通用的计算资源：CPU、内存、文件系统和 IP 网络。
+Nhiều hệ thống dữ liệu self-hosted có yêu cầu rất đơn giản đối với môi trường chạy: chạy trên hệ điều hành thông thường như Linux hoặc Windows, lưu dữ liệu thành các tệp trong hệ thống tệp, và giao tiếp qua giao thức mạng chuẩn như TCP/IP. Một số ít hệ thống phụ thuộc vào phần cứng đặc biệt như GPU (cho học máy) hoặc card mạng RDMA, nhưng nhìn chung, phần mềm self-hosted dùng những tài nguyên tính toán rất thông dụng: CPU, bộ nhớ, hệ thống tệp và mạng IP.
 
-在云中，这类软件可以运行在基础设施即服务（IaaS）环境里，使用一台或多台虚拟机（也称为 *实例*，*instance*），每台实例分配一定数量的 CPU、内存、磁盘和网络带宽。与物理机器相比，云实例的开通速度更快，可选规格也更多；但除此之外，它们与传统计算机相似：你可以随意运行任何软件，也要自行负责管理。
+Trên đám mây, loại phần mềm này có thể chạy trong môi trường hạ tầng như một dịch vụ (IaaS), dùng một hoặc nhiều máy ảo (còn gọi là *instance*), mỗi instance được cấp một lượng CPU, bộ nhớ, đĩa và băng thông mạng nhất định. So với máy vật lý, instance trên đám mây được cấp phát nhanh hơn và có nhiều cấu hình để chọn hơn, nhưng ngoài ra, chúng giống máy tính truyền thống: bạn có thể tùy ý chạy bất kỳ phần mềm nào, và cũng phải tự chịu trách nhiệm quản lý.
 
-与之相对，云原生服务的关键思想是：不仅使用操作系统管理的计算资源，还要在低层云服务的基础上构建更高层的服务。例如：
+Ngược lại, ý tưởng then chốt của dịch vụ cloud-native là: không chỉ dùng tài nguyên tính toán do hệ điều hành quản lý, mà còn xây dựng các dịch vụ tầng cao hơn trên nền các dịch vụ đám mây tầng thấp. Ví dụ:
 
-* Amazon S3、Azure Blob Storage 和 Cloudflare R2 等 *对象存储*（*object storage*）服务用于保存大型文件。它们的 API 比普通文件系统更受限，只提供基本的文件读写；但好处是隐藏了底层物理机器。服务会自动把数据分布到许多机器上，你不必担心其中某台机器的磁盘空间耗尽。即使某些机器或其磁盘彻底损坏，数据也不会丢失。
-* 许多其他服务又建立在对象存储和其他云服务之上。例如，Snowflake 是一种云端分析数据库（数据仓库），依靠 S3 存储数据 [^27]；还有一些服务进一步构建在 Snowflake 之上。
+* Các dịch vụ *lưu trữ đối tượng* (*object storage*) như Amazon S3, Azure Blob Storage và Cloudflare R2 dùng để lưu các tệp lớn. API của chúng hạn chế hơn hệ thống tệp thông thường, chỉ cung cấp thao tác đọc và ghi tệp cơ bản, nhưng ưu điểm là che giấu máy vật lý bên dưới. Dịch vụ tự động phân bổ dữ liệu trên nhiều máy, bạn không phải lo đĩa của một máy nào đó đầy. Ngay cả khi một số máy hoặc đĩa của chúng hỏng hẳn, dữ liệu cũng không bị mất.
+* Nhiều dịch vụ khác lại được xây dựng trên nền lưu trữ đối tượng và các dịch vụ đám mây khác. Ví dụ, Snowflake là cơ sở dữ liệu phân tích (kho dữ liệu) trên đám mây, dựa vào S3 để lưu dữ liệu [^27], và có những dịch vụ khác tiếp tục được xây dựng trên nền Snowflake.
 
-计算机领域的抽象一向如此：该选择哪一层，并没有唯一正确的答案。一般来说，层次越高的抽象，往往越面向特定用例。如果你的需求恰好符合某个高层系统的设计场景，那么直接使用现成系统，通常比自己用低层系统搭建省心得多，也足以满足需要。反过来，如果没有任何高层系统符合需求，那就只能用低层组件自行构建。
+Trong khoa học máy tính, trừu tượng hóa vốn luôn như vậy: không có câu trả lời duy nhất đúng cho việc nên chọn tầng nào. Nói chung, trừu tượng ở tầng càng cao thì thường càng hướng đến trường hợp sử dụng cụ thể. Nếu nhu cầu của bạn khớp với kịch bản mà một hệ thống tầng cao được thiết kế, thì dùng thẳng hệ thống có sẵn thường đỡ phiền hơn nhiều so với tự xây dựng bằng hệ thống tầng thấp, và cũng đủ đáp ứng. Ngược lại, nếu không hệ thống tầng cao nào phù hợp, bạn đành tự xây dựng từ các thành phần tầng thấp.
 
-#### 存储与计算的分离 {#sec_introduction_storage_compute}
+#### Tách rời lưu trữ và tính toán {#sec_introduction_storage_compute}
 
-在传统计算中，磁盘存储被视为持久存储：我们假定数据一旦写入磁盘，就不会丢失。为了容忍单块硬盘故障，人们通常使用 RAID（独立磁盘冗余阵列），在连接到同一台机器的多块磁盘上保存数据副本。RAID 既可以由硬件实现，也可以由操作系统通过软件实现；对于访问文件系统的应用来说，这一切都是透明的。
+Trong điện toán truyền thống, lưu trữ trên đĩa được coi là lưu trữ bền vững: ta giả định dữ liệu một khi đã ghi vào đĩa thì sẽ không mất. Để chịu được lỗi của một ổ cứng đơn lẻ, người ta thường dùng RAID (mảng đĩa dự phòng độc lập), lưu bản sao dữ liệu trên nhiều đĩa gắn vào cùng một máy. RAID có thể được hiện thực bằng phần cứng, hoặc bằng phần mềm trong hệ điều hành. Với ứng dụng truy cập hệ thống tệp, tất cả những điều này đều trong suốt.
 
-云中的计算实例（虚拟机）也可以连接本地磁盘，但云原生系统通常更愿意把它们当作临时缓存，而不是长期存储。原因在于：一旦相应实例发生故障，本地磁盘就无法访问；为了适应负载变化而把实例换成另一台物理机上的更大或更小规格时，本地磁盘同样无法访问。
+Máy tính toán (máy ảo) trên đám mây cũng có thể gắn đĩa cục bộ, nhưng hệ thống cloud-native thường muốn coi chúng như bộ nhớ đệm tạm thời, chứ không phải lưu trữ lâu dài. Lý do là: khi instance tương ứng gặp lỗi, đĩa cục bộ sẽ không truy cập được, và khi cần đổi instance sang một máy vật lý khác, lớn hơn hoặc nhỏ hơn để thích ứng với thay đổi của tải, đĩa cục bộ cũng không truy cập được.
 
-作为本地磁盘的替代方案，云服务还提供虚拟磁盘存储，可以从一个实例卸载，再挂载到另一个实例上，例如 Amazon EBS、Azure 托管磁盘和 Google Cloud 持久磁盘。这种虚拟磁盘并不是真正的物理磁盘，而是由另一组机器提供的云服务，用来模拟磁盘的行为——也就是 *块设备*（*block device*），其中每个块通常为 4 KiB。这项技术让传统的磁盘软件可以在云中运行，但块设备模拟会引入额外开销；如果系统从一开始便针对云设计，这些开销本来可以避免 [^25]。它还使应用对网络异常极为敏感，因为虚拟块设备上的每次 I/O 实际上都是一次网络调用 [^28]。
+Để thay cho đĩa cục bộ, dịch vụ đám mây còn cung cấp lưu trữ đĩa ảo, có thể tháo khỏi một instance rồi gắn vào instance khác, ví dụ Amazon EBS, Azure Managed Disks và Google Cloud Persistent Disk. Đĩa ảo này không phải đĩa vật lý thực sự, mà là một dịch vụ đám mây do một nhóm máy khác cung cấp để mô phỏng hành vi của đĩa — tức *thiết bị khối* (*block device*), trong đó mỗi khối thường là 4 KiB. Công nghệ này cho phép phần mềm đĩa truyền thống chạy trên đám mây, nhưng việc mô phỏng thiết bị khối sinh thêm chi phí phụ trội. Nếu hệ thống được thiết kế cho đám mây ngay từ đầu thì có thể tránh được các chi phí này [^25]. Nó cũng khiến ứng dụng rất nhạy với bất thường của mạng, vì mỗi thao tác I/O trên thiết bị khối ảo thực chất là một lần gọi mạng [^28].
 
-为了解决这个问题，云原生服务通常避开虚拟磁盘，转而建立在针对特定工作负载优化的专用存储服务之上。S3 等对象存储服务适合长期保存较大的文件，大小从数百 KB 到数 GB 不等。数据库中的单行或单个值通常远小于这个范围；因此，云数据库通常在一个独立服务中管理较小的值，并把包含许多个值的较大数据块存入对象存储 [^26] [^29]。我们将在[第 4 章](/ch4#ch_storage)介绍相应的实现方法。
+Để giải quyết vấn đề này, dịch vụ cloud-native thường tránh dùng đĩa ảo, mà xây dựng trên các dịch vụ lưu trữ chuyên dụng được tối ưu cho từng tải công việc cụ thể. Các dịch vụ lưu trữ đối tượng như S3 phù hợp để lưu lâu dài các tệp tương đối lớn, kích thước từ vài trăm KB đến vài GB. Một hàng hay một giá trị đơn lẻ trong cơ sở dữ liệu thường nhỏ hơn nhiều so với khoảng này, vì thế cơ sở dữ liệu đám mây thường quản lý các giá trị nhỏ trong một dịch vụ riêng, và lưu các khối dữ liệu lớn hơn, chứa nhiều giá trị, vào lưu trữ đối tượng [^26] [^29]. Chúng ta sẽ giới thiệu các cách hiện thực tương ứng ở [Chương 4](/ch4#ch_storage).
 
-在传统系统架构中，同一台计算机同时负责存储（磁盘）和计算（CPU 与内存）；而在云原生系统中，这两项职责在一定程度上相互分离，或者说被 *解耦*（*disaggregated*）了 [^9] [^27] [^30] [^31]。例如，S3 只负责保存文件；如果要分析其中的数据，就必须在 S3 之外运行分析代码。这也意味着数据需要通过网络传输，我们将在[“分布式与单节点系统”](/ch1#sec_introduction_distributed)中进一步讨论。
+Trong kiến trúc hệ thống truyền thống, cùng một máy tính đảm nhiệm cả lưu trữ (đĩa) lẫn tính toán (CPU và bộ nhớ), còn trong hệ thống cloud-native, hai trách nhiệm này ở một mức độ nào đó được tách riêng, hay nói cách khác là *tách rời* (*disaggregated*) [^9] [^27] [^30] [^31]. Ví dụ, S3 chỉ chịu trách nhiệm lưu tệp. Nếu muốn phân tích dữ liệu trong đó, bạn phải chạy mã phân tích bên ngoài S3. Điều này cũng có nghĩa là dữ liệu cần được truyền qua mạng, mà chúng ta sẽ bàn thêm ở [“Hệ thống phân tán và hệ thống một node”](/ch1#sec_introduction_distributed).
 
-此外，云原生系统往往采用 *多租户*（*multitenant*）模式：它并不为每个客户单独分配一台机器，而是由同一项服务在共享硬件上处理多个客户的数据和计算 [^32]。
+Ngoài ra, hệ thống cloud-native thường dùng mô hình *multitenant*: thay vì cấp riêng một máy cho mỗi khách hàng, cùng một dịch vụ xử lý dữ liệu và tính toán của nhiều khách hàng trên phần cứng dùng chung [^32].
 
-多租户可以提高硬件利用率，更容易实现可伸缩性，也便于云服务商管理；但要保证一个客户的活动不影响其他客户的性能或安全，就必须经过周密的工程设计 [^33]。
+Multitenant có thể nâng cao mức sử dụng phần cứng, dễ đạt khả năng mở rộng hơn và thuận tiện hơn cho nhà cung cấp đám mây khi quản lý, nhưng để bảo đảm hoạt động của khách hàng này không ảnh hưởng đến hiệu năng hay an ninh của khách hàng khác thì phải có thiết kế kỹ thuật cẩn thận [^33].
 
-### 云时代的运维 {#sec_introduction_operations}
+### Vận hành trong thời đại đám mây {#sec_introduction_operations}
 
-传统上，管理组织服务器端数据基础设施的人员称为 *数据库管理员*（DBA）或 *系统管理员*（sysadmin）。近年来，许多组织尝试把软件开发与运维角色融入同一个团队，让团队共同负责后端服务和数据基础设施；*DevOps* 理念推动了这一趋势。*站点可靠性工程师*（SRE）则是 Google 对这一理念的实践 [^34]。
+Theo truyền thống, những người quản lý hạ tầng dữ liệu phía máy chủ của tổ chức được gọi là *quản trị viên cơ sở dữ liệu* (DBA) hoặc *quản trị viên hệ thống* (sysadmin). Những năm gần đây, nhiều tổ chức cố gắng gộp vai trò phát triển phần mềm và vận hành vào cùng một nhóm, để nhóm cùng chịu trách nhiệm về dịch vụ backend và hạ tầng dữ liệu. Triết lý *DevOps* thúc đẩy xu hướng này. *Kỹ sư độ tin cậy trang web* (SRE) là cách Google hiện thực hóa triết lý đó [^34].
 
-运维的职责是确保服务可靠地交付给用户，包括配置基础设施和部署应用；同时保障生产环境稳定，包括监控和诊断任何可能影响可靠性的问题。对自托管系统来说，传统运维有大量工作落在单台机器上，例如容量规划（监控可用磁盘空间，并在耗尽前增加磁盘）、开通新机器、在机器之间迁移服务，以及安装操作系统补丁。
+Trách nhiệm của vận hành là bảo đảm dịch vụ được cung cấp đến người dùng một cách đáng tin cậy, gồm cấu hình hạ tầng và triển khai ứng dụng, đồng thời giữ môi trường production ổn định, gồm giám sát và chẩn đoán mọi vấn đề có thể ảnh hưởng đến độ tin cậy. Với hệ thống self-hosted, vận hành truyền thống có rất nhiều việc đổ dồn lên từng máy riêng lẻ, chẳng hạn lập kế hoạch dung lượng (theo dõi dung lượng đĩa còn trống và thêm đĩa trước khi hết), cấp phát máy mới, di chuyển dịch vụ giữa các máy và cài bản vá hệ điều hành.
 
-许多云服务通过 API 隐藏了实际承载服务的一台台机器。例如，云存储不再提供固定容量的磁盘，而是采用 *按量计费*（*metered billing*）：你无需提前规划容量，就可以存储数据，然后按实际占用的空间付费。此外，即使个别机器发生故障，许多云服务仍然保持高可用性（参见[“可靠性与容错”](/ch2#sec_introduction_reliability)）。
+Nhiều dịch vụ đám mây che giấu các máy cụ thể đang chạy dịch vụ đó sau API. Ví dụ, lưu trữ đám mây không còn cung cấp đĩa dung lượng cố định mà dùng *tính phí theo mức sử dụng* (*metered billing*): bạn không cần lập kế hoạch dung lượng trước, vẫn có thể lưu dữ liệu, rồi trả tiền theo dung lượng thực tế đã dùng. Ngoài ra, nhiều dịch vụ đám mây vẫn duy trì được tính sẵn sàng cao ngay cả khi từng máy riêng lẻ gặp lỗi (xem [“Độ tin cậy và khả năng chịu lỗi”](/ch2#sec_introduction_reliability)).
 
-关注点从单台机器转向服务，也伴随着运维角色的变化。可靠地提供服务这一高层目标没有改变，但流程和工具已经演变。DevOps/SRE 理念更强调：
+Việc chuyển trọng tâm từ từng máy sang dịch vụ cũng đi kèm thay đổi vai trò vận hành. Mục tiêu cấp cao là cung cấp dịch vụ đáng tin cậy không đổi, nhưng quy trình và công cụ đã tiến hóa. Triết lý DevOps/SRE nhấn mạnh hơn:
 
-* 自动化——采用可重复的流程，而不是手工执行一次性任务；
-* 采用临时性的虚拟机和服务，而不是长时间运行的服务器；
-* 支持频繁更新应用；
-* 从事故中吸取教训；以及
-* 即使人员来去更替，也要保留组织对系统的知识 [^35]。
+* Tự động hóa — dùng quy trình lặp lại được thay vì làm thủ công các tác vụ một lần;
+* Dùng máy ảo và dịch vụ tạm thời thay vì máy chủ chạy lâu dài;
+* Hỗ trợ cập nhật ứng dụng thường xuyên;
+* Rút kinh nghiệm từ sự cố; và
+* Lưu giữ hiểu biết của tổ chức về hệ thống, ngay cả khi nhân sự đến rồi đi [^35].
 
-随着云服务兴起，运维角色也发生了分化：基础设施公司的运维团队专攻如何面向大量客户提供可靠服务；云服务客户则力求把投入基础设施的时间和精力降到最低 [^36]。
+Cùng với sự trỗi dậy của dịch vụ đám mây, vai trò vận hành cũng phân hóa: đội vận hành của các công ty hạ tầng chuyên về cách cung cấp dịch vụ đáng tin cậy cho số lượng lớn khách hàng, còn khách hàng của dịch vụ đám mây cố gắng giảm thiểu thời gian và công sức đầu tư vào hạ tầng [^36].
 
-云服务的客户仍然需要运维，只是关注的方面有所不同，例如为一项任务选择最合适的服务、集成不同服务，以及从一项服务迁移到另一项服务。尽管按量计费消除了传统意义上的容量规划，你依然必须清楚哪些资源被用在什么地方，免得为并不需要的云资源白白花钱：容量规划变成了财务规划，性能优化变成了成本优化 [^37]。
+Khách hàng của dịch vụ đám mây vẫn cần vận hành, chỉ là mối quan tâm khác đi, ví dụ chọn dịch vụ phù hợp nhất cho một tác vụ, tích hợp các dịch vụ khác nhau, và di chuyển từ dịch vụ này sang dịch vụ khác. Dù tính phí theo mức sử dụng loại bỏ việc lập kế hoạch dung lượng theo nghĩa truyền thống, bạn vẫn phải biết rõ tài nguyên nào được dùng vào đâu, kẻo tiêu tiền vô ích cho tài nguyên đám mây không cần thiết: lập kế hoạch dung lượng trở thành lập kế hoạch tài chính, và tối ưu hiệu năng trở thành tối ưu chi phí [^37].
 
-而且，云服务仍有资源上限或 *配额*（*quota*），例如并发运行的进程数上限。你必须提前了解并做好规划，不能等到撞上限额才处理 [^38]。
+Hơn nữa, dịch vụ đám mây vẫn có giới hạn tài nguyên hay *hạn mức* (*quota*), ví dụ số tiến trình tối đa chạy đồng thời. Bạn phải biết trước và lên kế hoạch, không thể đợi đến khi chạm trần mới xử lý [^38].
 
-采用云服务或许比自行运行基础设施更加容易、快捷，但学习如何使用仍有成本，有时还得设法绕过它的限制。随着供应商越来越多，面向各种用例的云服务层出不穷，如何集成不同服务成了一项格外棘手的挑战 [^39] [^40]。
+Dùng dịch vụ đám mây có thể dễ và nhanh hơn tự chạy hạ tầng, nhưng học cách dùng vẫn tốn công, đôi khi còn phải tìm cách vòng qua các giới hạn của nó. Khi ngày càng có nhiều nhà cung cấp, và dịch vụ đám mây cho đủ loại trường hợp sử dụng xuất hiện dày đặc, việc tích hợp các dịch vụ khác nhau trở thành một thách thức đặc biệt hóc búa [^39] [^40].
 
-ETL（参见[“数据仓库”](/ch1#sec_introduction_dwh)）只是其中一部分，事务型云服务同样需要彼此集成。目前还缺少简化这类集成的标准，因此往往要投入大量手工工作。
+ETL (xem [“Kho dữ liệu”](/ch1#sec_introduction_dwh)) chỉ là một phần của vấn đề. Các dịch vụ đám mây tác nghiệp cũng cần tích hợp với nhau. Hiện còn thiếu tiêu chuẩn để đơn giản hóa việc tích hợp này, nên thường phải đầu tư nhiều công sức thủ công.
 
-还有一些运维工作无法完全外包给云服务，例如维护应用及其依赖库的安全，管理自有服务之间的交互，监控服务负载，以及追查性能下降或服务中断等问题的根源。云计算固然正在改变运维的角色，但运维仍与以往任何时候一样重要。
+Cũng có những công việc vận hành không thể thuê ngoài hoàn toàn cho dịch vụ đám mây, chẳng hạn giữ an toàn cho ứng dụng và các thư viện phụ thuộc của nó, quản lý tương tác giữa các dịch vụ của chính mình, giám sát tải của dịch vụ, và truy tìm gốc rễ của các vấn đề như hiệu năng suy giảm hay dịch vụ gián đoạn. Điện toán đám mây đang thay đổi vai trò của vận hành, nhưng vận hành vẫn quan trọng như bao giờ hết.
 
 
-## 分布式与单节点系统 {#sec_introduction_distributed}
+## Hệ thống phân tán và hệ thống một node {#sec_introduction_distributed}
 
-由多台机器通过网络通信而构成的系统，称为 *分布式系统*（*distributed system*）。参与分布式系统的每个进程称为一个 *节点*（*node*）。采用分布式系统可能出于以下各种原因：
+Hệ thống gồm nhiều máy giao tiếp với nhau qua mạng được gọi là *hệ thống phân tán* (*distributed system*). Mỗi tiến trình tham gia hệ thống phân tán được gọi là một *node*. Có nhiều lý do để dùng hệ thống phân tán:
 
-固有的分布式系统
-:   如果一项应用涉及两个或更多相互交互的用户，而每个用户都使用自己的设备，那么这个系统不可避免地是分布式的：设备之间只能通过网络通信。
+Hệ thống phân tán vốn có
+:   Nếu một ứng dụng có hai hay nhiều người dùng tương tác với nhau, và mỗi người dùng thiết bị của riêng mình, thì hệ thống đó tất yếu là phân tán: các thiết bị chỉ có thể giao tiếp với nhau qua mạng.
 
-云服务之间的请求
-:   如果数据存储在一个服务中，却要由另一个服务处理，就必须通过网络把数据从一个服务传到另一个服务。
+Yêu cầu giữa các dịch vụ đám mây
+:   Nếu dữ liệu lưu ở một dịch vụ nhưng do dịch vụ khác xử lý, thì bắt buộc phải truyền dữ liệu từ dịch vụ này sang dịch vụ kia qua mạng.
 
-容错/高可用性
-:   如果应用需要在一台机器（乃至多台机器、网络或整个数据中心）发生故障时继续运行，可以用多台机器提供冗余：一台发生故障后，由另一台接管。参见[“可靠性与容错”](/ch2#sec_introduction_reliability)以及[第 6 章](/ch6#ch_replication)关于复制的讨论。
+Chịu lỗi/tính sẵn sàng cao
+:   Nếu ứng dụng cần tiếp tục chạy khi một máy (thậm chí nhiều máy, mạng hoặc cả trung tâm dữ liệu) gặp lỗi, bạn có thể dùng nhiều máy để dự phòng: khi một máy hỏng, máy khác tiếp quản. Xem [“Độ tin cậy và khả năng chịu lỗi”](/ch2#sec_introduction_reliability) và phần thảo luận về sao chép (*replication*) ở [Chương 6](/ch6#ch_replication).
 
-可伸缩性
-:   如果数据量或计算需求增长到单台机器无力承担，或许可以把负载分散到多台机器上。参见[“可伸缩性”](/ch2#sec_introduction_scalability)。
+Khả năng mở rộng
+:   Nếu khối lượng dữ liệu hoặc nhu cầu tính toán tăng vượt quá sức một máy, có thể phân tán tải sang nhiều máy. Xem [“Khả năng mở rộng”](/ch2#sec_introduction_scalability).
 
-延迟
-:   如果用户遍布世界各地，你可能希望在全球多个区域部署服务器，让每个用户都由地理位置较近的服务器提供服务。这样一来，用户就不必等待网络数据包绕过半个地球才得到响应。参见[“描述性能”](/ch2#sec_introduction_percentiles)。
+Độ trễ
+:   Nếu người dùng ở khắp nơi trên thế giới, bạn có thể muốn triển khai máy chủ ở nhiều khu vực địa lý, để mỗi người dùng được phục vụ bởi máy chủ gần mình. Nhờ vậy, người dùng không phải chờ gói tin mạng đi vòng nửa Trái Đất mới nhận được phản hồi. Xem [“Mô tả hiệu năng”](/ch2#sec_introduction_percentiles).
 
-弹性
-:   如果应用有时繁忙、有时空闲，云端部署可以随着需求扩大或缩小，让你只为正在使用的资源付费。这在单台机器上很难做到：即使大部分时间几乎没有负载，仍要按最大负载预先配置机器。
+Tính co giãn
+:   Nếu ứng dụng lúc bận lúc rảnh, việc triển khai trên đám mây có thể co giãn theo nhu cầu, để bạn chỉ trả tiền cho tài nguyên đang dùng. Điều này khó làm trên một máy đơn lẻ: dù phần lớn thời gian gần như không có tải, bạn vẫn phải cấu hình sẵn máy theo tải tối đa.
 
-使用专用硬件
-:   系统的各个部分可以采用与各自工作负载相匹配的硬件。例如，对象存储可以使用磁盘很多、CPU 很少的机器；数据分析系统可以使用 CPU 和内存很多、却没有磁盘的机器；机器学习系统则可以使用配备 GPU 的机器——训练深度神经网络及执行其他机器学习任务时，GPU 的效率远高于 CPU。
+Dùng phần cứng chuyên dụng
+:   Các phần của hệ thống có thể dùng phần cứng phù hợp với tải công việc riêng. Ví dụ, lưu trữ đối tượng có thể dùng máy có nhiều đĩa nhưng ít CPU; hệ thống phân tích dữ liệu có thể dùng máy có nhiều CPU và bộ nhớ nhưng không có đĩa; hệ thống học máy có thể dùng máy trang bị GPU — khi huấn luyện mạng nơ-ron sâu và thực hiện các tác vụ học máy khác, GPU hiệu quả hơn CPU rất nhiều.
 
-法律合规
-:   一些国家制定了数据驻留法律，要求有关本国管辖范围内人员的数据，必须在该国境内存储和处理 [^41]。这类规定的适用范围不尽相同：有些只针对医疗或金融数据，有些则更加宽泛。因此，如果一项服务的用户分布在多个这样的司法管辖区，就不得不把用户数据分散到多个地点的服务器上。
+Tuân thủ pháp luật
+:   Một số quốc gia ban hành luật lưu trú dữ liệu, yêu cầu dữ liệu về những người thuộc phạm vi tài phán của nước đó phải được lưu trữ và xử lý trong lãnh thổ nước đó [^41]. Phạm vi áp dụng của các quy định này không giống nhau: có nơi chỉ nhắm vào dữ liệu y tế hoặc tài chính, có nơi rộng hơn. Do đó, nếu người dùng của một dịch vụ nằm ở nhiều khu vực tài phán như vậy, buộc phải phân tán dữ liệu người dùng lên máy chủ ở nhiều địa điểm.
 
-可持续性
-:   如果作业在何时、何地运行具有一定灵活性，就可以选择可再生电力充足的时间和地点，并避开电网负荷紧张的时候。这样既能减少碳排放，也能利用价格低廉的电力 [^42] [^43]。
+Tính bền vững
+:   Nếu thời điểm và địa điểm chạy công việc có độ linh hoạt nhất định, bạn có thể chọn thời gian và nơi có nhiều điện tái tạo, đồng thời tránh lúc lưới điện căng thẳng. Cách này vừa giảm phát thải carbon, vừa tận dụng được điện giá rẻ [^42] [^43].
 
-这些理由既适用于自行编写的服务（应用代码），也适用于由数据库等现成软件组成的服务。
+Những lý do này áp dụng cho cả dịch vụ do bạn tự viết (mã ứng dụng) lẫn dịch vụ cấu thành từ phần mềm có sẵn như cơ sở dữ liệu.
 
-### 分布式系统的问题 {#sec_introduction_dist_sys_problems}
+### Các vấn đề của hệ thống phân tán {#sec_introduction_dist_sys_problems}
 
-分布式系统也有缺点。每一个经过网络的请求和 API 调用，都必须面对失败的可能：网络可能中断，服务可能过载或崩溃，任何请求都有可能超时而收不到响应。此时，我们不知道服务究竟有没有收到请求，贸然重试未必安全。我们将在[第 9 章](/ch9#ch_distributed)详细讨论这些问题。
+Hệ thống phân tán cũng có nhược điểm. Mọi yêu cầu và lời gọi API đi qua mạng đều phải đối mặt với khả năng thất bại: mạng có thể đứt, dịch vụ có thể quá tải hoặc sập, và bất kỳ yêu cầu nào cũng có thể hết thời gian chờ mà không nhận được phản hồi. Khi đó, ta không biết dịch vụ rốt cuộc đã nhận được yêu cầu hay chưa, và vội thử lại chưa chắc đã an toàn. Chúng ta sẽ bàn chi tiết các vấn đề này ở [Chương 9](/ch9#ch_distributed).
 
-尽管数据中心网络很快，调用另一个服务仍然远远慢于在同一进程中调用函数 [^44]。
+Dù mạng trong trung tâm dữ liệu rất nhanh, gọi một dịch vụ khác vẫn chậm hơn nhiều so với gọi hàm trong cùng một tiến trình [^44].
 
-处理海量数据时，与其把数据从存储位置传到另一台机器上处理，可能不如把计算带到已经保存数据的机器上来得快 [^45]。
+Khi xử lý lượng dữ liệu khổng lồ, thay vì chuyển dữ liệu từ nơi lưu sang máy khác để xử lý, đưa phép tính đến máy đang giữ dữ liệu có thể nhanh hơn [^45].
 
-节点更多也不一定更快：有些情况下，一台计算机上简单的单线程程序，性能可以显著胜过拥有 100 多个 CPU 核心的集群 [^46]。
+Nhiều node hơn cũng không nhất thiết nhanh hơn: trong một số trường hợp, một chương trình đơn luồng đơn giản trên một máy tính có thể vượt hẳn hiệu năng của cụm có hơn 100 lõi CPU [^46].
 
-分布式系统往往很难排查故障：如果系统响应缓慢，怎样才能找出问题在哪里？用于诊断分布式系统问题的技术统称为 *可观测性*（*observability*）[^47] [^48]。它收集系统的执行数据，并允许人们查询这些数据，从而既能分析高层指标，也能追查单个事件。OpenTelemetry、Zipkin 和 Jaeger 等 *追踪*（*tracing*）工具可以记录哪个客户端为了什么操作调用了哪个服务器，以及每次调用花了多长时间 [^49]。
+Hệ thống phân tán thường rất khó khắc phục sự cố: nếu hệ thống phản hồi chậm, làm sao tìm ra vấn đề nằm ở đâu? Các kỹ thuật dùng để chẩn đoán vấn đề của hệ thống phân tán được gọi chung là *observability* [^47] [^48]. Nó thu thập dữ liệu thực thi của hệ thống và cho phép truy vấn dữ liệu đó, nhờ vậy vừa phân tích được các chỉ số cấp cao, vừa lần theo từng sự kiện riêng lẻ. Các công cụ *tracing* như OpenTelemetry, Zipkin và Jaeger có thể ghi lại client nào gọi máy chủ nào để làm thao tác gì, và mỗi lần gọi mất bao lâu [^49].
 
-数据库提供了多种保证数据一致性的机制，我们将在[第 6 章](/ch6#ch_replication)和[第 8 章](/ch8#ch_transactions)中看到。但是，当每个服务都有自己的数据库时，如何保持不同服务之间的数据一致，就成了应用自身的问题。分布式事务（参见[第 8 章](/ch8#ch_transactions)）是一种可能的手段，但很少用于微服务，因为它与服务彼此独立的目标背道而驰，而且许多数据库根本不支持分布式事务 [^50]。
+Cơ sở dữ liệu cung cấp nhiều cơ chế bảo đảm tính nhất quán của dữ liệu, như chúng ta sẽ thấy ở [Chương 6](/ch6#ch_replication) và [Chương 8](/ch8#ch_transactions). Nhưng khi mỗi dịch vụ có cơ sở dữ liệu riêng, việc giữ dữ liệu nhất quán giữa các dịch vụ trở thành vấn đề của chính ứng dụng. Giao dịch phân tán (xem [Chương 8](/ch8#ch_transactions)) là một cách khả dĩ, nhưng hiếm khi dùng trong microservices, vì nó đi ngược mục tiêu để các dịch vụ độc lập với nhau, và nhiều cơ sở dữ liệu vốn không hỗ trợ giao dịch phân tán [^50].
 
-出于以上种种原因，只要一项工作能在单台机器上完成，通常就比搭建分布式系统简单得多，也便宜得多 [^23] [^46] [^51]。CPU 越来越快，内存和磁盘的容量越来越大，硬件也越来越可靠。再加上 DuckDB、SQLite 和 KùzuDB 等单节点数据库，如今许多工作负载都可以在单个节点上运行。我们将在[第 4 章](/ch4#ch_storage)进一步探讨这个话题。
+Vì tất cả những lý do trên, nếu một việc có thể làm trên một máy đơn lẻ, thì thường đơn giản và rẻ hơn nhiều so với xây dựng hệ thống phân tán [^23] [^46] [^51]. CPU ngày càng nhanh, dung lượng bộ nhớ và đĩa ngày càng lớn, phần cứng cũng ngày càng đáng tin cậy. Cộng thêm các cơ sở dữ liệu một node như DuckDB, SQLite và KùzuDB, ngày nay nhiều tải công việc có thể chạy trên một node duy nhất. Chúng ta sẽ tiếp tục bàn chủ đề này ở [Chương 4](/ch4#ch_storage).
 
-### 微服务与无服务器 {#sec_introduction_microservices}
+### Microservices và serverless {#sec_introduction_microservices}
 
-把系统分布到多台机器上，最常见的做法是将它划分为客户端和服务器，由客户端向服务器发送请求。这种通信最常使用 HTTP，我们将在[“流经服务的数据流：REST 与 RPC”](/ch5#sec_encoding_dataflow_rpc)中进一步讨论。同一个进程既可以是服务器（处理传入的请求），也可以是客户端（向其他服务发出请求）。
+Cách phổ biến nhất để phân tán hệ thống trên nhiều máy là chia nó thành client và máy chủ, để client gửi yêu cầu đến máy chủ. Giao tiếp này thường dùng HTTP nhất, mà chúng ta sẽ bàn thêm ở [“Luồng dữ liệu qua dịch vụ: REST và RPC”](/ch5#sec_encoding_dataflow_rpc). Cùng một tiến trình có thể vừa là máy chủ (xử lý yêu cầu đến), vừa là client (gửi yêu cầu đến dịch vụ khác).
 
-这种构建应用的方式传统上称为 *面向服务架构*（SOA）；近年来，这一思想又进一步演化为 *微服务*（*microservices*）架构 [^52] [^53]。在这种架构中，每项服务都有明确的用途（例如 S3 的用途就是文件存储）；服务通过 API 向客户端开放能力，由客户端经网络调用；每项服务还由一个团队负责维护。这样一来，复杂应用就可以拆分成多项相互交互的服务，分别由不同团队管理。
+Cách xây dựng ứng dụng này theo truyền thống gọi là *kiến trúc hướng dịch vụ* (SOA), và những năm gần đây, ý tưởng này tiếp tục phát triển thành kiến trúc *microservices* [^52] [^53]. Trong kiến trúc này, mỗi dịch vụ có mục đích rõ ràng (ví dụ mục đích của S3 là lưu tệp); dịch vụ mở khả năng của mình qua API để client gọi qua mạng; và mỗi dịch vụ do một nhóm chịu trách nhiệm bảo trì. Nhờ vậy, ứng dụng phức tạp có thể được tách thành nhiều dịch vụ tương tác với nhau, do các nhóm khác nhau quản lý.
 
-把复杂软件拆成多项服务有几个优点：各项服务可以独立更新，减少团队之间的协调；每项服务可以获得符合自身需要的硬件资源；实现细节隐藏在 API 后面，服务负责人可以自由改变实现，而不影响客户端。在数据存储方面，通常每项服务都有自己的数据库，服务之间不共享数据库。否则，整个数据库结构实际上都会成为服务 API 的一部分，很难再行修改；而且，一项服务发出的查询也可能拖累其他服务的性能。
+Tách phần mềm phức tạp thành nhiều dịch vụ có vài lợi ích: từng dịch vụ có thể cập nhật độc lập, giảm phối hợp giữa các nhóm; mỗi dịch vụ có thể được cấp tài nguyên phần cứng phù hợp nhu cầu riêng; chi tiết hiện thực bị che sau API, nên người phụ trách dịch vụ có thể tự do thay đổi hiện thực mà không ảnh hưởng đến client. Về lưu trữ dữ liệu, thường mỗi dịch vụ có cơ sở dữ liệu riêng, và các dịch vụ không dùng chung cơ sở dữ liệu. Nếu không, toàn bộ cấu trúc cơ sở dữ liệu thực chất sẽ trở thành một phần của API dịch vụ, rất khó sửa đổi. Hơn nữa, truy vấn do một dịch vụ gửi ra cũng có thể làm chậm các dịch vụ khác.
 
-另一方面，服务多了本身也会滋生复杂度：每项服务都需要相应基础设施，用来部署新版本、根据负载调整硬件资源、收集日志、监控服务健康状况，并在出现问题时向值班工程师告警。Kubernetes 等 *编排*（*orchestration*）框架为这类基础设施提供了基础能力，因此成了部署服务的常用方式。在开发过程中测试一项服务也可能很麻烦，因为它所依赖的其他服务必须一并运行。
+Mặt khác, nhiều dịch vụ hơn cũng tự sinh thêm độ phức tạp: mỗi dịch vụ cần hạ tầng tương ứng để triển khai phiên bản mới, điều chỉnh tài nguyên phần cứng theo tải, thu thập nhật ký, giám sát tình trạng dịch vụ, và cảnh báo kỹ sư trực khi có sự cố. Các framework *điều phối* (*orchestration*) như Kubernetes cung cấp năng lực nền tảng cho loại hạ tầng này, nên trở thành cách phổ biến để triển khai dịch vụ. Kiểm thử một dịch vụ trong quá trình phát triển cũng có thể phiền toái, vì các dịch vụ khác mà nó phụ thuộc phải chạy cùng.
 
-微服务 API 也很难演化。调用 API 的客户端会期待其中存在某些字段；随着业务需求改变，开发者或许想要增删 API 字段，但这可能导致客户端出错。更糟的是，这类问题往往要到开发周期后期，更新后的服务 API 部署到预发布或生产环境时才被发现。OpenAPI 和 gRPC 等 API 描述标准有助于管理客户端 API 与服务器 API 之间的关系，我们将在[第 5 章](/ch5#ch_encoding)中进一步讨论。
+API của microservices cũng khó tiến hóa. Client gọi API sẽ kỳ vọng có một số trường nhất định, và khi yêu cầu kinh doanh thay đổi, nhà phát triển có thể muốn thêm hoặc bớt trường API, nhưng điều đó có thể làm client lỗi. Tệ hơn, những vấn đề như vậy thường chỉ được phát hiện muộn trong chu kỳ phát triển, khi API dịch vụ đã cập nhật được triển khai lên môi trường staging hoặc production. Các chuẩn mô tả API như OpenAPI và gRPC giúp quản lý mối quan hệ giữa API phía client và API phía máy chủ. Chúng ta sẽ bàn thêm ở [Chương 5](/ch5#ch_encoding).
 
-微服务主要是用技术手段解决人员问题：让不同团队无需彼此协调，也能独立推进工作。这对大公司很有价值；但在团队不多的小公司里，微服务很可能只是没有必要的额外开销，此时最好采用最简单的方式实现应用 [^52]。
+Microservices chủ yếu là dùng biện pháp kỹ thuật để giải quyết vấn đề về con người: cho phép các nhóm khác nhau tiến hành công việc độc lập mà không cần phối hợp với nhau. Điều này có giá trị với công ty lớn, nhưng ở công ty nhỏ với ít nhóm, microservices rất có thể chỉ là chi phí phụ trội không cần thiết, khi đó tốt nhất nên hiện thực ứng dụng theo cách đơn giản nhất [^52].
 
-*无服务器*（serverless），又称 *函数即服务*（FaaS），是另一种服务部署方式：它把基础设施管理进一步外包给云服务商 [^33]。使用虚拟机时，你必须明确决定何时启动或关闭实例；无服务器模型则由云服务商根据发往服务的请求，自动分配和释放硬件资源 [^54]。这种部署方式把更多运维负担转移给云服务商，并允许按使用量灵活计费，不再按机器实例收费。为了提供这些好处，许多无服务器基础设施会限制函数执行时长和运行时环境，而且函数第一次调用时可能启动缓慢。“无服务器”这个名称也容易误导：每次执行无服务器函数仍然要用到一台服务器，只是下一次执行可能换到另一台。此外，BigQuery 和各种 Kafka 产品也采用了“无服务器”这个说法，用来表示服务能够自动伸缩，并按使用量而不是机器实例收费。
+*Serverless*, còn gọi là *hàm như một dịch vụ* (FaaS), là một cách triển khai dịch vụ khác: nó thuê ngoài thêm việc quản lý hạ tầng cho nhà cung cấp đám mây [^33]. Với máy ảo, bạn phải tự quyết định khi nào khởi động hay tắt instance, còn mô hình serverless để nhà cung cấp đám mây tự động cấp phát và thu hồi tài nguyên phần cứng dựa trên các yêu cầu gửi đến dịch vụ [^54]. Cách triển khai này chuyển thêm gánh nặng vận hành sang nhà cung cấp đám mây, và cho phép tính phí linh hoạt theo mức sử dụng thay vì theo instance máy. Để mang lại những lợi ích đó, nhiều hạ tầng serverless giới hạn thời gian thực thi của hàm và môi trường chạy, đồng thời hàm có thể khởi động chậm trong lần gọi đầu tiên. Cái tên “serverless” cũng dễ gây hiểu lầm: mỗi lần thực thi hàm serverless vẫn phải dùng một máy chủ, chỉ là lần thực thi sau có thể chuyển sang máy khác. Ngoài ra, BigQuery và nhiều sản phẩm Kafka cũng dùng cách nói “serverless” để chỉ rằng dịch vụ có thể tự động co giãn và tính phí theo mức sử dụng thay vì theo instance máy.
 
-正如云存储用按量计费取代了容量规划（提前决定购买多少磁盘），无服务器模式也把按量计费带到了代码执行：你只需为应用代码实际运行的时间付费，不必提前配置资源。
+Cũng như lưu trữ đám mây dùng tính phí theo mức sử dụng để thay cho lập kế hoạch dung lượng (quyết định trước mua bao nhiêu đĩa), mô hình serverless cũng đưa tính phí theo mức sử dụng vào việc thực thi mã: bạn chỉ trả tiền cho thời gian mã ứng dụng thực sự chạy, không cần cấp phát tài nguyên trước.
 
-### 云计算与超级计算 {#id17}
+### Điện toán đám mây và siêu tính toán {#id17}
 
-云计算并非构建大规模计算系统的唯一方式，另一条路线是 *高性能计算*（HPC），也称为 *超级计算*（*supercomputing*）。尽管二者有所重叠，但与云计算和企业数据中心系统相比，HPC 的侧重点通常不同，采用的技术也不一样。差异包括：
+Điện toán đám mây không phải cách duy nhất để xây dựng hệ thống tính toán quy mô lớn. Một hướng khác là *tính toán hiệu năng cao* (HPC), còn gọi là *siêu tính toán* (*supercomputing*). Dù hai bên có phần giao nhau, HPC thường có trọng tâm khác và dùng công nghệ khác so với điện toán đám mây và hệ thống trung tâm dữ liệu doanh nghiệp. Các khác biệt gồm:
 
-* 超级计算机通常用于计算密集型的科学计算任务，例如天气预报、气候建模、分子动力学（模拟原子和分子的运动）、复杂优化问题，以及求解偏微分方程。云计算则更常用于在线服务、业务数据系统，以及其他需要以高可用性响应用户请求的系统。
-* 超级计算机通常运行大型批处理作业，并不时把计算状态作为检查点写入磁盘。如果某个节点发生故障，一种常见做法是直接停止整个集群的工作负载，修复故障节点，再从最近的检查点重新开始计算 [^55] [^56]。云服务通常不宜这样停掉整个集群，因为服务必须持续响应用户，尽量减少中断。
-* 超级计算机的节点通常通过共享内存和远程直接内存访问（RDMA）通信，既有高带宽，又有低延迟，但前提是系统用户彼此高度信任 [^57]。在云计算中，网络和机器常由互不信任的组织共享，因此需要更强的安全机制，例如资源隔离（使用虚拟机等）、加密和认证。
-* 云数据中心网络通常以 IP 和以太网为基础，采用 Clos 拓扑来提供较高的对分带宽——这是衡量网络整体性能的常用指标 [^55] [^58]。超级计算机则常采用专门的网络拓扑，例如多维网格和环面 [^59]；对于通信模式已知的 HPC 工作负载，这类拓扑可以提供更好的性能。
-* 云计算允许节点分布在多个地理区域；超级计算机通常假定所有节点都彼此邻近。
+* Siêu máy tính thường dùng cho các tác vụ tính toán khoa học chuyên sâu về tính toán, như dự báo thời tiết, mô hình hóa khí hậu, động lực học phân tử (mô phỏng chuyển động của nguyên tử và phân tử), các bài toán tối ưu phức tạp, và giải phương trình đạo hàm riêng. Còn điện toán đám mây thường dùng hơn cho dịch vụ trực tuyến, hệ thống dữ liệu kinh doanh, và các hệ thống khác cần đáp ứng yêu cầu của người dùng với tính sẵn sàng cao.
+* Siêu máy tính thường chạy các tác vụ xử lý theo lô lớn, và thỉnh thoảng ghi trạng thái tính toán xuống đĩa dưới dạng checkpoint. Nếu một node gặp lỗi, cách làm phổ biến là dừng toàn bộ tải công việc của cả cụm, sửa node lỗi, rồi tính toán lại từ checkpoint gần nhất [^55] [^56]. Dịch vụ đám mây thường không nên dừng cả cụm như vậy, vì dịch vụ phải liên tục đáp ứng người dùng và hạn chế gián đoạn.
+* Các node của siêu máy tính thường giao tiếp qua bộ nhớ chia sẻ và truy cập bộ nhớ trực tiếp từ xa (RDMA), vừa có băng thông cao vừa có độ trễ thấp, nhưng với điều kiện người dùng hệ thống rất tin cậy lẫn nhau [^57]. Trong điện toán đám mây, mạng và máy thường được chia sẻ bởi các tổ chức không tin nhau, nên cần cơ chế bảo mật mạnh hơn, như cách ly tài nguyên (dùng máy ảo, v.v.), mã hóa và xác thực.
+* Mạng trung tâm dữ liệu đám mây thường dựa trên IP và Ethernet, dùng topo Clos để có băng thông bisection cao — một chỉ số thường dùng để đo hiệu năng tổng thể của mạng [^55] [^58]. Siêu máy tính thường dùng topo mạng chuyên dụng như lưới đa chiều và torus [^59]. Với các tải HPC có mẫu giao tiếp đã biết, các topo này cho hiệu năng tốt hơn.
+* Điện toán đám mây cho phép các node phân bố ở nhiều khu vực địa lý, còn siêu máy tính thường giả định mọi node đều ở gần nhau.
 
-大规模分析系统有时也具备超级计算的一些特征；如果你在这个领域工作，了解这些技术会很有价值。不过，本书主要关注必须持续可用的服务，正如[“可靠性与容错”](/ch2#sec_introduction_reliability)所讨论的那样。
+Hệ thống phân tích quy mô lớn đôi khi cũng có một số đặc điểm của siêu tính toán, và nếu làm việc trong lĩnh vực này, hiểu biết về các kỹ thuật đó sẽ rất đáng giá. Tuy nhiên, cuốn sách này chủ yếu tập trung vào các dịch vụ phải luôn sẵn sàng, như đã bàn ở [“Độ tin cậy và khả năng chịu lỗi”](/ch2#sec_introduction_reliability).
 
-## 数据系统、法律与社会 {#sec_introduction_compliance}
+## Hệ thống dữ liệu, pháp luật và xã hội {#sec_introduction_compliance}
 
-本章到目前为止已经说明，数据系统架构不仅受技术目标和要求影响，也受其所服务组织中人类需求的影响。越来越多的数据系统工程师开始认识到，只满足自己所在企业的需求还不够：我们也对整个社会负有责任。
+Đến đây, chương này đã cho thấy kiến trúc hệ thống dữ liệu không chỉ chịu ảnh hưởng của mục tiêu và yêu cầu kỹ thuật, mà còn của nhu cầu con người trong tổ chức mà nó phục vụ. Ngày càng nhiều kỹ sư hệ thống dữ liệu nhận ra rằng chỉ đáp ứng nhu cầu của doanh nghiệp mình là chưa đủ: chúng ta còn có trách nhiệm với toàn xã hội.
 
-其中一个特别值得关注的问题，是存储个人及其行为数据的系统。自 2018 年起，*《通用数据保护条例》*（GDPR）赋予许多欧洲国家的居民更大的个人数据控制权和更多法律权利；世界各地的不少国家和地区也采用了类似的隐私法规，例如《加州消费者隐私法案》（CCPA）。*《欧盟人工智能法案》* 等针对 AI 的法规，又进一步限制了个人数据的使用方式。
+Một vấn đề đặc biệt đáng quan tâm là các hệ thống lưu trữ dữ liệu cá nhân và hành vi của họ. Từ năm 2018, *Quy định chung về bảo vệ dữ liệu* (GDPR) trao cho cư dân nhiều quốc gia châu Âu quyền kiểm soát lớn hơn đối với dữ liệu cá nhân và nhiều quyền pháp lý hơn. Nhiều quốc gia và khu vực khác trên thế giới cũng ban hành các quy định về quyền riêng tư tương tự, ví dụ Đạo luật Quyền riêng tư của Người tiêu dùng California (CCPA). Các quy định nhắm vào AI như *Đạo luật AI của Liên minh châu Âu* lại hạn chế thêm cách dùng dữ liệu cá nhân.
 
-即使在没有直接受到监管的领域，人们也越来越清楚地认识到计算机系统对个人和社会的影响。社交媒体改变了人们获取新闻的方式，进而影响政治观点，甚至可能左右选举结果。自动化系统也越来越多地作出对个人影响深远的决定，例如谁能获得贷款或保险，谁能得到工作面试的机会，以及谁会成为犯罪嫌疑人 [^60]。
+Ngay cả ở những lĩnh vực không bị quản lý trực tiếp, người ta cũng ngày càng nhận ra tác động của hệ thống máy tính đối với cá nhân và xã hội. Mạng xã hội đã thay đổi cách mọi người tiếp cận tin tức, từ đó ảnh hưởng đến quan điểm chính trị, thậm chí có thể chi phối kết quả bầu cử. Hệ thống tự động cũng ngày càng đưa ra những quyết định ảnh hưởng sâu sắc đến cá nhân, ví dụ ai được vay tiền hay mua bảo hiểm, ai được mời phỏng vấn xin việc, và ai bị coi là nghi phạm tội phạm [^60].
 
-每一个参与这类系统的人，都有责任考虑它们的伦理影响，并确保系统遵守相关法律。并非人人都要成为法律和伦理专家，但具备基本的法律与伦理常识，与掌握分布式系统的基础知识同样重要。
+Mỗi người tham gia vào các hệ thống như vậy đều có trách nhiệm cân nhắc tác động đạo đức của chúng và bảo đảm hệ thống tuân thủ pháp luật liên quan. Không phải ai cũng phải trở thành chuyên gia pháp lý và đạo đức, nhưng hiểu biết cơ bản về pháp luật và đạo đức cũng quan trọng không kém việc nắm kiến thức nền tảng về hệ thống phân tán.
 
-法律因素正在影响数据系统设计最根本的部分 [^61]。例如，GDPR 赋予个人要求删除其数据的权利，有时称为 *被遗忘权*（*right to be forgotten*）。然而，正如本书将要介绍的，许多数据系统的设计依赖仅追加日志等不可变结构；一个本应不可变的文件，要怎样从中间删除某些数据？如果数据已经纳入衍生数据集（参见[“记录系统与衍生数据”](/ch1#sec_introduction_derived)），例如成为机器学习模型的训练数据，又该如何删除？回答这些问题带来了新的工程挑战。
+Các yếu tố pháp lý đang ảnh hưởng đến những phần căn bản nhất của thiết kế hệ thống dữ liệu [^61]. Ví dụ, GDPR trao cho cá nhân quyền yêu cầu xóa dữ liệu của họ, đôi khi gọi là *quyền được lãng quên* (*right to be forgotten*). Tuy nhiên, như cuốn sách này sẽ giới thiệu, nhiều hệ thống dữ liệu được thiết kế dựa trên các cấu trúc bất biến như nhật ký chỉ ghi thêm. Một tệp lẽ ra bất biến thì làm sao xóa một số dữ liệu ở giữa? Nếu dữ liệu đã được đưa vào các tập dữ liệu dẫn xuất (xem [“Hệ thống ghi nhận gốc và dữ liệu dẫn xuất”](/ch1#sec_introduction_derived)), chẳng hạn trở thành dữ liệu huấn luyện của mô hình học máy, thì xóa thế nào? Trả lời những câu hỏi này đặt ra những thách thức kỹ thuật mới.
 
-目前，还没有明确指南说明哪些具体技术或系统架构算是“符合 GDPR”。法规有意不规定特定技术，因为技术进步可能很快就会使这些规定过时。法律文本给出的只是有待解释的高层原则。因此，如何遵守隐私法规并没有简单答案；不过，在讨论本书的一些技术时，我们会从这个角度加以审视。
+Hiện chưa có hướng dẫn rõ ràng về những kỹ thuật hay kiến trúc hệ thống cụ thể nào được coi là “tuân thủ GDPR”. Quy định cố ý không chỉ định công nghệ cụ thể, vì tiến bộ công nghệ có thể nhanh chóng làm các quy định ấy lỗi thời. Văn bản pháp luật chỉ đưa ra các nguyên tắc cấp cao cần được diễn giải. Do đó, việc tuân thủ quy định về quyền riêng tư không có câu trả lời đơn giản. Tuy nhiên, khi bàn về một số kỹ thuật trong cuốn sách này, chúng ta sẽ xem xét chúng từ góc độ đó.
 
-一般来说，我们之所以存储数据，是因为相信它的价值高于存储成本。但不要忘记，存储成本不只是付给 Amazon S3 或其他服务的账单。成本效益分析还应计入这些风险：数据一旦泄露，或遭到攻击者窃取、破坏，可能承担法律责任并蒙受声誉损失；如果数据的存储和处理不符合法律规定，还可能产生诉讼费用和罚款 [^51]。
+Nói chung, chúng ta lưu trữ dữ liệu vì tin rằng giá trị của nó cao hơn chi phí lưu trữ. Nhưng đừng quên rằng chi phí lưu trữ không chỉ là hóa đơn trả cho Amazon S3 hay dịch vụ khác. Phân tích chi phí – lợi ích còn phải tính đến các rủi ro: dữ liệu bị rò rỉ, hoặc bị kẻ tấn công đánh cắp, phá hoại có thể phải chịu trách nhiệm pháp lý và thiệt hại về danh tiếng, và nếu dữ liệu được lưu trữ, xử lý không đúng quy định pháp luật, còn có thể phát sinh chi phí kiện tụng và tiền phạt [^51].
 
-政府或警方也可能强迫企业交出数据。如果数据可能暴露某些在当地被法律定为犯罪的行为——例如，在一些中东和非洲国家，同性恋会受到刑事处罚；在美国一些州，寻求堕胎也可能受到刑事追究——那么存储这些数据会给用户带来切实的安全风险。例如，位置数据很容易暴露一个人曾前往堕胎诊所；哪怕只是一段用户 IP 地址的历史日志，也可能泄露其大致位置。
+Chính phủ hoặc cảnh sát cũng có thể buộc doanh nghiệp giao nộp dữ liệu. Nếu dữ liệu có thể làm lộ những hành vi bị luật pháp địa phương coi là tội phạm — ví dụ, ở một số nước Trung Đông và châu Phi, đồng tính bị trừng phạt hình sự; ở một số bang của Mỹ, việc tìm cách phá thai cũng có thể bị truy cứu hình sự — thì lưu trữ dữ liệu đó mang lại rủi ro an toàn thực sự cho người dùng. Ví dụ, dữ liệu vị trí dễ dàng tiết lộ việc một người từng đến phòng khám phá thai. Thậm chí chỉ một bản nhật ký lịch sử địa chỉ IP của người dùng cũng có thể làm lộ vị trí đại khái của họ.
 
-把所有风险都考虑在内之后，合理的结论可能是：某些数据根本不值得存储，因此应当删除。*数据最小化*（*data minimization*）原则（有时也用德语 *Datensparsamkeit* 表示）与“大数据”理念背道而驰；后者倾向于先存下大量数据，指望它们将来也许会派上用场 [^62]。不过，数据最小化符合 GDPR：个人数据只能为具体、明确的目的而收集，日后不得用于其他目的，也不得在超出原定目的所需期限后继续保留 [^63]。
+Sau khi cân nhắc mọi rủi ro, kết luận hợp lý có thể là: một số dữ liệu không đáng để lưu trữ, nên cần xóa đi. Nguyên tắc *tối thiểu hóa dữ liệu* (*data minimization*) (đôi khi còn được biểu đạt bằng từ tiếng Đức *Datensparsamkeit*) đi ngược quan niệm “dữ liệu lớn” vốn thiên về lưu thật nhiều dữ liệu trước, hy vọng sau này có thể hữu ích [^62]. Tuy nhiên, tối thiểu hóa dữ liệu phù hợp với GDPR: dữ liệu cá nhân chỉ được thu thập cho những mục đích cụ thể, rõ ràng, sau này không được dùng cho mục đích khác, và không được giữ lâu hơn thời hạn cần thiết cho mục đích ban đầu [^63].
 
-企业同样开始重视隐私和安全问题。信用卡公司要求支付处理企业遵守严格的支付卡行业（PCI）标准；支付处理商要频繁接受独立审计机构的评估，验证是否持续合规。软件供应商面临的审查也日趋严格，许多采购方如今要求供应商符合服务组织控制（SOC）第 2 类标准。与 PCI 合规一样，供应商要通过第三方审计来验证是否符合要求。
+Doanh nghiệp cũng bắt đầu coi trọng vấn đề quyền riêng tư và bảo mật. Các công ty thẻ tín dụng yêu cầu doanh nghiệp xử lý thanh toán tuân thủ tiêu chuẩn nghiêm ngặt của ngành thẻ thanh toán (PCI). Đơn vị xử lý thanh toán phải thường xuyên chịu đánh giá của các kiểm toán viên độc lập để xác minh họ tiếp tục tuân thủ. Nhà cung cấp phần mềm cũng chịu sự thẩm định ngày càng chặt, nhiều bên mua hiện yêu cầu nhà cung cấp phù hợp tiêu chuẩn Kiểm soát Tổ chức Dịch vụ (SOC) loại 2. Cũng như tuân thủ PCI, nhà cung cấp phải qua kiểm toán của bên thứ ba để xác minh đã đáp ứng các yêu cầu.
 
-总而言之，必须在业务需求与数据被收集、处理的人们的需求之间取得平衡。这个话题远不止于此；[第 14 章](/ch14#ch_right_thing)将深入讨论伦理与法律合规问题，包括偏见和歧视。
+Tóm lại, cần cân bằng giữa nhu cầu kinh doanh và nhu cầu của những người có dữ liệu được thu thập, xử lý. Chủ đề này còn rộng hơn nhiều. [Chương 14](/ch14#ch_right_thing) sẽ đi sâu vào đạo đức và tuân thủ pháp luật, bao gồm cả thiên kiến và phân biệt đối xử.
 
 
-## 总结 {#summary}
+## Tóm tắt {#summary}
 
-本章的主题是理解权衡：许多问题并没有唯一正确的答案，而是有几种不同的做法，各有利弊。我们探讨了影响数据系统架构的一些最重要的选择，也介绍了阅读本书其余部分所需的术语。
+Chủ đề của chương này là hiểu về sự đánh đổi: nhiều vấn đề không có một đáp án đúng duy nhất, mà có vài cách làm khác nhau, mỗi cách có ưu và nhược điểm. Chúng ta đã khảo sát một số lựa chọn quan trọng nhất ảnh hưởng đến kiến trúc hệ thống dữ liệu, và giới thiệu các thuật ngữ cần thiết để đọc phần còn lại của cuốn sách.
 
-首先，我们区分了事务型系统（事务处理，即 OLTP）与分析型系统（OLAP），看到两者不仅管理着访问模式不同的各类数据，服务的群体也不相同。我们还认识了数据仓库与数据湖，它们通过 ETL 接收事务型系统送来的数据。[第 4 章](/ch4#ch_storage)将会说明，由于要服务的查询类型不同，事务型系统与分析型系统的内部数据布局往往大相径庭。
+Trước tiên, chúng ta phân biệt hệ thống tác nghiệp (xử lý giao dịch, tức OLTP) với hệ thống phân tích (OLAP), thấy rằng hai loại này không chỉ quản lý các loại dữ liệu có mô hình truy cập khác nhau, mà còn phục vụ những nhóm đối tượng khác nhau. Chúng ta cũng làm quen với kho dữ liệu và data lake, nhận dữ liệu từ hệ thống tác nghiệp qua ETL. [Chương 4](/ch4#ch_storage) sẽ giải thích rằng, vì loại truy vấn cần phục vụ khác nhau, cách bố trí dữ liệu bên trong hệ thống tác nghiệp và hệ thống phân tích thường khác nhau rất nhiều.
 
-接着，我们把出现时间较晚的云服务，与此前长期主导数据系统架构的自托管软件范式作了比较。哪种方式成本效益更高，很大程度上取决于具体情况；但不可否认的是，云原生方法正在深刻改变数据系统的架构，例如将存储与计算分离。
+Tiếp đó, chúng ta so sánh dịch vụ đám mây, xuất hiện muộn hơn, với mô hình phần mềm self-hosted vốn thống trị kiến trúc hệ thống dữ liệu từ lâu. Cách nào hiệu quả chi phí hơn phụ thuộc nhiều vào hoàn cảnh cụ thể, nhưng không thể phủ nhận rằng cách tiếp cận cloud-native đang thay đổi sâu sắc kiến trúc hệ thống dữ liệu, ví dụ tách rời lưu trữ khỏi tính toán.
 
-云系统天然就是分布式系统，我们也简要考察了分布式系统与单机方案之间的一些权衡。有些场景无法避免分布式；但只要系统还能保留在一台机器上，就不宜急着将其分布式化。[第 9 章](/ch9#ch_distributed)将更详细地讨论分布式系统带来的挑战。
+Hệ thống đám mây vốn là hệ thống phân tán, và chúng ta cũng đã sơ lược khảo sát một số đánh đổi giữa hệ thống phân tán và giải pháp một máy. Có những tình huống không thể tránh phân tán, nhưng nếu hệ thống vẫn có thể giữ trên một máy, thì không nên vội phân tán hóa nó. [Chương 9](/ch9#ch_distributed) sẽ bàn chi tiết hơn về những thách thức mà hệ thống phân tán mang lại.
 
-最后，我们看到，数据系统架构不仅由部署系统的企业需求决定，也受隐私法规影响；这些法规保护着数据处理所涉及人员的权利，而许多工程师很容易忽视这一点。如何把法律要求转化为技术实现，目前还没有得到充分理解；但在阅读本书后续内容时，务必始终把这个问题放在心上。
+Cuối cùng, chúng ta thấy rằng kiến trúc hệ thống dữ liệu không chỉ do nhu cầu của doanh nghiệp triển khai hệ thống quyết định, mà còn chịu ảnh hưởng của các quy định về quyền riêng tư, những quy định này bảo vệ quyền của những người liên quan đến việc xử lý dữ liệu, điều mà nhiều kỹ sư rất dễ bỏ qua. Cách chuyển yêu cầu pháp lý thành hiện thực kỹ thuật hiện vẫn chưa được hiểu đầy đủ, nhưng khi đọc các phần tiếp theo của cuốn sách, hãy luôn giữ vấn đề này trong đầu.
 
-### 参考文献
+### Tài liệu tham khảo
+
 
 [^1]: Richard T. Kouzes, Gordon A. Anderson, Stephen T. Elbert, Ian Gorton, and Deborah K. Gracio. [The Changing Paradigm of Data-Intensive Computing](http://www2.ic.uff.br/~boeres/slides_AP/papers/TheChanginParadigmDataIntensiveComputing_2009.pdf). *IEEE Computer*, volume 42, issue 1, January 2009. [doi:10.1109/MC.2009.26](https://doi.org/10.1109/MC.2009.26)
 [^2]: Martin Kleppmann, Adam Wiggins, Peter van Hardenberg, and Mark McGranaghan. [Local-first software: you own your data, in spite of the cloud](https://www.inkandswitch.com/local-first/). At *2019 ACM SIGPLAN International Symposium on New Ideas, New Paradigms, and Reflections on Programming and Software* (Onward!), October 2019. [doi:10.1145/3359591.3359737](https://doi.org/10.1145/3359591.3359737)

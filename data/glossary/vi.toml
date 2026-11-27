@@ -3490,3 +3490,29 @@ vi = "CDC"
 keep = true
 abbr = "Change Data Capture"
 note = "Từ viết tắt chuẩn, không dịch."
+
+[[term]]
+en = "database"
+vi = "cơ sở dữ liệu"
+
+[[term]]
+en = "search index"
+vi = "chỉ mục tìm kiếm"
+show_en = true
+
+[[term]]
+en = "point query"
+vi = "truy vấn điểm"
+note = "Truy vấn tra một bản ghi theo khóa."
+
+[[term]]
+en = "instance"
+vi = "instance"
+keep = true
+note = "Máy ảo trên đám mây; giới IT/DEV Việt Nam quen dùng nguyên từ gốc."
+
+[[term]]
+en = "business intelligence"
+vi = "business intelligence"
+keep = true
+note = "Thường gọi tắt là BI; không có bản dịch Việt phổ biến."
