@@ -1,6 +1,4 @@
 ---
-draft: true
-book_status: draft
 translationKey: ddia-v2-ch6
 title: Sao chép
 book_kind: chapter
@@ -14,780 +12,776 @@ breadcrumbs: false
 
 ![](/map/ch05.png)
 
-> *与可能出错的东西比，“不可能”出错的东西最显著的特点就是：一旦真的出错，通常就彻底玩完了。*
+> *Điểm khác biệt nổi bật nhất giữa thứ có thể hỏng và thứ "không thể" hỏng là: khi thứ "không thể" hỏng mà lại hỏng thật, thì thường nó hỏng sạch sành sanh, không sửa nổi.*
 >
-> —— 道格拉斯・亚当斯，《基本无害》（1992）
+> Douglas Adams, *Mostly Harmless* (1992)
 
-*复制*（*replication*）意味着在通过网络连接的多台机器上保留相同数据的副本。正如 [“分布式与单节点系统”](/ch1#sec_introduction_distributed) 中所讨论的，我们希望复制数据，可能出于以下原因：
+*Sao chép* (*replication*) nghĩa là giữ bản sao của cùng một dữ liệu trên nhiều máy được nối với nhau qua mạng. Như đã bàn ở ["Hệ thống phân tán và hệ thống một node"](/ch1#sec_introduction_distributed), ta có thể muốn sao chép (*replication*) dữ liệu vì một số lý do sau:
 
-* 使数据在地理上更接近用户（从而降低访问延迟）
-* 即使系统的一部分发生故障，系统仍能继续工作（从而提高可用性）
-* 增加能够处理读查询的机器数量（从而提高读取吞吐量）
+* Để đưa dữ liệu về gần người dùng hơn về mặt địa lý (nhờ đó giảm độ trễ truy cập)
+* Để hệ thống vẫn tiếp tục hoạt động ngay cả khi một phần của nó gặp sự cố (nhờ đó tăng tính sẵn sàng)
+* Để tăng số lượng máy có thể phục vụ truy vấn đọc (nhờ đó tăng thông lượng đọc)
 
-本章假设数据集足够小，每台机器都能保存整个数据集的副本。在 [第 7 章](/ch7#ch_sharding) 中，我们将放宽这一假设，讨论单台机器无法容纳的大型数据集如何进行 *分片*（*sharding*，也称 *分区*，*partitioning*）。再往后的章节会讨论复制数据系统中可能出现的各种故障，以及应对这些故障的方法。
+Chương này giả định tập dữ liệu đủ nhỏ để mỗi máy giữ được một bản sao của toàn bộ tập dữ liệu. Ở [Chương 7](/ch7#ch_sharding), ta sẽ nới lỏng giả định này và bàn về việc *sharding* (*sharding*, còn gọi là *phân region*, *partitioning*) những tập dữ liệu quá lớn so với một máy. Các chương sau đó sẽ bàn về nhiều loại lỗi có thể xảy ra trong hệ thống dữ liệu được sao chép (*replication*), và cách đối phó với chúng.
 
-如果要复制的数据不随时间变化，复制就很简单：只需把数据复制到每个节点一次，便大功告成。复制的全部难点都在于处理被复制数据的 *变更*，这正是本章的主题。我们将讨论三类在节点之间复制变更的算法：*单主复制*（*single-leader replication*）、*多主复制*（*multi-leader replication*）和 *无主复制*（*leaderless replication*）。几乎所有分布式数据库都采用其中一种。三者各有利弊，本章将逐一详述。
+Nếu dữ liệu cần sao chép (*replication*) không thay đổi theo thời gian thì việc sao chép (*replication*) rất đơn giản: chỉ cần chép dữ liệu đến mọi node một lần là xong. Toàn bộ độ khó của sao chép (*replication*) nằm ở việc xử lý các *thay đổi* của dữ liệu được sao chép (*replication*), và đó chính là chủ đề của chương này. Ta sẽ bàn về ba loại thuật toán để sao chép (*replication*) thay đổi giữa các node: *sao chép đơn leader* (*single-leader replication*), *sao chép đa leader* (*multi-leader replication*) và *sao chép không leader* (*leaderless replication*). Hầu như mọi cơ sở dữ liệu phân tán đều dùng một trong ba cách này. Mỗi cách có ưu nhược điểm riêng, và ta sẽ xem xét chi tiết từng cách.
 
-复制需要考虑许多权衡，例如采用 *同步复制*（*synchronous replication*）还是 *异步复制*（*asynchronous replication*），以及如何处理失效的副本。这些往往都是数据库的配置选项；具体细节因数据库而异，但不同实现背后的基本原理大体相通。本章将讨论这些选择带来的后果。
+Sao chép (*replication*) có nhiều đánh đổi cần cân nhắc, chẳng hạn dùng *sao chép đồng bộ* (*synchronous replication*) hay *sao chép bất đồng bộ* (*asynchronous replication*), và xử lý các replica hỏng ra sao. Đây thường là các tùy chọn cấu hình của cơ sở dữ liệu. Chi tiết khác nhau giữa các cơ sở dữ liệu, nhưng nguyên lý cơ bản đằng sau các cách triển khai khác nhau nhìn chung giống nhau. Chương này sẽ bàn về hệ quả của những lựa chọn đó.
 
-数据库复制算得上是老生常谈：自 20 世纪 70 年代有人开始研究以来，其基本原理并没有太大变化 [^1]，因为网络的根本约束也一直未变。即便如此，*最终一致性*（*eventual consistency*）等概念仍常常引起困惑。在 [“复制延迟的问题”](/ch6#sec_replication_lag) 中，我们会更精确地说明最终一致性，并讨论 *读己之写*（*read-your-writes*）、*单调读*（*monotonic reads*）等保证。
+Sao chép (*replication*) cơ sở dữ liệu là chủ đề đã quá quen thuộc: các nguyên lý cơ bản gần như không đổi kể từ khi người ta bắt đầu nghiên cứu nó vào thập niên 1970 [^1], vì các ràng buộc căn bản của mạng cũng không thay đổi. Dù vậy, những khái niệm như *nhất quán cuối cùng* (*eventual consistency*) vẫn thường gây nhầm lẫn. Trong ["Vấn đề của replication lag"](/ch6#sec_replication_lag), ta sẽ nói chính xác hơn về nhất quán cuối cùng và bàn về các đảm bảo như *read-your-writes* (*read-your-writes*) và *monotonic reads* (*monotonic reads*).
 
 
-> [!TIP] 备份与复制
+> [!TIP] Sao lưu và sao chép (*replication*)
 >
-> 你可能会问：有了复制，是否还需要备份？答案是肯定的，因为二者目的不同。副本会迅速把一个节点上的写入反映到其他节点，而备份保存的是数据在过去某一时刻的快照，以便恢复到先前状态。如果不慎删除了某些数据，复制帮不上忙，因为删除操作也会传播到所有副本；要恢复这些数据，仍然需要备份。
+> Bạn có thể hỏi: đã có sao chép (*replication*) thì còn cần sao lưu không? Câu trả lời là có, vì hai thứ phục vụ mục đích khác nhau. Replica phản ánh rất nhanh các lần ghi trên một node sang các node khác, còn bản sao lưu lưu ảnh chụp (snapshot) của dữ liệu tại một thời điểm trong quá khứ để có thể khôi phục về trạng thái trước đó. Nếu bạn lỡ xóa dữ liệu, sao chép (*replication*) không giúp được gì, vì thao tác xóa cũng được lan truyền đến mọi replica. Để khôi phục dữ liệu đó, bạn vẫn cần bản sao lưu.
 >
-> 事实上，复制与备份往往相辅相成。正如 [“设置新的副本”](/ch6#sec_replication_new_replica) 中将要看到的，备份有时是建立复制的一环；反过来，归档复制日志也可以成为备份流程的一部分。
+> Thực ra, sao chép (*replication*) và sao lưu thường bổ trợ cho nhau. Như sẽ thấy trong ["Thiết lập replica mới"](/ch6#sec_replication_new_replica), sao lưu đôi khi là một bước để thiết lập sao chép (*replication*), ngược lại, việc lưu trữ (archive) log sao chép (*replication*) cũng có thể là một phần của quy trình sao lưu.
 >
-> 有些数据库会在内部维护过去状态的不可变快照，相当于一种内置备份。不过，这意味着旧版本和当前状态要保存在同一类存储介质上。数据量很大时，把旧数据的备份放在针对低频访问优化的对象存储中，往往比放在主存储中便宜；主存储只需保留数据库的当前状态。
+> Một số cơ sở dữ liệu tự duy trì các snapshot bất biến của các trạng thái quá khứ, tương đương một dạng sao lưu tích hợp sẵn. Tuy nhiên, điều đó có nghĩa là phiên bản cũ và trạng thái hiện tại phải nằm trên cùng loại phương tiện lưu trữ. Khi dữ liệu lớn, đặt bản sao lưu của dữ liệu cũ vào lưu trữ đối tượng, vốn được tối ưu cho truy cập không thường xuyên, thường rẻ hơn so với để trong kho lưu trữ chính, nơi chỉ cần giữ trạng thái hiện tại của cơ sở dữ liệu.
 
 
-## 单主复制 {#sec_replication_leader}
+## Sao chép đơn leader (*single-leader replication*) {#sec_replication_leader}
 
-每个保存数据库拷贝的节点都称为一个 *副本*（*replica*）。存在多个副本时，一个问题不可避免：如何确保所有数据最终都出现在所有副本上？
+Mỗi node lưu một bản sao của cơ sở dữ liệu được gọi là một *replica* (*replica*). Khi có nhiều replica, một câu hỏi không thể tránh khỏi nảy sinh: làm sao đảm bảo mọi dữ liệu cuối cùng đều xuất hiện trên tất cả các replica?
 
-数据库的每次写入都必须由每个副本处理，否则各副本就会包含不同的数据。最常见的解决方案称为 *基于领导者的复制*（*leader-based replication*），也称 *主备复制*（*primary-backup*）或 *主动/被动复制*（*active/passive*）。其工作原理如下（见 {{< xref fig="6-1" page="/ch6" anchor="fig_replication_leader_follower" >}}图 6-1{{< /xref >}}）：
+Mỗi lần ghi vào cơ sở dữ liệu đều phải được mọi replica xử lý. Nếu không, các replica sẽ chứa dữ liệu khác nhau. Giải pháp phổ biến nhất gọi là *sao chép dựa trên leader* (*leader-based replication*), còn gọi là *primary-backup* (*primary-backup*) hay *active/passive* (*active/passive*). Cách hoạt động như sau (xem {{< xref fig="6-1" page="/ch6" anchor="fig_replication_leader_follower" >}}Hình 6-1{{< /xref >}}):
 
-1. 其中一个副本被指定为 *领导者*（*leader*，也称 *主库*，*primary*，或 *源*，*source* [^2]）。客户端要写入数据库时，必须把请求发给领导者；领导者首先将新数据写入本地存储。
-2. 其他副本称为 *追随者*（*follower*，也称 *只读副本*，*read replica*，*备库*，*secondary*，或 *热备*，*hot standby*）。领导者每次把新数据写入本地存储，也会把数据变更作为 *复制日志*（*replication log*）或 *变更流*（*change stream*）发送给所有追随者。每个追随者取得领导者的日志，按照领导者处理写入的相同顺序应用所有写入，从而更新本地的数据库副本。
-3. 客户端读取数据库时，可以查询领导者，也可以查询任意追随者；但只有领导者接受写入（从客户端的角度看，追随者是只读的）。
+1. Một trong các replica được chỉ định làm *leader* (*leader*, còn gọi là *primary*, hay *source* [^2]). Khi client muốn ghi vào cơ sở dữ liệu, nó phải gửi yêu cầu đến leader. Leader trước hết ghi dữ liệu mới vào bộ nhớ lưu trữ cục bộ.
+2. Các replica khác được gọi là *follower* (*follower*, còn gọi là *read replica*, *secondary* hay *hot standby*). Mỗi khi leader ghi dữ liệu mới vào bộ nhớ lưu trữ cục bộ, nó cũng gửi thay đổi dữ liệu đó cho tất cả follower dưới dạng *replication log* (*replication log*) hoặc *change stream* (*change stream*). Mỗi follower lấy log từ leader và áp dụng mọi lần ghi theo đúng thứ tự mà leader đã xử lý, qua đó cập nhật bản sao cơ sở dữ liệu cục bộ của mình.
+3. Khi client muốn đọc từ cơ sở dữ liệu, nó có thể truy vấn leader hoặc bất kỳ follower nào, nhưng chỉ leader mới nhận ghi (từ góc nhìn của client, follower là chỉ đọc).
 
-{{< fig num="6-1" id="fig_replication_leader_follower" src="/fig/ddia_0601.png" caption="单主复制把所有写入都发往指定的领导者，再由领导者将变更流发送给各追随者副本。" class="ddia-figure ddia-figure--panorama" width="2880" height="925" />}}
+{{< fig num="6-1" id="fig_replication_leader_follower" src="/fig/ddia_0601.png" caption="Sao chép đơn leader (*single-leader replication*) gửi mọi lần ghi đến leader được chỉ định, rồi leader gửi luồng thay đổi đến các replica follower." class="ddia-figure ddia-figure--panorama" width="2880" height="925" />}}
 
-如果数据库做了分片（见 [第 7 章](/ch7#ch_sharding)），每个分片都有一个领导者。不同分片的领导者可以位于不同节点，但每个分片仍必须有且只有一个领导者。在 [“多主复制”](/ch6#sec_replication_multi_leader) 中，我们将讨论另一种模型：同一分片可以同时有多个领导者。
+Nếu cơ sở dữ liệu được sharding (xem [Chương 7](/ch7#ch_sharding)), mỗi shard có một leader. Leader của các shard khác nhau có thể nằm trên các node khác nhau, nhưng mỗi shard vẫn phải có đúng một leader. Trong ["Sao chép đa leader (*multi-leader replication*)"](/ch6#sec_replication_multi_leader), ta sẽ bàn một mô hình khác, trong đó cùng một shard có thể có nhiều leader cùng lúc.
 
-单主复制应用极为广泛。它是 PostgreSQL、MySQL、Oracle Data Guard [^3] 和 SQL Server Always On 可用性组 [^4] 等许多关系数据库的内置功能；MongoDB、DynamoDB [^5] 等文档数据库，Kafka 等消息代理，DRBD 等复制块设备，以及一些网络文件系统也采用这种方式。Raft 等许多共识算法同样以单个领导者为基础；CockroachDB [^6]、TiDB [^7]、etcd、RabbitMQ 法定人数队列等系统用它来实现复制，并在原领导者失效时自动选举新领导者（[第 10 章](/ch10#ch_consistency) 将更详细地讨论共识）。
+Sao chép đơn leader (*single-leader replication*) được dùng cực kỳ rộng rãi. Nó là tính năng tích hợp sẵn của nhiều cơ sở dữ liệu quan hệ như PostgreSQL, MySQL, Oracle Data Guard [^3] và SQL Server Always On Availability Groups [^4], cũng được dùng bởi các cơ sở dữ liệu tài liệu như MongoDB, DynamoDB [^5], các message broker như Kafka, các thiết bị khối được sao chép (*replication*) như DRBD, và một số hệ thống tệp mạng. Nhiều thuật toán đồng thuận như Raft cũng dựa trên một leader duy nhất. Các hệ thống như CockroachDB [^6], TiDB [^7], etcd và hàng đợi quorum của RabbitMQ dùng nó để sao chép (*replication*), và tự động bầu leader mới khi leader cũ hỏng ([Chương 10](/ch10#ch_consistency) sẽ bàn kỹ hơn về đồng thuận).
 
 
 > [!NOTE]
-> 较早的资料中可能会出现 *主从复制*（master–slave replication）一词。它与基于领导者的复制含义相同，但如今普遍认为这种说法具有冒犯性，应当避免使用 [^8]。
+> Trong các tài liệu cũ hơn, bạn có thể gặp thuật ngữ *sao chép master–slave* (*master–slave replication*). Nó có nghĩa giống sao chép dựa trên leader (*leader-based replication*), nhưng ngày nay cách gọi này bị coi là xúc phạm và nên tránh [^8].
 
 
-### 同步复制与异步复制 {#sec_replication_sync_async}
+### Sao chép đồng bộ (*synchronous replication*) và bất đồng bộ {#sec_replication_sync_async}
 
-复制系统的一个重要细节是，复制究竟 *同步*（*synchronous*）进行还是 *异步*（*asynchronous*）进行。（在关系数据库中，这通常是一个配置项；其他系统往往固定采用其中一种。）
+Một chi tiết quan trọng của hệ thống sao chép (*replication*) là việc sao chép (*replication*) diễn ra *đồng bộ* (*synchronous*) hay *bất đồng bộ* (*asynchronous*). (Trong cơ sở dữ liệu quan hệ, đây thường là một tùy chọn cấu hình. Các hệ thống khác thường cố định một trong hai.)
 
-设想 {{< xref fig="6-1" page="/ch6" anchor="fig_replication_leader_follower" >}}图 6-1{{< /xref >}} 中的情形：某网站用户更新个人头像。客户端在某个时刻向领导者发出更新请求，不久后领导者收到请求；领导者随后在某个时刻把数据变更转发给追随者，并最终通知客户端更新成功。{{< xref fig="6-2" page="/ch6" anchor="fig_replication_sync_replication" >}}图 6-2{{< /xref >}} 展示了其中一种可能的时序。
+Hãy hình dung tình huống ở {{< xref fig="6-1" page="/ch6" anchor="fig_replication_leader_follower" >}}Hình 6-1{{< /xref >}}: người dùng một website cập nhật ảnh đại diện. Tại một thời điểm nào đó, client gửi yêu cầu cập nhật đến leader. Ngay sau đó leader nhận được. Rồi tại một thời điểm nào đó, leader chuyển tiếp thay đổi dữ liệu cho các follower, và cuối cùng thông báo cho client rằng cập nhật đã thành công. {{< xref fig="6-2" page="/ch6" anchor="fig_replication_sync_replication" >}}Hình 6-2{{< /xref >}} cho thấy một trình tự thời gian khả dĩ.
 
-{{< fig num="6-2" id="fig_replication_sync_replication" src="/fig/ddia_0602.png" caption="基于领导者的复制，其中一个追随者同步复制，另一个异步复制。" class="ddia-figure ddia-figure--wide" width="2880" height="1128" />}}
+{{< fig num="6-2" id="fig_replication_sync_replication" src="/fig/ddia_0602.png" caption="Sao chép dựa trên leader (*leader-based replication*), trong đó một follower sao chép đồng bộ (*synchronous replication*) và một follower sao chép bất đồng bộ (*asynchronous replication*)." class="ddia-figure ddia-figure--wide" width="2880" height="1128" />}}
 
-在 {{< xref fig="6-2" page="/ch6" anchor="fig_replication_sync_replication" >}}图 6-2{{< /xref >}} 的例子中，发往追随者 1 的复制是 *同步* 的：领导者必须等到追随者 1 确认收到写入，才能向用户报告成功，也才能让其他客户端看到这次写入。发往追随者 2 的复制则是 *异步* 的：领导者发出消息，但不等待追随者响应。
+Trong ví dụ ở {{< xref fig="6-2" page="/ch6" anchor="fig_replication_sync_replication" >}}Hình 6-2{{< /xref >}}, việc sao chép (*replication*) tới follower 1 là *đồng bộ*: leader phải đợi follower 1 xác nhận đã nhận được lần ghi thì mới báo thành công cho người dùng, và mới cho các client khác thấy lần ghi này. Việc sao chép (*replication*) tới follower 2 là *bất đồng bộ*: leader gửi thông điệp đi nhưng không chờ follower phản hồi.
 
-图中追随者 2 处理消息前有一段明显的延迟。通常复制相当快：大多数数据库系统不到一秒便能把变更应用到追随者，但它们并不保证复制一定能在多久内完成。有时追随者可能落后领导者几分钟甚至更久，例如追随者正从失效中恢复、系统在容量极限附近运行，或节点间网络出现问题。
+Trong hình, follower 2 có một độ trễ đáng kể trước khi xử lý thông điệp. Thông thường việc sao chép (*replication*) khá nhanh: hầu hết hệ thống cơ sở dữ liệu áp dụng thay đổi lên follower trong chưa đến một giây, nhưng chúng không đảm bảo việc sao chép (*replication*) sẽ hoàn tất trong bao lâu. Đôi khi follower có thể tụt sau leader vài phút hoặc lâu hơn, chẳng hạn khi follower đang phục hồi sau sự cố, khi hệ thống đang chạy gần giới hạn dung lượng, hoặc khi mạng giữa các node có vấn đề.
 
-同步复制的优点是，追随者保证拥有与领导者一致的最新数据副本。领导者突然失效时，可以确信数据仍可从追随者取得。缺点是，如果同步追随者没有响应——无论因为崩溃、网络故障还是其他原因——写入就无法继续。领导者必须阻塞所有写入，直至同步副本重新可用。
+Ưu điểm của sao chép đồng bộ (*synchronous replication*) là follower được đảm bảo có bản sao dữ liệu mới nhất và nhất quán với leader. Nếu leader đột ngột hỏng, ta có thể yên tâm dữ liệu vẫn còn trên follower. Nhược điểm là nếu follower đồng bộ không phản hồi — dù do sập, do lỗi mạng hay lý do nào khác — thì lần ghi không thể tiếp tục. Leader phải chặn mọi lần ghi cho đến khi replica đồng bộ khả dụng trở lại.
 
-因此，把所有追随者都设为同步并不现实：任意一个节点停机都会拖垮整个系统。实践中，数据库所谓的同步复制，通常是指 *一个* 追随者同步，其余追随者异步。如果同步追随者不可用或过慢，就把某个异步追随者切换为同步。这样可以保证至少有两个节点持有最新数据：领导者和一个同步追随者。这种配置有时也称为 *半同步*（*semi-synchronous*）。
+Vì vậy, đặt tất cả follower ở chế độ đồng bộ là không thực tế: chỉ cần một node ngừng hoạt động là cả hệ thống tê liệt. Trên thực tế, khi cơ sở dữ liệu nói về sao chép đồng bộ (*synchronous replication*), thường là *một* follower đồng bộ và các follower còn lại bất đồng bộ. Nếu follower đồng bộ không khả dụng hoặc quá chậm, một follower bất đồng bộ sẽ được chuyển thành đồng bộ. Cách này đảm bảo có ít nhất hai node giữ dữ liệu mới nhất: leader và một follower đồng bộ. Cấu hình này đôi khi còn gọi là *bán đồng bộ* (*semi-synchronous*).
 
-有些系统会同步更新 *多数* 副本（例如含领导者在内的 5 个副本中更新 3 个），其余少数副本异步更新。这就是 *法定人数*（*quorum*）的一个例子，我们会在 [“读写仲裁”](/ch6#sec_replication_quorum_condition) 中进一步讨论。采用共识协议自动选举领导者的系统经常使用多数法定人数，[第 10 章](/ch10#ch_consistency) 将再次谈到这个问题。
+Một số hệ thống cập nhật đồng bộ cho *đa số* replica (ví dụ 3 trong 5 replica, tính cả leader), còn thiểu số còn lại được cập nhật bất đồng bộ. Đây là một ví dụ về *quorum* (*quorum*), mà ta sẽ bàn thêm ở ["Đọc và ghi quorum"](/ch6#sec_replication_quorum_condition). Các hệ thống dùng giao thức đồng thuận để tự động bầu leader thường dùng quorum đa số. [Chương 10](/ch10#ch_consistency) sẽ quay lại vấn đề này.
 
-有时，基于领导者的复制会配置为完全异步。如果领导者失效且无法恢复，所有尚未复制到追随者的写入都会丢失。也就是说，即使已经向客户端确认成功，写入仍不保证持久。不过，完全异步配置也有一个优点：即使所有追随者都已落后，领导者仍可继续处理写入。
+Đôi khi sao chép dựa trên leader (*leader-based replication*) được cấu hình hoàn toàn bất đồng bộ. Khi đó, nếu leader hỏng và không thể phục hồi, mọi lần ghi chưa kịp sao chép (*replication*) sang follower sẽ bị mất. Nghĩa là lần ghi không được đảm bảo bền vững, dù đã xác nhận thành công cho client. Tuy vậy, cấu hình bất đồng bộ hoàn toàn cũng có ưu điểm: leader vẫn có thể tiếp tục xử lý ghi ngay cả khi mọi follower đều đã tụt lại.
 
-削弱持久性听起来不像是划算的取舍，但异步复制依然应用广泛，尤其是在追随者很多或分布于不同地理位置时 [^9]。我们会在 [“复制延迟的问题”](/ch6#sec_replication_lag) 中再谈这一点。
+Làm yếu tính bền vững nghe không giống một đánh đổi đáng giá, nhưng sao chép bất đồng bộ (*asynchronous replication*) vẫn được dùng rộng rãi, đặc biệt khi có rất nhiều follower hoặc chúng nằm rải rác ở các vị trí địa lý khác nhau [^9]. Ta sẽ quay lại điều này trong ["Vấn đề của replication lag"](/ch6#sec_replication_lag).
 
-### 设置新的副本 {#sec_replication_new_replica}
+### Thiết lập replica mới {#sec_replication_new_replica}
 
-有时需要设置新的追随者，也许是为了增加副本数量，也许是为了替换失效的节点。怎样才能确保新追随者拿到领导者数据的准确副本？
+Đôi khi cần thiết lập một follower mới, có thể để tăng số lượng replica, hoặc để thay thế node đã hỏng. Làm sao đảm bảo follower mới có bản sao chính xác của dữ liệu trên leader?
 
-简单地把数据文件从一个节点复制到另一个节点通常并不够：客户端一直在向数据库写入，数据始终处于变化之中，普通的文件复制会在不同时间点读到数据库的不同部分，所得结果可能毫无意义。
+Chỉ chép tệp dữ liệu từ node này sang node khác thường là không đủ: client liên tục ghi vào cơ sở dữ liệu, dữ liệu luôn thay đổi, nên việc chép tệp thông thường sẽ đọc các phần khác nhau của cơ sở dữ liệu tại các thời điểm khác nhau, và kết quả có thể vô nghĩa.
 
-可以锁住数据库，让磁盘上的文件保持一致，但这样数据库将无法接受写入，违背了高可用的目标。好在设置追随者通常不需要停机。从概念上讲，其过程如下：
+Có thể khóa cơ sở dữ liệu để các tệp trên đĩa nhất quán, nhưng khi đó cơ sở dữ liệu không nhận ghi được, trái với mục tiêu sẵn sàng cao. May là việc thiết lập follower thường không cần ngừng hoạt động. Về mặt khái niệm, quy trình như sau:
 
-1. 取得领导者数据库在某个时刻的一致快照；如果可能，不要锁住整个数据库。大多数数据库都提供这一功能，因为备份同样需要它。有些情况下需要借助第三方工具，例如 MySQL 的 Percona XtraBackup。
-2. 把快照复制到新的追随者节点。
-3. 追随者连接领导者，请求从快照生成之后发生的所有数据变更。这要求快照与领导者复制日志中的准确位置相关联。不同系统对这个位置有不同称呼：PostgreSQL 称之为 *日志序列号*（*log sequence number*，LSN）；MySQL 则有 *binlog 位点*（*binlog coordinates*）和 *全局事务标识符*（*global transaction identifiers*，GTIDs）两套机制。
-4. 追随者处理完快照之后积压的数据变更时，就称它已经 *赶上进度*。此后，它可以继续随时处理领导者产生的数据变更。
+1. Lấy một snapshot nhất quán của cơ sở dữ liệu leader tại một thời điểm. Nếu có thể, không khóa toàn bộ cơ sở dữ liệu. Hầu hết cơ sở dữ liệu đều có tính năng này vì sao lưu cũng cần đến nó. Trong một số trường hợp cần công cụ bên thứ ba, chẳng hạn Percona XtraBackup cho MySQL.
+2. Sao chép (*replication*) snapshot sang node follower mới.
+3. Follower kết nối đến leader và yêu cầu mọi thay đổi dữ liệu xảy ra sau khi snapshot được tạo. Điều này đòi hỏi snapshot gắn với một vị trí chính xác trong replication log của leader. Mỗi hệ thống gọi vị trí này một tên: PostgreSQL gọi là *log sequence number* (*log sequence number*, LSN). MySQL có hai cơ chế là *binlog coordinates* (*binlog coordinates*) và *global transaction identifier* (*global transaction identifiers*, GTID).
+4. Khi follower xử lý xong phần thay đổi dữ liệu tồn đọng sau snapshot, ta nói nó đã *bắt kịp* (caught up). Từ đó nó có thể tiếp tục xử lý các thay đổi dữ liệu do leader tạo ra theo thời gian thực.
 
-设置追随者的实际步骤因数据库而异。有些系统完全自动完成这一过程，另一些系统则需要管理员手工执行一套颇为晦涩的多步骤流程。
+Các bước thiết lập follower trên thực tế khác nhau tùy cơ sở dữ liệu. Một số hệ thống tự động hóa hoàn toàn quy trình này, số khác đòi hỏi quản trị viên thực hiện thủ công một quy trình nhiều bước khá khó hiểu.
 
-还可以把复制日志归档到对象存储；再定期把整个数据库的快照保存到对象存储，就形成了一套很好的数据库备份与灾难恢复方案。建立新追随者时，步骤 1 和 2 也可以通过从对象存储下载这些文件来完成。例如，WAL-G 为 PostgreSQL、MySQL 和 SQL Server 提供了这种功能，Litestream 则为 SQLite 提供了类似功能。
+Bạn cũng có thể lưu trữ replication log vào lưu trữ đối tượng. Rồi định kỳ lưu snapshot của toàn bộ cơ sở dữ liệu vào lưu trữ đối tượng, tạo nên một giải pháp sao lưu và khôi phục sau thảm họa rất tốt cho cơ sở dữ liệu. Khi dựng follower mới, bước 1 và 2 cũng có thể thực hiện bằng cách tải các tệp này từ lưu trữ đối tượng. Chẳng hạn WAL-G cung cấp chức năng này cho PostgreSQL, MySQL và SQL Server, còn Litestream cung cấp chức năng tương tự cho SQLite.
 
 
 <a id="sec_replication_object_storage"></a>
 
-> [!TIP] 以对象存储为后端的数据库
+> [!TIP] Cơ sở dữ liệu dựa trên lưu trữ đối tượng
 >
-> 对象存储不只能用于归档。许多数据库已经开始用 Amazon Web Services S3、Google Cloud Storage、Azure Blob Storage 等对象存储为在线查询提供数据。把数据库数据存入对象存储有很多好处：
+> Lưu trữ đối tượng không chỉ dùng để lưu trữ lâu dài. Nhiều cơ sở dữ liệu đã bắt đầu dùng các lưu trữ đối tượng như Amazon Web Services S3, Google Cloud Storage và Azure Blob Storage để phục vụ dữ liệu cho truy vấn trực tuyến. Đặt dữ liệu cơ sở dữ liệu vào lưu trữ đối tượng có nhiều lợi ích:
 >
-> * 对象存储比其他云存储方案便宜。云数据库因而可以把查询频率较低的数据放到成本更低、延迟更高的存储中，同时用内存、SSD 和 NVMe 保存工作集。
-> * 对象存储还提供多可用区、双地区或多地区复制，并给出很高的持久性保证；数据库也由此可以避开跨可用区网络费用。
-> * 数据库可以利用对象存储的 *条件写入*（*conditional write*）功能——本质上是一种 *比较并设置*（CAS）操作——来实现事务和领导者选举 [^10] [^11]。
-> * 把多个数据库的数据放在同一对象存储中，可以简化数据集成，尤其是在使用 Apache Parquet、Apache Iceberg 等开放格式时。
+> * Lưu trữ đối tượng rẻ hơn các giải pháp lưu trữ đám mây khác. Nhờ đó cơ sở dữ liệu đám mây có thể đặt dữ liệu ít được truy vấn vào kho lưu trữ rẻ hơn, độ trễ cao hơn, đồng thời dùng bộ nhớ, SSD và NVMe để chứa tập dữ liệu đang làm việc (working set).
+> * Lưu trữ đối tượng còn cung cấp sao chép (*replication*) đa availability zone, hai region hoặc đa region, kèm cam kết độ bền vững rất cao, nhờ vậy cơ sở dữ liệu cũng tránh được phí mạng giữa các availability zone.
+> * Cơ sở dữ liệu có thể tận dụng tính năng *ghi có điều kiện* (*conditional write*) của lưu trữ đối tượng — về bản chất là một thao tác *compare-and-set* (CAS) — để triển khai giao dịch và bầu leader [^10] [^11].
+> * Đặt dữ liệu của nhiều cơ sở dữ liệu trong cùng một lưu trữ đối tượng có thể đơn giản hóa việc tích hợp dữ liệu, nhất là khi dùng các định dạng mở như Apache Parquet và Apache Iceberg.
 >
-> 这些好处把事务、领导者选举和复制的责任转交给对象存储，从而大幅简化数据库架构。
+> Những lợi ích này chuyển trách nhiệm về giao dịch, bầu leader và sao chép (*replication*) sang lưu trữ đối tượng, nhờ đó đơn giản hóa đáng kể kiến trúc cơ sở dữ liệu.
 >
-> 以对象存储实现复制的系统也必须面对一些权衡。尤其是，对象存储的读写延迟远高于本地磁盘或 EBS 之类的虚拟块设备。许多云服务商还按 API 调用次数收费，迫使系统把读写合并成批次以降低成本，而批处理又会进一步增加延迟。此外，许多对象存储没有标准的文件系统接口，未集成对象存储的系统便无法直接利用它。*用户空间文件系统*（FUSE）等接口允许运维人员把对象存储桶挂载成文件系统，应用程序不必知道数据实际位于对象存储中。然而，许多面向对象存储的 FUSE 接口并不支持非顺序写入、符号链接等 POSIX 功能，而系统可能依赖这些功能。
+> Hệ thống triển khai sao chép (*replication*) bằng lưu trữ đối tượng cũng phải đối mặt với một số đánh đổi. Đáng chú ý, độ trễ đọc và ghi của lưu trữ đối tượng cao hơn nhiều so với đĩa cục bộ hay thiết bị khối ảo như EBS. Nhiều nhà cung cấp đám mây còn tính phí theo số lần gọi API, buộc hệ thống phải gộp đọc và ghi thành lô để giảm chi phí, mà xử lý theo lô lại làm tăng thêm độ trễ. Ngoài ra, nhiều lưu trữ đối tượng không có giao diện hệ tệp chuẩn, nên những hệ thống chưa tích hợp lưu trữ đối tượng không thể tận dụng trực tiếp. Các giao diện như *hệ tệp trong không gian người dùng* (*filesystem in userspace*, FUSE) cho phép người vận hành mount bucket lưu trữ đối tượng thành hệ tệp, để ứng dụng không cần biết dữ liệu thực ra nằm trong lưu trữ đối tượng. Tuy nhiên, nhiều giao diện FUSE cho lưu trữ đối tượng không hỗ trợ các tính năng POSIX như ghi không tuần tự hay symbolic link, trong khi hệ thống có thể phụ thuộc vào chúng.
 >
-> 不同系统处理这些权衡的方式各不相同。有些采用 *分层存储*（*tiered storage*）架构，把不常访问的数据放到对象存储，把新数据或常用数据放在 SSD、NVMe 乃至内存等更快的存储介质上。另一些系统以对象存储作为主存储层，但另用 Amazon EBS、Neon Safekeepers [^12] 等低延迟存储系统保存 WAL。近来，一些系统走得更远，采用 *零磁盘架构*（ZDA）：所有数据都持久化到对象存储，磁盘和内存只用作缓存。节点因此无需保存持久状态，运维也大为简化。WarpStream、Confluent Freight、Buf 的 Bufstream 和 Redpanda Serverless 都是采用零磁盘架构构建的 Kafka 兼容系统。几乎所有现代云数据仓库也采用类似架构，向量搜索引擎 Turbopuffer 和云原生 LSM 存储引擎 SlateDB 亦是如此。
+> Mỗi hệ thống xử lý các đánh đổi này một cách khác nhau. Một số dùng kiến trúc *lưu trữ phân tầng* (*tiered storage*), đặt dữ liệu ít truy cập vào lưu trữ đối tượng, còn dữ liệu mới hoặc thường dùng nằm trên phương tiện nhanh hơn như SSD, NVMe, thậm chí bộ nhớ. Một số khác dùng lưu trữ đối tượng làm tầng lưu trữ chính nhưng lưu WAL trên hệ thống lưu trữ độ trễ thấp như Amazon EBS hay Neon Safekeepers [^12]. Gần đây, một số hệ thống đi xa hơn với *kiến trúc không đĩa* (*zero-disk architecture*, ZDA): mọi dữ liệu đều được lưu bền vững vào lưu trữ đối tượng, còn đĩa và bộ nhớ chỉ đóng vai trò cache. Nhờ vậy node không cần giữ trạng thái bền vững, và việc vận hành được đơn giản hóa rất nhiều. WarpStream, Confluent Freight, Bufstream của Buf và Redpanda Serverless đều là các hệ thống tương thích Kafka xây dựng theo kiến trúc không đĩa. Gần như mọi kho dữ liệu đám mây hiện đại cũng dùng kiến trúc tương tự, cũng như công cụ tìm kiếm vector Turbopuffer và storage engine LSM cloud-native SlateDB.
 
+### Xử lý sự cố node {#sec_replication_failover}
 
-### 处理节点故障 {#sec_replication_failover}
+Bất kỳ node nào trong hệ thống cũng có thể ngừng hoạt động, do sự cố bất ngờ hoặc do bảo trì có kế hoạch, chẳng hạn khởi động lại máy để cài bản vá bảo mật kernel. Việc có thể khởi động lại từng node mà không làm gián đoạn dịch vụ rất có lợi cho vận hành và bảo trì. Vì vậy mục tiêu của ta là: toàn hệ thống vẫn tiếp tục chạy dù từng node riêng lẻ bị hỏng, và giảm tối đa ảnh hưởng của việc node ngừng hoạt động.
 
-系统中的任何节点都可能停机，既可能是故障意外所致，也可能是计划内维护，例如重启机器以安装内核安全补丁。能够在服务不中断的情况下逐个重启节点，对运维和维护大有裨益。因此，我们的目标是：即使个别节点失效，整个系统仍能继续运行，并尽可能减小节点停机的影响。
+Làm thế nào để đạt tính sẵn sàng cao với sao chép dựa trên leader (*leader-based replication*)?
 
-如何用基于领导者的复制实现高可用？
+#### Follower hỏng: phục hồi bằng cách bắt kịp {#follower-failure-catch-up-recovery}
 
-#### 追随者失效：追赶恢复 {#follower-failure-catch-up-recovery}
+Mỗi follower ghi lại trên đĩa cục bộ các thay đổi dữ liệu nhận từ leader. Nếu follower sập rồi khởi động lại, hoặc mạng giữa leader và follower tạm thời gián đoạn, việc phục hồi khá dễ: từ log, follower biết giao dịch cuối cùng nó đã xử lý trước khi lỗi xảy ra. Sau đó nó kết nối đến leader và yêu cầu mọi thay đổi dữ liệu xảy ra trong lúc nó ngắt kết nối. Áp dụng xong các thay đổi này, nó đã bắt kịp leader và có thể tiếp tục nhận luồng thay đổi dữ liệu như trước.
 
-每个追随者都会在本地磁盘上记录从领导者收到的数据变更。如果追随者崩溃后重启，或领导者与追随者之间的网络暂时中断，恢复起来相对容易：追随者可以从日志中得知故障发生前处理的最后一个事务。它随后连接领导者，请求自己断开期间发生的所有数据变更。应用完这些变更后，它便赶上领导者，可以像以前一样继续接收数据变更流。
+Về mặt khái niệm, phục hồi follower rất đơn giản, nhưng về hiệu năng có thể rắc rối. Nếu thông lượng ghi của cơ sở dữ liệu rất cao, hoặc follower ngoại tuyến lâu, số lần ghi cần bắt kịp có thể rất lớn. Trong lúc bắt kịp, cả follower đang phục hồi lẫn leader đều chịu tải cao — leader còn phải gửi các lần ghi tồn đọng cho follower.
 
-追随者恢复在概念上很简单，性能上却可能很棘手。如果数据库写入吞吐量很高，或追随者离线很久，需要追赶的写入可能非常多。追赶期间，正在恢复的追随者和领导者都会承受很高负载——领导者还要把积压的写入发送给追随者。
+Khi mọi follower đã xác nhận xử lý xong một đoạn log ghi, leader có thể xóa đoạn đó. Nhưng nếu một follower không khả dụng lâu, leader phải chọn: hoặc giữ log mãi để đợi follower phục hồi và bắt kịp, với rủi ro cạn dung lượng đĩa của leader, hoặc xóa phần log chưa được follower đó xác nhận, và khi follower trở lại, nó không thể dùng log để bắt kịp nữa mà phải khôi phục từ bản sao lưu.
 
-所有追随者确认处理完某段写入日志后，领导者便可将其删除。但如果某个追随者长时间不可用，领导者必须作出选择：要么一直保留日志，等追随者恢复并赶上进度，但要冒领导者磁盘空间耗尽的风险；要么删除尚未得到该追随者确认的日志，这样追随者恢复上线后就无法靠日志追赶，只能从备份恢复。
+#### Leader hỏng: failover {#leader-failure-failover}
 
-#### 领导者失效：故障切换 {#leader-failure-failover}
+Xử lý leader hỏng khó hơn: phải đưa một follower lên làm leader mới, cấu hình lại client để gửi ghi đến leader mới, và để các follower còn lại bắt đầu nhận thay đổi dữ liệu từ leader mới. Quá trình này gọi là *failover* (*failover*).
 
-领导者失效处理起来更加棘手：必须把一个追随者提升为新领导者，重新配置客户端以便把写入发给新领导者，并让其他追随者开始消费新领导者的数据变更。这个过程称为 *故障切换*（*failover*）。
+Failover có thể thực hiện thủ công — báo cho quản trị viên biết leader đã hỏng, rồi họ thực hiện các bước cần thiết để chọn leader mới — hoặc tự động. Failover tự động thường gồm các bước sau:
 
-故障切换可以手工完成——通知管理员领导者已经失效，再由管理员执行必要步骤选出新领导者；也可以自动完成。自动故障切换通常包括以下步骤：
+1. *Xác định leader đã hỏng.* Có rất nhiều thứ có thể trục trặc: sập, mất điện, lỗi mạng, v.v. Không có cách nào chắc chắn để biết chính xác chuyện gì đã xảy ra, nên hầu hết hệ thống chỉ dùng *timeout* (*timeout*): các node thường xuyên trao đổi thông điệp qua lại, và nếu một node không phản hồi trong một khoảng thời gian (ví dụ 30 giây) thì coi là đã hỏng. (Quy tắc này không áp dụng khi chủ động đưa leader ngoại tuyến để bảo trì có kế hoạch.)
+2. *Chọn leader mới.* Có thể thực hiện qua một cuộc bầu cử (đa số các replica còn lại chọn leader), hoặc do một *node điều khiển* (*controller node*) được chỉ định từ trước bổ nhiệm [^13]. Ứng viên phù hợp nhất thường là replica có dữ liệu mới nhất, tức đã nhận nhiều thay đổi dữ liệu nhất từ leader cũ, để giảm thiểu mất mát dữ liệu. Làm cho mọi node thống nhất về leader mới là một bài toán đồng thuận, sẽ được bàn chi tiết ở [Chương 10](/ch10#ch_consistency).
+3. *Cấu hình lại hệ thống để dùng leader mới.* Client giờ phải gửi yêu cầu ghi đến leader mới (xem ["Định tuyến yêu cầu"](/ch7#sec_sharding_routing)). Nếu leader cũ trở lại, nó có thể vẫn tin mình là leader, không biết rằng các replica khác đã buộc nó thôi vai trò. Hệ thống phải đảm bảo leader cũ trở thành follower và thừa nhận leader mới.
 
-1. *确认领导者失效。* 可能出问题的地方很多：崩溃、断电、网络故障等等。没有万无一失的办法判断究竟出了什么问题，因此大多数系统只是使用超时：节点之间频繁往返传递消息，如果某个节点在一段时间内（例如 30 秒）没有响应，就认为它已经失效。（因计划维护而主动下线领导者则不适用这一规则。）
-2. *选择新的领导者。* 可以通过选举完成（由剩余副本中的多数选出领导者），也可以由事先指定的 *控制器节点* 任命 [^13]。最合适的候选者通常是从旧领导者收到数据变更最多、数据最新的副本，这样可以尽量减少数据损失。让所有节点就新领导者达成一致是一个共识问题，[第 10 章](/ch10#ch_consistency) 将详细讨论。
-3. *重新配置系统以使用新领导者。* 客户端现在必须把写请求发给新领导者（参见 [“请求路由”](/ch7#sec_sharding_routing)）。如果旧领导者恢复上线，它可能仍以为自己是领导者，没有意识到其他副本已经迫使它退位。系统必须保证旧领导者转为追随者，并承认新领导者。
+Failover có rất nhiều chỗ có thể xảy ra sai sót:
 
-故障切换过程中有很多地方可能出错：
-
-* 如果使用异步复制，新领导者可能没有收到旧领导者失效前的全部写入。选出新领导者后，原领导者若重新加入集群，那些未复制的写入该怎么办？与此同时，新领导者可能已经收到与之冲突的写入。最常见的办法是直接丢弃旧领导者尚未复制的写入，这意味着你原以为已经提交的写入其实并未持久保存。
-* 如果数据库内容还需要与数据库之外的存储系统协调，丢弃写入尤其危险。例如，GitHub 曾发生过一起事故 [^14]：一个数据过时的 MySQL 追随者被提升为领导者。数据库用自增计数器为新行分配主键；新领导者的计数器落后于旧领导者，因而重复使用了旧领导者已经分配过的一些主键。这些主键同时用于 Redis 存储，主键重用造成 MySQL 与 Redis 数据不一致，最终使一些私有数据泄露给了错误的用户。
-* 在某些故障场景下（见 [第 9 章](/ch9#ch_distributed)），可能有两个节点都认为自己是领导者。这种情况称为 *脑裂*（*split brain*），非常危险：如果两个领导者都接受写入，而系统又没有冲突解决流程（参见 [“多主复制”](/ch6#sec_replication_multi_leader)），数据很可能丢失或损坏。有些系统设有保险机制，一旦发现两个领导者便关闭其中一个节点；但机制设计不当时，也可能把两个节点都关闭 [^15]。而且，等系统发现脑裂并关闭旧节点时，可能已经为时过晚，数据早已损坏。
-* 宣布领导者失效前，超时应该设为多长？超时越长，领导者确实失效时恢复所需的时间就越长；超时太短，又容易触发不必要的故障切换。例如，短暂的负载尖峰可能使节点响应时间超过超时值，网络抖动也可能延迟数据包。如果系统已经饱受高负载或网络问题困扰，不必要的故障切换只会让情况更糟。
+* Nếu dùng sao chép bất đồng bộ (*asynchronous replication*), leader mới có thể chưa nhận được toàn bộ các lần ghi trước khi leader cũ hỏng. Sau khi chọn leader mới, nếu leader cũ gia nhập lại cụm thì những lần ghi chưa được sao chép (*replication*) đó xử lý ra sao? Trong lúc đó, leader mới có thể đã nhận những lần ghi xung đột với chúng. Cách phổ biến nhất là đơn giản loại bỏ các lần ghi chưa sao chép (*replication*) của leader cũ, nghĩa là những lần ghi mà bạn tưởng đã commit thực ra không được lưu bền vững.
+* Việc loại bỏ các lần ghi đặc biệt nguy hiểm nếu nội dung cơ sở dữ liệu còn cần phối hợp với một hệ thống lưu trữ bên ngoài cơ sở dữ liệu. Chẳng hạn, GitHub từng gặp một sự cố [^14] khi một follower MySQL có dữ liệu lỗi thời được đưa lên làm leader. Cơ sở dữ liệu dùng bộ đếm tự tăng để gán khóa chính cho các dòng mới. Bộ đếm của leader mới tụt sau leader cũ, nên nó dùng lại một số khóa chính mà leader cũ đã gán. Các khóa chính này cũng được dùng trong kho lưu trữ Redis. Việc dùng lại khóa chính khiến dữ liệu MySQL và Redis không nhất quán, cuối cùng làm lộ một số dữ liệu riêng tư cho nhầm người dùng.
+* Trong một số tình huống lỗi (xem [Chương 9](/ch9#ch_distributed)), có thể xảy ra việc hai node đều tin mình là leader. Tình huống này gọi là *split brain* (*split brain*) và rất nguy hiểm: nếu cả hai leader đều nhận ghi mà hệ thống không có quy trình giải quyết xung đột (xem ["Sao chép đa leader (*multi-leader replication*)"](/ch6#sec_replication_multi_leader)), dữ liệu rất dễ bị mất hoặc hỏng. Một số hệ thống có cơ chế an toàn: khi phát hiện hai leader thì tắt một trong hai node, nhưng nếu thiết kế không tốt, cơ chế này có thể tắt cả hai node [^15]. Hơn nữa, đến lúc hệ thống phát hiện split brain và tắt node cũ, có thể đã quá muộn, dữ liệu đã hỏng.
+* Nên đặt timeout bao lâu trước khi tuyên bố leader đã hỏng? Timeout càng dài thì thời gian phục hồi khi leader thực sự hỏng càng lâu. Timeout quá ngắn lại dễ kích hoạt failover không cần thiết. Chẳng hạn, một đợt tăng tải đột biến ngắn có thể khiến thời gian phản hồi của node vượt timeout, hoặc mạng chập chờn có thể làm trễ gói tin. Nếu hệ thống vốn đã chịu tải cao hoặc gặp vấn đề mạng, failover không cần thiết chỉ làm tình hình tệ hơn.
 
 
 > [!NOTE]
-> 通过限制或关闭旧领导者来防止脑裂，称为 *栅栏机制*（fencing），更形象的说法是 *爆彼之头*（Shoot The Other Node In The Head，STONITH）。[“分布式锁和租约”](/ch9#sec_distributed_lock_fencing) 将更详细地讨论栅栏机制。
+> Ngăn split brain bằng cách giới hạn hoặc tắt leader cũ được gọi là *fencing* (*fencing*), cách gọi hình ảnh hơn là *Shoot The Other Node In The Head* (STONITH). ["Khóa phân tán và lease"](/ch9#sec_distributed_lock_fencing) sẽ bàn chi tiết hơn về fencing.
 
 
-这些问题没有简单的解决方案。因此，即使软件支持自动故障切换，一些运维团队还是更愿意手工执行。
+Những vấn đề này không có lời giải đơn giản. Vì vậy, dù phần mềm hỗ trợ failover tự động, một số đội vận hành vẫn thích thực hiện thủ công.
 
-故障切换最重要的是选出一个数据最新的追随者作为新领导者。采用同步或半同步复制时，应选择旧领导者确认写入前所等待的那个追随者；采用异步复制时，则可以选择日志序列号最大的追随者。这样能尽量减少故障切换时的数据损失：丢失几分之一秒内的写入或许尚可容忍，选中一个落后数天的追随者却可能是灾难性的。
+Điều quan trọng nhất của failover là chọn follower có dữ liệu mới nhất làm leader mới. Với sao chép đồng bộ (*synchronous replication*) hoặc bán đồng bộ, nên chọn follower mà leader cũ đã chờ trước khi xác nhận ghi, với sao chép bất đồng bộ (*asynchronous replication*), có thể chọn follower có log sequence number lớn nhất. Cách này giảm thiểu mất dữ liệu khi failover: mất các lần ghi trong vài phần giây thì có thể chấp nhận được, còn chọn phải follower tụt hậu nhiều ngày có thể là thảm họa.
 
-节点失效、不可靠的网络，以及围绕副本一致性、持久性、可用性和延迟所作的权衡，都是分布式系统中的根本问题。[第 9 章](/ch9#ch_distributed) 和 [第 10 章](/ch10#ch_consistency) 将进一步深入讨论。
+Sự cố node, mạng không đáng tin cậy, và các đánh đổi xoay quanh tính nhất quán, độ bền vững, tính sẵn sàng và độ trễ của replica đều là những vấn đề căn bản của hệ thống phân tán. [Chương 9](/ch9#ch_distributed) và [Chương 10](/ch10#ch_consistency) sẽ đi sâu hơn.
 
-### 复制日志的实现 {#sec_replication_implementation}
+### Triển khai replication log {#sec_replication_implementation}
 
-基于领导者的复制在底层究竟如何工作？实践中采用了几种不同的复制方式，下面逐一简要介绍。
+Sao chép dựa trên leader (*leader-based replication*) thực sự hoạt động ra sao ở tầng dưới? Thực tế có vài cách sao chép (*replication*) khác nhau, ta lần lượt điểm qua dưới đây.
 
-#### 基于语句的复制 {#statement-based-replication}
+#### Sao chép (*replication*) dựa trên câu lệnh {#statement-based-replication}
 
-最简单的情况下，领导者会记录自己执行的每个写入请求（即 *语句*），并把这份语句日志发送给追随者。对于关系数据库，这意味着每条 `INSERT`、`UPDATE` 或 `DELETE` 语句都会转发给追随者；每个追随者解析并执行这条 SQL 语句，就像它直接来自客户端一样。
+Trong trường hợp đơn giản nhất, leader ghi lại mọi yêu cầu ghi nó thực thi (tức *câu lệnh*) và gửi log câu lệnh này cho follower. Với cơ sở dữ liệu quan hệ, điều đó nghĩa là mọi câu lệnh `INSERT`, `UPDATE` hay `DELETE` đều được chuyển cho follower, mỗi follower phân tích cú pháp và thực thi câu lệnh SQL này như thể nó đến trực tiếp từ client.
 
-虽然听起来很合理，但这种复制方式有许多可能出错的地方：
+Nghe có vẻ hợp lý, nhưng cách sao chép (*replication*) này có nhiều chỗ dễ sai:
 
-* 任何调用非确定性函数的语句，都可能在各副本上产生不同的值，例如用 `NOW()` 取得当前日期和时间，或用 `RAND()` 取得随机数。
-* 如果语句使用自增列，或依赖数据库中的现有数据（例如 `UPDATE …​ WHERE <some condition>`），就必须在每个副本上按完全相同的顺序执行，否则可能产生不同结果。有多个事务并发执行时，这会成为限制。
-* 带有副作用的语句（例如触发器、存储过程、用户定义函数），可能在各副本上产生不同的副作用，除非这些副作用完全确定。
+* Bất kỳ câu lệnh nào gọi hàm *phi tất định* (*nondeterministic*) đều có thể cho giá trị khác nhau trên mỗi replica, chẳng hạn `NOW()` để lấy ngày giờ hiện tại hoặc `RAND()` để lấy số ngẫu nhiên.
+* Nếu câu lệnh dùng cột tự tăng, hoặc phụ thuộc vào dữ liệu hiện có trong cơ sở dữ liệu (ví dụ `UPDATE …​ WHERE <some condition>`), thì nó phải được thực thi theo đúng cùng thứ tự trên mọi replica, nếu không có thể cho kết quả khác nhau. Khi có nhiều giao dịch thực thi đồng thời, điều này trở thành một hạn chế.
+* Các câu lệnh có *tác dụng phụ* (*side effect*) (ví dụ trigger, *thủ tục lưu trữ* (*stored procedure*), hàm do người dùng định nghĩa) có thể gây ra tác dụng phụ khác nhau trên từng replica, trừ khi các tác dụng phụ đó hoàn toàn tất định.
 
-这些问题可以绕开。例如，领导者在记录语句时，可以用固定的返回值替换非确定性函数调用，从而让所有追随者得到相同的值。按固定顺序执行确定性语句，与 [“事件溯源与 CQRS”](/ch3#sec_datamodels_events) 中介绍的事件溯源模型很相似。这种方法也称为 *状态机复制*（*state machine replication*）；[“使用共享日志”](/ch10#sec_consistency_smr) 将讨论其理论基础。
+Những vấn đề này có thể được né tránh. Chẳng hạn, khi ghi lại câu lệnh, leader có thể thay các lời gọi hàm phi tất định bằng giá trị trả về cố định, để mọi follower nhận cùng một giá trị. Việc thực thi các câu lệnh tất định theo thứ tự cố định rất giống mô hình event sourcing giới thiệu ở ["Event sourcing và CQRS"](/ch3#sec_datamodels_events). Cách này còn được gọi là *sao chép máy trạng thái* (*state machine replication*). ["Dùng shared log"](/ch10#sec_consistency_smr) sẽ bàn về nền tảng lý thuyết của nó.
 
-MySQL 5.1 以前使用基于语句的复制。由于日志相当紧凑，如今有时仍会采用这种方式；不过默认情况下，只要语句中存在任何非确定性，MySQL 就会切换到稍后介绍的基于行的复制。VoltDB 也采用基于语句的复制，并要求事务必须是确定性的，以保证安全 [^16]。然而，实践中很难确保确定性，因此许多数据库更倾向于其他复制方式。
+MySQL trước phiên bản 5.1 dùng sao chép (*replication*) dựa trên câu lệnh. Vì log khá gọn nhẹ, đôi khi ngày nay vẫn còn dùng cách này. Tuy nhiên, theo mặc định, hễ trong câu lệnh có bất kỳ yếu tố phi tất định nào, MySQL sẽ chuyển sang sao chép (*replication*) dựa trên dòng (sẽ nói ở phần sau). VoltDB cũng dùng sao chép (*replication*) dựa trên câu lệnh, và yêu cầu giao dịch phải tất định để đảm bảo an toàn [^16]. Tuy nhiên, trên thực tế rất khó đảm bảo tính tất định, nên nhiều cơ sở dữ liệu ưa chuộng các cách sao chép (*replication*) khác.
 
-#### 预写日志（WAL）传输 {#write-ahead-log-wal-shipping}
+#### Chuyển write-ahead log (WAL) {#write-ahead-log-wal-shipping}
 
-我们在 [第 4 章](/ch4#ch_storage) 中看到，B 树存储引擎需要预写日志才能可靠工作：每次修改都先写入 WAL，以便崩溃后把树恢复到一致状态。WAL 包含把索引和堆恢复到一致状态所需的全部信息，因此同一份日志也能用来在另一个节点上建立副本：领导者除了把日志写入磁盘，还通过网络把它发送给追随者。追随者处理日志后，就会构建出与领导者完全相同的文件副本。
+Ở [Chương 4](/ch4#ch_storage), ta đã thấy storage engine B-tree cần write-ahead log để hoạt động đáng tin cậy: mỗi thay đổi đều được ghi vào WAL trước, để sau khi sập có thể khôi phục cây về trạng thái nhất quán. WAL chứa mọi thông tin cần thiết để đưa chỉ mục (*index*) và heap về trạng thái nhất quán, nên chính log đó cũng có thể dùng để dựng replica trên node khác: ngoài việc ghi log xuống đĩa, leader còn gửi nó qua mạng cho follower. Follower xử lý log sẽ dựng nên một bản sao tệp giống hệt trên leader.
 
-PostgreSQL、Oracle 等数据库采用这种复制方式 [^17] [^18]。其主要缺点是，日志在非常低的层次描述数据：WAL 记录了哪个磁盘块中的哪些字节发生变化。因此，复制与存储引擎紧密耦合。数据库从一个版本升级到另一个版本、存储格式随之改变时，通常无法在领导者和追随者上运行不同版本的数据库软件。
+Các cơ sở dữ liệu như PostgreSQL và Oracle dùng cách sao chép (*replication*) này [^17] [^18]. Nhược điểm chính là log mô tả dữ liệu ở tầng rất thấp: WAL ghi lại những byte nào ở khối đĩa nào đã thay đổi. Do đó sao chép (*replication*) gắn chặt với storage engine. Khi cơ sở dữ liệu nâng cấp từ phiên bản này sang phiên bản khác và định dạng lưu trữ thay đổi, thường không thể chạy các phiên bản phần mềm cơ sở dữ liệu khác nhau trên leader và follower.
 
-这看起来只是一个微不足道的实现细节，却可能给运维带来巨大影响。如果复制协议允许追随者运行比领导者更新的软件版本，就可以先升级追随者，再执行故障切换，让一个升级后的节点成为新领导者，从而实现数据库软件的零停机升级。如果复制协议不允许版本不一致——WAL 传输往往如此——这类升级就需要停机。
+Điều này nghe như một chi tiết triển khai vụn vặt, nhưng có thể gây ảnh hưởng lớn đến vận hành. Nếu giao thức sao chép (*replication*) cho phép follower chạy phiên bản phần mềm mới hơn leader, ta có thể nâng cấp follower trước, rồi thực hiện failover để một node đã nâng cấp trở thành leader mới, qua đó nâng cấp phần mềm cơ sở dữ liệu không cần ngừng hoạt động. Nếu giao thức sao chép (*replication*) không cho phép lệch phiên bản — như thường thấy với chuyển WAL — thì việc nâng cấp như vậy phải ngừng hoạt động.
 
 <a id="sec_replication_logical"></a>
 
-#### 逻辑（基于行）日志复制 {#logical-row-based-log-replication}
+#### Sao chép (*replication*) log logic (dựa trên dòng) {#logical-row-based-log-replication}
 
-另一种方法是让复制和存储引擎使用不同的日志格式，从而使复制日志与存储引擎的内部实现解耦。这种复制日志称为 *逻辑日志*（*logical log*），以区别于存储引擎的（*物理*，*physical*）数据表示。
+Một cách khác là dùng các định dạng log khác nhau cho sao chép (*replication*) và storage engine, nhờ đó tách replication log khỏi chi tiết nội bộ của storage engine. Loại replication log này gọi là *logical log* (*logical log*), để phân biệt với cách biểu diễn dữ liệu (*vật lý*, *physical*) của storage engine.
 
-关系数据库的逻辑日志通常由一系列记录组成，以行的粒度描述对数据库表的写入：
+Logical log của cơ sở dữ liệu quan hệ thường là một chuỗi bản ghi mô tả các lần ghi vào bảng ở mức độ chi tiết từng dòng:
 
-* 插入一行时，日志包含所有列的新值。
-* 删除一行时，日志包含足以唯一标识被删行的信息，通常是主键；如果表没有主键，则需要记录所有列的旧值。
-* 更新一行时，日志包含足以唯一标识被更新行的信息，以及所有列的新值（或者至少包含所有发生变化的列的新值）。
+* Khi chèn một dòng, log chứa giá trị mới của mọi cột.
+* Khi xóa một dòng, log chứa đủ thông tin để xác định duy nhất dòng bị xóa, thường là khóa chính. Nếu bảng không có khóa chính thì cần ghi giá trị cũ của mọi cột.
+* Khi cập nhật một dòng, log chứa đủ thông tin để xác định duy nhất dòng bị cập nhật, cùng giá trị mới của mọi cột (hoặc ít nhất là giá trị mới của mọi cột có thay đổi).
 
-修改多行的事务会生成多条这样的日志记录，随后再跟一条表示事务已经提交的记录。MySQL 配置为基于行的复制时，除了 WAL 之外，还会维护一份称为 *binlog* 的独立逻辑复制日志。PostgreSQL 则把物理 WAL 解码成行插入、更新和删除事件，以实现逻辑复制 [^19]。
+Giao dịch sửa nhiều dòng sinh ra nhiều bản ghi log như vậy, theo sau là một bản ghi cho biết giao dịch đã commit. Khi MySQL được cấu hình sao chép (*replication*) dựa trên dòng, ngoài WAL nó còn duy trì một logical replication log riêng gọi là *binlog*. PostgreSQL thì giải mã WAL vật lý thành các sự kiện chèn, cập nhật, xóa dòng để thực hiện sao chép (*replication*) logic [^19].
 
-由于逻辑日志与存储引擎的内部实现解耦，更容易保持向后兼容，因而领导者与追随者可以运行不同版本的数据库软件，也就能以极少的停机时间升级到新版本 [^20]。
+Vì logical log tách khỏi chi tiết nội bộ của storage engine nên dễ giữ tương thích ngược hơn, nhờ đó leader và follower có thể chạy các phiên bản phần mềm cơ sở dữ liệu khác nhau, và có thể nâng cấp lên phiên bản mới với rất ít thời gian ngừng hoạt động [^20].
 
-逻辑日志格式也更容易由外部应用程序解析。如果要把数据库内容发送到外部系统，例如送入数据仓库做离线分析，或构建自定义索引和缓存 [^21]，这一点会很有用。这种技术称为 *变更数据捕获*（*change data capture*，CDC），我们会在 [“变更数据捕获”](/ch12#sec_stream_cdc) 中再次谈到它。
+Định dạng logical log cũng dễ để ứng dụng bên ngoài phân tích hơn. Điều này hữu ích khi muốn gửi nội dung cơ sở dữ liệu sang hệ thống bên ngoài, chẳng hạn đưa vào kho dữ liệu để phân tích ngoại tuyến, hoặc xây chỉ mục (*index*) và cache tùy biến [^21]. Kỹ thuật này gọi là *change data capture* (*change data capture*, CDC), và ta sẽ quay lại ở ["Change data capture"](/ch12#sec_stream_cdc).
 
-## 复制延迟的问题 {#sec_replication_lag}
+## Vấn đề của replication lag {#sec_replication_lag}
 
-容忍节点失效只是使用复制的一个原因。正如 [“分布式与单节点系统”](/ch1#sec_introduction_distributed) 中提到的，其他原因还包括可伸缩性（处理单台机器无法承受的请求量）和延迟（把副本放在地理上更靠近用户的位置）。
+Chịu được sự cố node chỉ là một lý do để dùng sao chép (*replication*). Như đã nhắc ở ["Hệ thống phân tán và hệ thống một node"](/ch1#sec_introduction_distributed), các lý do khác gồm khả năng mở rộng (xử lý lượng yêu cầu vượt quá sức một máy) và độ trễ (đặt replica gần người dùng hơn về mặt địa lý).
 
-基于领导者的复制要求所有写入经过一个节点，但只读查询可以发往任意副本。对于读多写少的工作负载——在线服务往往如此——有一种很有吸引力的方案：建立许多追随者，把读请求分散到这些追随者上。这样既能减轻领导者的负载，也能由附近的副本处理读请求。
+Sao chép dựa trên leader (*leader-based replication*) yêu cầu mọi lần ghi đi qua một node, nhưng truy vấn chỉ đọc có thể gửi đến bất kỳ replica nào. Với khối lượng công việc đọc nhiều, ghi ít — thường thấy ở các dịch vụ trực tuyến — có một phương án hấp dẫn: tạo nhiều follower và dàn yêu cầu đọc ra các follower đó. Cách này vừa giảm tải cho leader, vừa cho phép các replica ở gần xử lý yêu cầu đọc.
 
-在这种 *读伸缩*（*read-scaling*）架构中，只需增加追随者，便可提高只读请求的处理能力。不过，这种办法实际上只适用于异步复制。如果尝试同步复制到所有追随者，任意一个节点失效或网络中断都会让整个系统无法写入。节点越多，越可能有某个节点停机，因此完全同步的配置会极不可靠。
+Trong kiến trúc *mở rộng đọc* (*read-scaling*) này, chỉ cần thêm follower là tăng được khả năng xử lý yêu cầu chỉ đọc. Tuy nhiên, cách này thực tế chỉ phù hợp với sao chép bất đồng bộ (*asynchronous replication*). Nếu cố sao chép đồng bộ (*synchronous replication*) đến mọi follower, chỉ cần một node hỏng hoặc mạng gián đoạn là cả hệ thống không ghi được. Node càng nhiều thì càng dễ có node ngừng hoạt động, nên cấu hình đồng bộ hoàn toàn sẽ cực kỳ thiếu tin cậy.
 
-不幸的是，应用程序从 *异步*（*asynchronous*）追随者读取时，如果追随者落后，就可能看到过时的信息。数据库于是显得不一致：同时在领导者和追随者上执行同一查询，结果可能不同，因为追随者尚未反映所有写入。这种不一致只是暂时的——如果停止写入并等待一段时间，追随者最终会赶上领导者，恢复一致。因此，这种现象称为 *最终一致性*（*eventual consistency*）[^22]。
+Đáng tiếc là khi ứng dụng đọc từ follower *bất đồng bộ*, nó có thể thấy thông tin lỗi thời nếu follower tụt hậu. Cơ sở dữ liệu vì thế có vẻ không nhất quán: chạy cùng một truy vấn đồng thời trên leader và follower có thể cho kết quả khác nhau, vì follower chưa phản ánh hết các lần ghi. Sự không nhất quán này chỉ là tạm thời — nếu ngừng ghi và chờ một lúc, follower cuối cùng sẽ bắt kịp leader và trở lại nhất quán. Vì vậy hiện tượng này được gọi là *nhất quán cuối cùng* (*eventual consistency*) [^22].
 
 
 > [!NOTE]
-> *最终一致性* 一词由 Douglas Terry 等人提出 [^23]，经 Werner Vogels 推广 [^24]，后来成了许多 NoSQL 项目的口号。不过，最终一致性并非 NoSQL 数据库独有：关系数据库采用异步复制时，其追随者也有相同特性。
+> Thuật ngữ *nhất quán cuối cùng* do Douglas Terry và cộng sự đưa ra [^23], được Werner Vogels phổ biến [^24], và về sau trở thành khẩu hiệu của nhiều dự án NoSQL. Tuy nhiên, nhất quán cuối cùng không phải đặc quyền của cơ sở dữ liệu NoSQL: cơ sở dữ liệu quan hệ dùng sao chép bất đồng bộ (*asynchronous replication*) thì follower của nó cũng có đặc tính tương tự.
 
 
-“最终”一词有意保持模糊：一般而言，副本能落后多久并没有上限。正常运行时，从写入发生在领导者上，到变更反映在追随者上，两者之间的延迟——即 *复制延迟*（*replication lag*）——可能只有几分之一秒，在实践中难以察觉。但当系统在容量极限附近运行或网络出现问题时，延迟很容易增至几秒甚至几分钟。
+Từ "cuối cùng" được cố ý để mơ hồ: nhìn chung, replica có thể tụt hậu bao lâu thì không có giới hạn trên. Khi hoạt động bình thường, độ trễ giữa lúc ghi diễn ra trên leader và lúc thay đổi phản ánh trên follower — tức *replication lag* (*replication lag*) — có thể chỉ vài phần giây, thực tế khó nhận ra. Nhưng khi hệ thống chạy gần giới hạn dung lượng hoặc mạng gặp sự cố, độ trễ dễ dàng tăng lên vài giây, thậm chí vài phút.
 
-延迟一旦大到这种程度，由此造成的不一致就不再只是理论问题，而会成为应用程序面临的真实问题。本节将重点介绍复制延迟容易引发的三类问题，并概述一些解决办法。
+Khi độ trễ lớn đến mức đó, sự không nhất quán do nó gây ra không còn là vấn đề lý thuyết mà trở thành vấn đề thực sự của ứng dụng. Phần này sẽ tập trung vào ba loại vấn đề dễ phát sinh do replication lag, và điểm qua một số giải pháp.
 
-### 读己之写 {#sec_replication_ryw}
+### Read-your-writes {#sec_replication_ryw}
 
-许多应用程序允许用户提交数据，随后查看自己提交的内容。它可能是客户数据库中的一条记录、讨论主题下的一条评论，或其他类似内容。新数据必须写入领导者，但用户查看时可以从追随者读取。如果数据经常读取、很少写入，这种做法尤其合适。
+Nhiều ứng dụng cho phép người dùng gửi dữ liệu rồi xem lại nội dung mình đã gửi. Đó có thể là một bản ghi trong cơ sở dữ liệu khách hàng, một bình luận dưới chủ đề thảo luận, hoặc thứ gì đó tương tự. Dữ liệu mới phải được ghi vào leader, nhưng khi người dùng xem, dữ liệu có thể được đọc từ follower. Cách này đặc biệt phù hợp nếu dữ liệu được đọc thường xuyên nhưng ít khi ghi.
 
-异步复制在这里会产生问题，如 {{< xref fig="6-3" page="/ch6" anchor="fig_replication_read_your_writes" >}}图 6-3{{< /xref >}} 所示：用户刚写入数据不久便查看它时，新数据可能尚未到达该副本。在用户看来，自己刚刚提交的数据仿佛丢失了，当然会感到不满。
+Sao chép bất đồng bộ (*asynchronous replication*) gây ra vấn đề ở đây, như minh họa ở {{< xref fig="6-3" page="/ch6" anchor="fig_replication_read_your_writes" >}}Hình 6-3{{< /xref >}}: khi người dùng xem dữ liệu ngay sau khi ghi, dữ liệu mới có thể chưa đến replica đó. Với người dùng, dữ liệu vừa gửi trông như bị mất, và họ đương nhiên sẽ không hài lòng.
 
-{{< fig num="6-3" id="fig_replication_read_your_writes" src="/fig/ddia_0603.png" caption="用户写入后，又从陈旧副本读取。要防止这种异常，需要写后读一致性。" class="ddia-figure ddia-figure--wide" width="2880" height="1128" />}}
+{{< fig num="6-3" id="fig_replication_read_your_writes" src="/fig/ddia_0603.png" caption="Người dùng ghi dữ liệu rồi đọc từ một replica cũ. Để ngăn dị thường này, cần nhất quán read-after-write." class="ddia-figure ddia-figure--wide" width="2880" height="1128" />}}
 
-这种情况下需要 *写后读一致性*（*read-after-write consistency*），也称 *读己之写一致性*（*read-your-writes consistency*）[^23]。它保证用户重新加载页面时，总能看到自己提交的更新。至于其他用户则不作保证：他们的更新可能过一段时间才会出现。但至少用户可以确信，自己的输入已经正确保存。
+Trường hợp này cần *nhất quán read-after-write* (*read-after-write consistency*), còn gọi là *nhất quán read-your-writes* (*read-your-writes consistency*) [^23]. Nó đảm bảo rằng khi người dùng tải lại trang, họ luôn thấy các cập nhật mình đã gửi. Còn với người dùng khác thì không đảm bảo gì: cập nhật của họ có thể phải một lúc sau mới xuất hiện. Nhưng ít nhất người dùng có thể yên tâm dữ liệu mình nhập đã được lưu đúng.
 
-如何在基于领导者的复制系统中实现写后读一致性？有多种办法，例如：
+Làm sao triển khai nhất quán read-after-write trong hệ thống sao chép dựa trên leader (*leader-based replication*)? Có nhiều cách, ví dụ:
 
-* 读取用户可能修改过的内容时，从领导者或同步更新的追随者读取；其他内容则从异步更新的追随者读取。这要求系统无需实际查询，就能判断某项内容是否可能被修改。例如，社交网络中的个人资料通常只能由本人编辑。因此可以制定一条简单规则：用户自己的资料总是从领导者读取，其他用户的资料则从追随者读取。
-* 如果应用程序中的大部分内容都可能由用户编辑，上述办法就没有效果，因为几乎所有内容都得从领导者读取，读伸缩也就失去了意义。这时可以采用其他标准来决定是否从领导者读取。例如，记录最近一次更新时间，此后一分钟内的所有读取都发往领导者 [^25]。也可以监控追随者的复制延迟，不向落后领导者超过一分钟的追随者发送查询。
-* 客户端可以记住自己最近一次写入的时间戳，系统再确保为该用户处理读取的副本至少已经反映到这个时间戳。如果副本不够新，就换一个副本处理读取，或让查询等待该副本赶上进度 [^26]。这个时间戳既可以是 *逻辑时间戳*（*logical timestamp*，例如表示写入顺序的日志序列号），也可以来自实际的系统时钟；后一种情况下，时钟必须准确同步，参见 [“不可靠的时钟”](/ch9#sec_distributed_clocks)。
-* 如果副本分布于多个地区（为了靠近用户或提高可用性），还会增加一层复杂性：凡是必须由领导者处理的请求，都要路由到领导者所在的地区。
+* Khi đọc nội dung mà người dùng có thể đã sửa, đọc từ leader hoặc từ follower được cập nhật đồng bộ. Nội dung khác thì đọc từ follower cập nhật bất đồng bộ. Điều này đòi hỏi hệ thống biết được, mà không cần truy vấn thực tế, liệu một mục nội dung có thể đã bị sửa hay không. Ví dụ, hồ sơ cá nhân trên mạng xã hội thường chỉ do chính chủ chỉnh sửa. Do đó có thể đặt một quy tắc đơn giản: hồ sơ của chính người dùng luôn đọc từ leader, hồ sơ của người dùng khác đọc từ follower.
+* Nếu phần lớn nội dung trong ứng dụng có thể do người dùng chỉnh sửa, cách trên sẽ không hiệu quả, vì hầu như mọi thứ đều phải đọc từ leader, làm mất ý nghĩa của mở rộng đọc. Khi đó có thể dùng tiêu chí khác để quyết định có đọc từ leader hay không. Ví dụ, ghi lại thời điểm cập nhật gần nhất, và mọi lần đọc trong một phút sau đó đều gửi đến leader [^25]. Cũng có thể theo dõi replication lag của follower và không gửi truy vấn đến những follower tụt sau leader hơn một phút.
+* Client có thể nhớ timestamp của lần ghi gần nhất, và hệ thống đảm bảo replica phục vụ lần đọc của người dùng đó đã phản ánh ít nhất đến timestamp này. Nếu replica chưa đủ mới, có thể để replica khác xử lý lần đọc, hoặc để truy vấn chờ replica bắt kịp [^26]. Timestamp có thể là *timestamp logic* (*logical timestamp*, ví dụ log sequence number thể hiện thứ tự ghi), hoặc lấy từ đồng hồ hệ thống thực, ở trường hợp sau, đồng hồ phải được đồng bộ chính xác, xem ["Đồng hồ không đáng tin cậy"](/ch9#sec_distributed_clocks).
+* Nếu các replica phân bố ở nhiều region (để gần người dùng hơn hoặc tăng tính sẵn sàng), có thêm một tầng phức tạp: mọi yêu cầu phải do leader xử lý đều phải được định tuyến đến region chứa leader.
 
-同一用户通过多个设备访问服务时，例如同时使用桌面浏览器和移动应用，还会出现另一种复杂情况。这时可能需要提供 *跨设备* 写后读一致性：用户在一台设备上输入信息，随后在另一台设备上查看时，应当看到刚才输入的内容。
+Một tình huống phức tạp khác xuất hiện khi cùng một người dùng truy cập dịch vụ từ nhiều thiết bị, chẳng hạn vừa dùng trình duyệt máy tính vừa dùng ứng dụng di động. Khi đó có thể cần nhất quán read-after-write *xuyên thiết bị*: người dùng nhập thông tin trên một thiết bị, rồi xem trên thiết bị khác, thì phải thấy thông tin vừa nhập.
 
-还需要考虑以下问题：
+Cần cân nhắc thêm các vấn đề sau:
 
-* 依赖“记住用户最近一次更新时间戳”的方法会变得更难，因为一台设备上运行的代码不知道另一台设备做了哪些更新。这些元数据需要集中保存。
-* 如果副本分布在不同地区，来自不同设备的连接不保证会路由到同一地区。例如，用户的台式机使用家庭宽带，手机使用蜂窝网络，两台设备的网络路径可能完全不同。如果方案要求从领导者读取，可能首先要把该用户所有设备发出的请求都路由到同一地区。
+* Cách dựa vào việc "nhớ timestamp lần cập nhật gần nhất của người dùng" trở nên khó hơn, vì mã chạy trên một thiết bị không biết thiết bị kia đã cập nhật gì. Siêu dữ liệu này cần được lưu tập trung.
+* Nếu replica phân bố ở nhiều region, các kết nối từ những thiết bị khác nhau không được đảm bảo sẽ được định tuyến đến cùng một region. Ví dụ, máy tính để bàn của người dùng dùng băng thông rộng tại nhà, còn điện thoại dùng mạng di động, đường đi mạng của hai thiết bị có thể hoàn toàn khác nhau. Nếu giải pháp yêu cầu đọc từ leader, trước hết có thể phải định tuyến yêu cầu từ mọi thiết bị của người dùng đó đến cùng một region.
 
 
-> [!TIP] 地区与可用区
+> [!TIP] Region và availability zone
 >
-> 本书用 *地区*（region）表示同一地理位置上的一个或多个数据中心。云服务商通常会在同一地理区域设置多个数据中心，每个数据中心称为一个 *可用区*（availability zone），简称 *区*（zone）。因此，一个云地区由多个可用区组成。每个可用区都是位于独立物理设施中的数据中心，有自己的供电、制冷等基础设施。
+> Cuốn sách này dùng *region* (*region*) để chỉ một hoặc nhiều trung tâm dữ liệu ở cùng một vị trí địa lý. Nhà cung cấp đám mây thường đặt nhiều trung tâm dữ liệu trong cùng một khu vực địa lý, mỗi trung tâm dữ liệu gọi là một *availability zone* (*availability zone*), gọi tắt là *zone*. Như vậy, một region đám mây gồm nhiều availability zone. Mỗi availability zone là một trung tâm dữ liệu nằm trong cơ sở vật chất riêng biệt, có hệ thống điện, làm mát và hạ tầng riêng.
 >
-> 同一地区内的可用区之间由高速网络连接，延迟足够低，因此大多数分布式系统可以把节点分散在多个可用区运行，就像它们位于同一个区一样。多可用区配置可以抵御某个可用区整体下线，却无法抵御一个地区内所有可用区均不可用的地区级中断。要在地区级中断时继续运行，分布式系统必须跨多个地区部署，而这可能带来更高延迟、更低吞吐量和更高的云网络费用。我们将在 [“多主复制拓扑”](/ch6#sec_replication_topologies) 中进一步讨论这些权衡。这里暂且记住：本书所说的地区，是同一地理位置上的一组可用区或数据中心。
+> Các availability zone trong cùng một region được nối với nhau bằng mạng tốc độ cao, với độ trễ đủ thấp để hầu hết hệ thống phân tán có thể rải node trên nhiều availability zone, như thể chúng nằm cùng một zone. Cấu hình đa availability zone chịu được việc một availability zone ngừng hoạt động hoàn toàn, nhưng không chịu được sự cố cấp region khi mọi availability zone trong region đều không khả dụng. Để tiếp tục hoạt động khi xảy ra sự cố cấp region, hệ thống phân tán phải được triển khai trên nhiều region, và điều này có thể kéo theo độ trễ cao hơn, thông lượng thấp hơn và phí mạng đám mây cao hơn. Ta sẽ bàn thêm về các đánh đổi này ở ["Topology sao chép (*replication topology*) đa leader"](/ch6#sec_replication_topologies). Tạm thời, hãy nhớ rằng region trong sách này là một nhóm availability zone hoặc trung tâm dữ liệu ở cùng một vị trí địa lý.
 
 
-### 单调读 {#sec_replication_monotonic_reads}
+### Monotonic reads {#sec_replication_monotonic_reads}
 
-从异步追随者读取时可能发生的第二种异常，是用户可能会看到 *时光倒流*。
+Dị thường thứ hai có thể xảy ra khi đọc từ follower bất đồng bộ là người dùng có thể thấy *thời gian đi ngược*.
 
-用户连续几次从不同副本读取时，就可能发生这种情况。例如，{{< xref fig="6-4" page="/ch6" anchor="fig_replication_monotonic_reads" >}}图 6-4{{< /xref >}} 中，用户 2345 连续执行两次相同查询：第一次查询复制延迟较小的追随者，第二次查询延迟更大的追随者。（用户刷新网页、而每个请求被随机路由到不同服务器时，这种场景很容易出现。）第一次查询返回了用户 1234 最近添加的评论，第二次却什么也没返回，因为落后的追随者还没有收到这次写入。实际上，第二次查询观察到的系统状态比第一次更早。如果第一次查询本就没有结果，倒也问题不大，因为用户 2345 多半不知道用户 1234 刚刚添加过评论；但如果评论先出现又消失，就非常令人困惑。
+Điều này có thể xảy ra khi người dùng đọc nhiều lần liên tiếp từ các replica khác nhau. Ví dụ, ở {{< xref fig="6-4" page="/ch6" anchor="fig_replication_monotonic_reads" >}}Hình 6-4{{< /xref >}}, người dùng 2345 thực hiện hai lần cùng một truy vấn: lần đầu truy vấn một follower có replication lag nhỏ, lần sau truy vấn một follower có độ trễ lớn hơn. (Tình huống này rất dễ xảy ra khi người dùng làm mới trang web, còn mỗi yêu cầu được định tuyến ngẫu nhiên đến một server khác nhau.) Truy vấn đầu trả về bình luận do người dùng 1234 vừa thêm, nhưng truy vấn thứ hai không trả về gì, vì follower tụt hậu chưa nhận được lần ghi đó. Thực chất, truy vấn thứ hai quan sát trạng thái hệ thống cũ hơn truy vấn đầu. Nếu truy vấn đầu vốn không có kết quả thì cũng không sao, vì người dùng 2345 có lẽ không biết người dùng 1234 vừa thêm bình luận, nhưng nếu bình luận hiện ra rồi lại biến mất thì rất khó hiểu.
 
-{{< fig num="6-4" id="fig_replication_monotonic_reads" src="/fig/ddia_0604.png" caption="用户先从较新的副本读取，随后从陈旧副本读取，时间仿佛倒退了。要防止这种异常，需要单调读。" class="ddia-figure ddia-figure--wide" width="2880" height="1474" />}}
+{{< fig num="6-4" id="fig_replication_monotonic_reads" src="/fig/ddia_0604.png" caption="Người dùng đọc từ replica mới trước, rồi đọc từ replica cũ. Thời gian như bị quay ngược. Để ngăn dị thường này, cần monotonic reads." class="ddia-figure ddia-figure--wide" width="2880" height="1474" />}}
 
-*单调读* [^22] 保证这种异常不会发生。它弱于强一致性，却强于最终一致性。读取数据时仍可能看到旧值；单调读只保证同一用户顺序执行多次读取时，不会看到时间倒退——一旦读到较新的数据，以后就不会再读到更旧的数据。
+*Monotonic reads* [^22] đảm bảo dị thường này không xảy ra. Nó yếu hơn nhất quán mạnh, nhưng mạnh hơn nhất quán cuối cùng. Khi đọc dữ liệu, vẫn có thể thấy giá trị cũ. Monotonic reads chỉ đảm bảo rằng khi cùng một người dùng thực hiện nhiều lần đọc tuần tự thì không thấy thời gian đi ngược — một khi đã đọc được dữ liệu mới hơn, về sau sẽ không đọc lại dữ liệu cũ hơn.
 
-实现单调读的一种办法，是确保每个用户始终从同一个副本读取（不同用户可以选择不同副本）。例如，可以根据用户 ID 的哈希选择副本，而不是随机选择。如果该副本失效，则需要把用户的查询重新路由到其他副本。
+Một cách triển khai monotonic reads là đảm bảo mỗi người dùng luôn đọc từ cùng một replica (những người dùng khác nhau có thể dùng replica khác nhau). Chẳng hạn, có thể chọn replica dựa trên hash của ID người dùng thay vì chọn ngẫu nhiên. Nếu replica đó hỏng, cần định tuyến lại truy vấn của người dùng sang replica khác.
 
-### 一致前缀读 {#sec_replication_consistent_prefix}
+### Consistent prefix reads {#sec_replication_consistent_prefix}
 
-第三种复制延迟异常违反了因果关系。设想 Poons 先生和 Cake 夫人有下面这段简短对话：
+Dị thường thứ ba do replication lag vi phạm quan hệ nhân quả. Hãy hình dung đoạn hội thoại ngắn giữa ông Poons và bà Cake:
 
-Poons 先生
-:   Cake 夫人，你能看到多远的未来？
+Ông Poons
+:   Bà Cake, bà nhìn thấy tương lai xa đến đâu?
 
-Cake 夫人
-:   通常大约十秒钟，Poons 先生。
+Bà Cake
+:   Thường khoảng mười giây, ông Poons.
 
-这两句话之间存在因果依赖：Cake 夫人听到 Poons 先生的问题，然后作出回答。
+Hai câu này có quan hệ nhân quả: bà Cake nghe câu hỏi của ông Poons rồi mới trả lời.
 
-现在设想第三个人通过追随者旁听这段对话。Cake 夫人的话经过复制延迟较小的追随者，Poons 先生的话经过延迟更大的追随者（见 {{< xref fig="6-5" page="/ch6" anchor="fig_replication_consistent_prefix" >}}图 6-5{{< /xref >}}）。于是，这位旁听者会听到：
+Giờ hãy hình dung người thứ ba nghe lén cuộc trò chuyện này qua các follower. Lời của bà Cake đi qua follower có replication lag nhỏ, còn lời của ông Poons đi qua follower có độ trễ lớn hơn (xem {{< xref fig="6-5" page="/ch6" anchor="fig_replication_consistent_prefix" >}}Hình 6-5{{< /xref >}}). Khi đó người nghe lén sẽ nghe thấy:
 
-Cake 夫人
-:   通常大约十秒钟，Poons 先生。
+Bà Cake
+:   Thường khoảng mười giây, ông Poons.
 
-Poons 先生
-:   Cake 夫人，你能看到多远的未来？
+Ông Poons
+:   Bà Cake, bà nhìn thấy tương lai xa đến đâu?
 
-在旁听者看来，Cake 夫人还没听到 Poons 先生提问，就已经回答了问题。这种通灵能力令人印象深刻，却也十分费解 [^27]。
+Với người nghe lén, bà Cake đã trả lời câu hỏi trước khi ông Poons hỏi. Khả năng ngoại cảm này thật ấn tượng, nhưng cũng rất khó hiểu [^27].
 
-{{< fig num="6-5" id="fig_replication_consistent_prefix" src="/fig/ddia_0605.png" caption="如果某些分片的复制速度慢于其他分片，观察者可能先看到答案，后看到问题。" class="ddia-figure ddia-figure--standard" width="2880" height="1843" />}}
+{{< fig num="6-5" id="fig_replication_consistent_prefix" src="/fig/ddia_0605.png" caption="Nếu một số shard sao chép (*replication*) chậm hơn các shard khác, người quan sát có thể thấy câu trả lời trước câu hỏi." class="ddia-figure ddia-figure--standard" width="2880" height="1843" />}}
 
-防止这种异常需要另一种保证：*一致前缀读*（*consistent prefix reads*）[^22]。它保证，如果一系列写入按某个顺序发生，那么任何人读取这些写入时，也会看到它们以相同顺序出现。
+Để ngăn dị thường này cần một đảm bảo khác: *consistent prefix reads* (*consistent prefix reads*) [^22]. Nó đảm bảo rằng nếu một chuỗi lần ghi xảy ra theo một thứ tự nhất định, thì bất kỳ ai đọc các lần ghi đó cũng sẽ thấy chúng xuất hiện theo đúng thứ tự ấy.
 
-这在分片（分区）数据库中尤其容易成为问题，我们将在 [第 7 章](/ch7#ch_sharding) 讨论这类数据库。如果数据库始终按相同顺序应用写入，读取就总会看到一致前缀，这种异常也不会发生。然而，在许多分布式数据库中，不同分片彼此独立运行，没有全局写入顺序。用户读取数据库时，可能看到一部分处于较旧状态，另一部分却处于较新状态。
+Đây đặc biệt là vấn đề trong cơ sở dữ liệu được sharding (phân region), mà ta sẽ bàn ở [Chương 7](/ch7#ch_sharding). Nếu cơ sở dữ liệu luôn áp dụng các lần ghi theo cùng một thứ tự, lần đọc sẽ luôn thấy một tiền tố nhất quán, và dị thường này không xảy ra. Tuy nhiên, ở nhiều cơ sở dữ liệu phân tán, các shard hoạt động độc lập với nhau, không có thứ tự ghi toàn cục. Khi người dùng đọc cơ sở dữ liệu, họ có thể thấy một phần ở trạng thái cũ hơn, còn một phần khác ở trạng thái mới hơn.
 
-一种解决办法是确保存在因果关系的写入落在同一个分片，但有些应用程序无法高效做到这一点。还有一些算法会显式跟踪因果依赖，我们会在 [“先发生”关系与并发](/ch6#sec_replication_happens_before) 中再次讨论。
+Một giải pháp là đảm bảo các lần ghi có quan hệ nhân quả với nhau được ghi vào cùng một shard, nhưng một số ứng dụng không thể làm điều này một cách hiệu quả. Cũng có những thuật toán theo dõi tường minh các phụ thuộc nhân quả, và ta sẽ quay lại ở ["Quan hệ “xảy ra trước” và tính đồng thời"](/ch6#sec_replication_happens_before).
 
-### 复制延迟的解决方案 {#id131}
+### Giải pháp cho replication lag {#id131}
 
-使用最终一致的系统时，值得认真考虑：如果复制延迟增加到几分钟甚至几小时，应用程序会怎样表现？如果答案是“没有影响”，那当然很好；如果会给用户带来糟糕体验，就必须把系统设计成能够提供写后读之类的更强保证。复制本来是异步的，却假装它是同步的，迟早会酿成问题。
+Khi làm việc với hệ thống nhất quán cuối cùng, đáng suy nghĩ nghiêm túc: nếu replication lag tăng lên vài phút hoặc vài giờ thì ứng dụng sẽ hành xử ra sao? Nếu câu trả lời là "không ảnh hưởng gì" thì tuyệt, nhưng nếu nó mang lại trải nghiệm tồi cho người dùng, bạn phải thiết kế hệ thống để cung cấp đảm bảo mạnh hơn, chẳng hạn read-after-write. Sao chép (*replication*) vốn bất đồng bộ mà lại giả vờ nó đồng bộ thì sớm muộn cũng gây rắc rối.
 
-如前所述，应用程序可以提供比底层数据库更强的保证，例如把某些读取发往领导者或同步更新的追随者。不过，在应用程序代码中处理这些问题既复杂又容易出错。
+Như đã nói ở trên, ứng dụng có thể cung cấp đảm bảo mạnh hơn cơ sở dữ liệu bên dưới, ví dụ gửi một số lần đọc đến leader hoặc follower được cập nhật đồng bộ. Tuy nhiên, xử lý những vấn đề này trong mã ứng dụng vừa phức tạp vừa dễ sai.
 
-对应用程序开发者而言，最简单的编程模型，是选择一个能为副本提供强一致性保证（例如线性一致性，见 [第 10 章](/ch10#ch_consistency)）和 ACID 事务（见 [第 8 章](/ch8#ch_transactions)）的数据库。这样就可以基本忽略复制带来的挑战，把数据库看作只有一个节点。2010 年代初兴起的 *NoSQL* 运动曾宣扬一种观点：这些特性会限制可伸缩性，大规模系统不得不接受最终一致性。
+Với lập trình viên ứng dụng, mô hình lập trình đơn giản nhất là chọn cơ sở dữ liệu cung cấp đảm bảo nhất quán mạnh cho các replica (như linearizability, xem [Chương 10](/ch10#ch_consistency)) và giao dịch ACID (xem [Chương 8](/ch8#ch_transactions)). Khi đó có thể gần như bỏ qua thách thức do sao chép (*replication*) gây ra và coi cơ sở dữ liệu như chỉ có một node. Phong trào *NoSQL* nổi lên đầu thập niên 2010 từng cổ xúy quan điểm rằng những tính năng này hạn chế khả năng mở rộng, và hệ thống quy mô lớn buộc phải chấp nhận nhất quán cuối cùng.
 
-此后，许多数据库开始在提供强一致性和事务的同时，保留分布式数据库在容错、高可用和可伸缩性方面的优势。正如 [“关系模型与文档模型”](/ch3#sec_datamodels_history) 中提到的，为与 NoSQL 区分，这一趋势称为 *NewSQL*（尽管重点并不在 SQL 本身，而在可伸缩事务管理的新方法）。
+Kể từ đó, nhiều cơ sở dữ liệu đã cung cấp nhất quán mạnh và giao dịch mà vẫn giữ lợi thế của cơ sở dữ liệu phân tán về khả năng chịu lỗi, tính sẵn sàng cao và khả năng mở rộng. Như đã nhắc ở ["Mô hình quan hệ và mô hình tài liệu"](/ch3#sec_datamodels_history), để phân biệt với NoSQL, xu hướng này được gọi là *NewSQL* (dù trọng tâm không nằm ở bản thân SQL mà ở các phương pháp mới để quản lý giao dịch có khả năng mở rộng).
 
-如今虽已有可伸缩的强一致分布式数据库，一些应用程序仍有充分理由选择一致性保证较弱的其他复制方式：面对网络中断时，它们的韧性可能更强，开销也低于事务型系统。本章余下部分将继续探讨这些方法。
+Dù ngày nay đã có cơ sở dữ liệu phân tán nhất quán mạnh và mở rộng được, một số ứng dụng vẫn có lý do chính đáng để chọn các cách sao chép (*replication*) khác với đảm bảo nhất quán yếu hơn: chúng có thể bền bỉ hơn trước gián đoạn mạng, và chi phí thấp hơn các hệ thống giao dịch. Phần còn lại của chương này sẽ tiếp tục khám phá các cách tiếp cận đó.
 
+## Sao chép đa leader (*multi-leader replication*) {#sec_replication_multi_leader}
 
-## 多主复制 {#sec_replication_multi_leader}
+Cho đến giờ, chương này mới chỉ bàn về kiến trúc sao chép (*replication*) dùng một leader duy nhất. Dù đây là cách làm phổ biến, vẫn còn một số lựa chọn đáng chú ý.
 
-到目前为止，本章只讨论了使用单个领导者的复制架构。虽然这是常见做法，但还有一些值得关注的选择。
+Sao chép đơn leader (*single-leader replication*) có một nhược điểm lớn: mọi lần ghi đều phải đi qua leader duy nhất. Dù vì lý do gì, nếu không kết nối được với leader — chẳng hạn mạng giữa client và leader bị gián đoạn — thì không thể ghi vào cơ sở dữ liệu.
 
-单主复制有一个主要缺点：所有写入都必须经过唯一的领导者。无论出于什么原因，只要连接不上领导者——例如客户端与领导者之间的网络中断——就无法写入数据库。
+Mô hình đơn leader có thể mở rộng một cách tự nhiên để cho phép nhiều node nhận ghi. Việc sao chép (*replication*) vẫn diễn ra theo cách cũ: mỗi node xử lý một lần ghi đều phải chuyển tiếp thay đổi dữ liệu cho mọi node khác. Ta gọi cấu hình này là *sao chép đa leader* (*multi-leader replication*), còn gọi là mô hình *active/active* (*active/active*) hay *sao chép hai chiều* (*bidirectional replication*). Trong cấu hình này, mỗi leader đồng thời đóng vai follower của các leader khác.
 
-单主复制模型可以自然地扩展为允许多个节点接受写入。复制仍以同样方式进行：每个处理写入的节点都必须把数据变更转发给其他所有节点。我们把这种配置称为 *多主复制*（*multi-leader replication*），也称 *主动/主动复制*（*active/active*）或 *双向复制*（*bidirectional replication*）。在这种配置中，每个领导者同时也是其他领导者的追随者。
+Cũng như sao chép đơn leader (*single-leader replication*), sao chép đa leader (*multi-leader replication*) có thể là đồng bộ hoặc bất đồng bộ. Giả sử có hai leader *A* và *B*, và cần ghi vào *A*. Nếu lần ghi phải được sao chép đồng bộ (*synchronous replication*) từ *A* sang *B*, thì khi mạng giữa hai bên gián đoạn, không thể ghi vào *A* cho đến khi mạng phục hồi. Sao chép đa leader (*multi-leader replication*) đồng bộ như vậy cung cấp một mô hình rất giống sao chép đơn leader (*single-leader replication*): tức là tương đương việc đặt *B* làm leader, còn *A* chuyển tiếp mọi yêu cầu ghi sang *B* để thực thi.
 
-与单主复制一样，多主复制也可以选择同步或异步。假设有两个领导者 *A* 和 *B*，现在要向 *A* 写入。如果写入必须从 *A* 同步复制到 *B*，那么两者之间的网络一旦中断，在网络恢复前就无法向 *A* 写入。这种同步多主复制提供的模型与单主复制极为相似：也就是说，这等同于把 *B* 设为领导者，由 *A* 把所有写请求转发给 *B* 执行。
+Vì vậy, phần này sẽ không đi sâu vào sao chép đa leader (*multi-leader replication*) đồng bộ mà coi nó tương đương sao chép đơn leader (*single-leader replication*). Phần thảo luận dưới đây tập trung vào sao chép đa leader (*multi-leader replication*) bất đồng bộ: dù kết nối giữa một leader với các leader khác bị gián đoạn, nó vẫn có thể xử lý ghi.
 
-因此，本节不再深入讨论同步多主复制，而把它视为等同于单主复制。以下讨论集中于异步多主复制：即使某个领导者与其他领导者之间的连接中断，它仍可处理写入。
+### Vận hành xuyên nhiều region {#sec_replication_multi_dc}
 
-### 跨地域运行 {#sec_replication_multi_dc}
+Dùng cấu hình đa leader trong một region đơn lẻ thường ít ý nghĩa, vì lợi ích hiếm khi bù được độ phức tạp tăng thêm. Tuy nhiên, có một số tình huống mà cấu hình này thực sự hợp lý.
 
-在单个地区内使用多主配置通常没有多少意义，因为所得好处很少能抵消额外的复杂性。不过，在某些场景中，这种配置确实合理。
+Hãy hình dung một cơ sở dữ liệu có replica ở nhiều region, có thể để vẫn chạy được khi cả một region ngừng hoạt động, hoặc để gần người dùng hơn về mặt địa lý. Kiểu triển khai này gọi là *phân tán theo địa lý* (*geographically distributed*), *geo-distributed* (*geo-distributed*) hoặc *geo-replicated* (*geo-replicated*). Với sao chép đơn leader (*single-leader replication*), leader phải nằm ở *một* region, và mọi lần ghi đều phải đi qua region đó.
 
-设想一个数据库在多个地区都有副本，也许是为了在整个地区失效时仍能运行，也许是为了在地理上更接近用户。这种部署称为 *地理分布式*（*geographically distributed*）、*跨地域分布式*（*geo-distributed*）或 *跨地域复制*（*geo-replicated*）。采用单主复制时，领导者必须位于其中 *一个* 地区，所有写入都要经过该地区。
+Trong cấu hình đa leader, *mỗi* region có thể có một leader. {{< xref fig="6-6" page="/ch6" anchor="fig_replication_multi_dc" >}}Hình 6-6{{< /xref >}} minh họa kiến trúc này: trong từng region dùng sao chép (*replication*) leader–follower thông thường (follower có thể nằm ở availability zone khác với leader), còn giữa các region, leader của mỗi region sao chép (*replication*) thay đổi sang leader của các region khác.
 
-在多主配置中，*每个* 地区都可以有一个领导者。{{< xref fig="6-6" page="/ch6" anchor="fig_replication_multi_dc" >}}图 6-6{{< /xref >}} 展示了这种架构：每个地区内部使用常规的领导者—追随者复制（追随者可以位于与领导者不同的可用区）；地区之间，则由各地区的领导者把变更复制给其他地区的领导者。
+{{< fig num="6-6" id="fig_replication_multi_dc" src="/fig/ddia_0606.png" caption="Sao chép đa leader (*multi-leader replication*) xuyên nhiều region." class="ddia-figure ddia-figure--wide" width="2658" height="1293" />}}
 
-{{< fig num="6-6" id="fig_replication_multi_dc" src="/fig/ddia_0606.png" caption="跨多个地区的多主复制。" class="ddia-figure ddia-figure--wide" width="2658" height="1293" />}}
+Dưới đây so sánh cấu hình đơn leader và đa leader khi triển khai đa region:
 
-下面比较单主与多主配置在多地区部署中的表现：
+Hiệu năng
+:   Trong cấu hình đơn leader, mọi lần ghi phải đi qua internet đến region của leader. Điều này có thể làm tăng đáng kể độ trễ ghi, thậm chí đi ngược mục đích triển khai đa region. Trong cấu hình đa leader, mỗi lần ghi được xử lý ngay tại region cục bộ rồi sao chép bất đồng bộ (*asynchronous replication*) sang các region khác. Do đó độ trễ mạng giữa các region được che khỏi người dùng, và hiệu năng cảm nhận được có thể tốt hơn.
 
-性能
-:   在单主配置中，每次写入都必须通过互联网发往领导者所在的地区。这可能显著增加写入延迟，甚至违背多地区部署的初衷。在多主配置中，每次写入都能在本地地区处理，再异步复制到其他地区。地区间的网络延迟因而对用户不可见，感知到的性能可能更好。
+Chịu được sự cố ngừng hoạt động của region
+:   Trong cấu hình đơn leader, nếu region chứa leader không khả dụng, có thể failover để đưa một follower ở region khác lên làm leader. Trong cấu hình đa leader, mỗi region có thể tiếp tục hoạt động độc lập với các region khác. Khi region ngoại tuyến hoạt động trở lại, việc sao chép (*replication*) sẽ bắt kịp.
 
-容忍地区停机
-:   在单主配置中，如果领导者所在的地区不可用，可以通过故障切换把另一个地区的追随者提升为领导者。在多主配置中，各地区可以彼此独立地继续运行；离线地区恢复上线后，复制会赶上进度。
+Chịu được sự cố mạng
+:   Ngay cả khi dùng kết nối chuyên dụng giữa các region, lưu lượng này vẫn có thể kém tin cậy hơn lưu lượng giữa các availability zone trong cùng một region, hay bên trong một availability zone. Cấu hình đơn leader rất nhạy với sự cố của đường truyền giữa các region: client ở một region muốn ghi vào leader ở region khác thì phải gửi yêu cầu qua đường truyền này và đợi phản hồi mới hoàn tất thao tác.
 
-容忍网络问题
-:   即使地区之间使用专用连接，其流量也可能不如同一地区内不同可用区之间、或同一可用区内部的流量可靠。单主配置对地区间链路的问题极为敏感：一个地区的客户端要向另一个地区的领导者写入，就必须通过这条链路发出请求，并等待响应后才能完成操作。
+    Cấu hình đa leader dùng sao chép bất đồng bộ (*asynchronous replication*) chịu được sự cố mạng tốt hơn: khi mạng tạm thời gián đoạn, leader của mỗi region vẫn có thể xử lý ghi độc lập.
 
-    异步复制的多主配置更能容忍网络问题：网络暂时中断期间，每个地区的领导者仍可独立处理写入。
+Tính nhất quán
+:   Hệ thống đơn leader có thể cung cấp đảm bảo nhất quán mạnh, chẳng hạn giao dịch serializable, mà ta sẽ bàn ở [Chương 8](/ch8#ch_transactions). Nhược điểm lớn nhất của hệ thống đa leader là mức nhất quán nó cung cấp yếu hơn nhiều. Chẳng hạn, không thể đảm bảo số dư tài khoản ngân hàng không âm, hay tên người dùng là duy nhất: hoàn toàn có thể các leader khác nhau xử lý riêng lẻ những lần ghi hợp lệ khi xét một mình (chi một khoản từ tài khoản, đăng ký một tên người dùng), nhưng khi gộp chúng với các lần ghi trên leader khác thì vi phạm ràng buộc.
 
-一致性
-:   单主系统可以提供可串行化事务等强一致性保证，我们会在 [第 8 章](/ch8#ch_transactions) 讨论。多主系统最大的缺点，是它所能提供的一致性要弱得多。例如，无法保证银行账户余额不会变成负数，也无法保证用户名唯一：不同领导者完全可能分别处理单独看来合法的写入（从账户支付一笔钱、注册某个用户名），但把它们与另一个领导者上的写入合在一起，就违反了约束。
+    Đây là một giới hạn căn bản của hệ thống phân tán [^28]. Nếu bắt buộc phải thực thi những ràng buộc như vậy, tốt nhất nên dùng hệ thống đơn leader. Tuy nhiên, như ta sẽ thấy ở ["Xử lý xung đột ghi"](/ch6#sec_replication_write_conflicts), với nhiều ứng dụng không cần các ràng buộc đó, hệ thống đa leader vẫn cung cấp được những thuộc tính nhất quán hữu ích.
 
-    这是分布式系统的一项根本限制 [^28]。如果必须强制执行这类约束，最好采用单主系统。不过，正如 [“处理写入冲突”](/ch6#sec_replication_write_conflicts) 中将要看到的，对于不需要这类约束的大量应用程序，多主系统仍能提供有用的一致性属性。
+Sao chép đa leader (*multi-leader replication*) ít phổ biến hơn đơn leader, nhưng nhiều cơ sở dữ liệu vẫn hỗ trợ, như MySQL, Oracle, SQL Server và YugabyteDB. Đôi khi nó đến dưới dạng thành phần bổ sung bên ngoài, như Redis Enterprise, EDB Postgres Distributed và pglogical [^29].
 
-多主复制不如单主复制常见，但 MySQL、Oracle、SQL Server、YugabyteDB 等许多数据库仍提供支持。有时它以外部附加组件的形式出现，例如 Redis Enterprise、EDB Postgres Distributed 和 pglogical [^29]。
+Ở nhiều cơ sở dữ liệu, sao chép đa leader (*multi-leader replication*) là tính năng được gắn thêm về sau, nên thường có những cạm bẫy cấu hình tinh vi và tương tác bất ngờ với các tính năng khác của cơ sở dữ liệu. Chẳng hạn, khóa tự tăng, trigger và ràng buộc toàn vẹn đều có thể gây vấn đề. Vì thế, sao chép đa leader (*multi-leader replication*) thường bị coi là vùng nguy hiểm nên tránh nếu có thể [^30].
 
-许多数据库的多主复制都是后来加装的功能，因而常有细微的配置陷阱，也会与其他数据库功能产生出人意料的相互作用。例如，自增键、触发器和完整性约束都可能带来问题。因此，多主复制往往被视为应当尽量避开的危险领域 [^30]。
+#### Topology sao chép (*replication topology*) đa leader {#sec_replication_topologies}
 
-#### 多主复制拓扑 {#sec_replication_topologies}
+*Topology sao chép* (*replication topology*) mô tả các đường truyền thông mà các lần ghi đi qua khi lan truyền từ node này sang node khác. Nếu chỉ có hai leader, như ở {{< xref fig="6-9" page="/ch6" anchor="fig_replication_write_conflict" >}}Hình 6-9{{< /xref >}}, thì chỉ có một topology hợp lý: leader 1 phải gửi mọi lần ghi cho leader 2, và ngược lại. Khi có hơn hai leader, có nhiều topology để chọn. {{< xref fig="6-7" page="/ch6" anchor="fig_replication_topologies" >}}Hình 6-7{{< /xref >}} đưa ra ba ví dụ.
 
-*复制拓扑*（*replication topology*）描述写入从一个节点传播到另一个节点时所经过的通信路径。如果只有两个领导者，如 {{< xref fig="6-9" page="/ch6" anchor="fig_replication_write_conflict" >}}图 6-9{{< /xref >}} 所示，那么只有一种合理的拓扑：领导者 1 必须把所有写入发送给领导者 2，反之亦然。领导者超过两个时，则有多种拓扑可供选择。{{< xref fig="6-7" page="/ch6" anchor="fig_replication_topologies" >}}图 6-7{{< /xref >}} 给出了三个例子。
+{{< fig num="6-7" id="fig_replication_topologies" src="/fig/ddia_0607.png" caption="Ba ví dụ topology có thể dùng cho sao chép đa leader (*multi-leader replication*)." class="ddia-figure ddia-figure--panorama" width="2880" height="800" />}}
 
-{{< fig num="6-7" id="fig_replication_topologies" src="/fig/ddia_0607.png" caption="多主复制可以采用的三种拓扑示例。" class="ddia-figure ddia-figure--panorama" width="2880" height="800" />}}
-
-最通用的是 {{< xref fig="6-7" page="/ch6" anchor="fig_replication_topologies" >}}图 6-7{{< /xref >}}(c) 所示的 *全对全*（*all-to-all*）拓扑，每个领导者都会把写入发送给其他所有领导者。不过，实际系统也会采用限制更多的拓扑。例如在 *环形拓扑*（*circular topology*）中，每个节点从一个节点接收写入，再把这些写入连同自己的写入转发给另一个节点。另一种常见拓扑呈 *星形*（*star topology*）：指定一个根节点，由它把写入转发给所有其他节点。星形拓扑还可以推广成树形。
+Topology tổng quát nhất là *all-to-all* (*all-to-all*) ở {{< xref fig="6-7" page="/ch6" anchor="fig_replication_topologies" >}}Hình 6-7{{< /xref >}}(c), trong đó mỗi leader gửi lần ghi của mình cho mọi leader khác. Tuy nhiên, hệ thống thực tế cũng dùng các topology hạn chế hơn. Chẳng hạn trong *topology vòng* (*circular topology*), mỗi node nhận lần ghi từ một node, rồi chuyển tiếp các lần ghi đó cùng với lần ghi của chính mình sang một node khác. Một topology phổ biến khác là *topology hình sao* (*star topology*): một node gốc được chỉ định để chuyển tiếp lần ghi đến mọi node còn lại. Topology hình sao còn có thể tổng quát hóa thành hình cây.
 
 
 > [!NOTE]
-> 不要把星形网络拓扑与 *星型模式* 混为一谈；后者描述的是数据模型结构，参见 [“星型与雪花型：分析模式”](/ch3#sec_datamodels_analytics)。
+> Đừng nhầm topology mạng hình sao với *star schema*, thứ mô tả cấu trúc của mô hình dữ liệu, xem ["Star schema và snowflake: lược đồ cho phân tích"](/ch3#sec_datamodels_analytics).
 
 
-在环形和星形拓扑中，一次写入可能要经过多个节点才能到达所有副本。因此，节点必须转发从其他节点收到的数据变更。为避免无限复制循环，每个节点都有唯一标识符；复制日志中的每次写入都会标记自己经过的全部节点 [^31]。节点收到带有自身标识符的数据变更时，会直接忽略它，因为这说明自己已经处理过该变更。
+Trong topology vòng và hình sao, một lần ghi có thể phải đi qua nhiều node mới tới được mọi replica. Do đó các node phải chuyển tiếp những thay đổi dữ liệu nhận từ node khác. Để tránh vòng lặp sao chép (*replication*) vô hạn, mỗi node có một định danh duy nhất, mỗi lần ghi trong replication log được gắn định danh của mọi node mà nó đã đi qua [^31]. Khi một node nhận được thay đổi dữ liệu có gắn định danh của chính nó, nó bỏ qua thay đổi đó, vì điều này cho thấy nó đã xử lý rồi.
 
-#### 不同拓扑的问题 {#problems-with-different-topologies}
+#### Vấn đề của các topology khác nhau {#problems-with-different-topologies}
 
-环形和星形拓扑有一个问题：只要一个节点失效，就可能中断其他节点之间的复制消息流；在该节点修复前，其他节点无法相互通信。虽然可以重配拓扑以绕过失效节点，但大多数部署都需要手工完成这一操作。连接更密集的拓扑（例如全对全）容错性更好，因为消息可以沿不同路径传播，避开单点故障。
+Topology vòng và hình sao có một vấn đề: chỉ cần một node hỏng là có thể làm gián đoạn dòng thông điệp sao chép (*replication*) giữa các node khác. Trước khi node đó được sửa, các node khác không thể liên lạc với nhau. Dù có thể cấu hình lại topology để đi vòng qua node hỏng, hầu hết triển khai đều phải làm việc này thủ công. Các topology kết nối dày hơn (như all-to-all) chịu lỗi tốt hơn, vì thông điệp có thể truyền theo nhiều đường khác nhau, tránh được điểm hỏng đơn lẻ.
 
-另一方面，全对全拓扑也有问题。尤其是，不同网络链路的速度可能不同（例如受到网络拥塞影响），导致某些复制消息“超越”另一些消息，如 {{< xref fig="6-8" page="/ch6" anchor="fig_replication_causality" >}}图 6-8{{< /xref >}} 所示。
+Mặt khác, topology all-to-all cũng có vấn đề. Cụ thể, tốc độ các đường truyền mạng có thể khác nhau (chẳng hạn do tắc nghẽn mạng), khiến một số thông điệp sao chép (*replication*) "vượt mặt" các thông điệp khác, như ở {{< xref fig="6-8" page="/ch6" anchor="fig_replication_causality" >}}Hình 6-8{{< /xref >}}.
 
-{{< fig num="6-8" id="fig_replication_causality" src="/fig/ddia_0608.png" caption="在多主复制中，写入抵达某些副本的顺序可能有误。" class="ddia-figure ddia-figure--wide" width="2880" height="1602" />}}
+{{< fig num="6-8" id="fig_replication_causality" src="/fig/ddia_0608.png" caption="Với sao chép đa leader (*multi-leader replication*), các lần ghi có thể đến một số replica sai thứ tự." class="ddia-figure ddia-figure--wide" width="2880" height="1602" />}}
 
-在 {{< xref fig="6-8" page="/ch6" anchor="fig_replication_causality" >}}图 6-8{{< /xref >}} 中，客户端 A 在领导者 1 上向表中插入一行，客户端 B 随后在领导者 3 上更新该行。但领导者 2 可能以相反顺序收到这两次写入：先收到更新（在它看来，这是要更新数据库中并不存在的行），稍后才收到本应先发生的插入。
+Ở {{< xref fig="6-8" page="/ch6" anchor="fig_replication_causality" >}}Hình 6-8{{< /xref >}}, client A chèn một dòng vào bảng trên leader 1, rồi client B cập nhật dòng đó trên leader 3. Nhưng leader 2 có thể nhận hai lần ghi này theo thứ tự ngược lại: nó nhận bản cập nhật trước (theo nó, đây là cập nhật một dòng chưa tồn tại trong cơ sở dữ liệu), rồi một lúc sau mới nhận lần chèn lẽ ra phải đến trước.
 
-这也是一个因果关系问题，与 [“一致前缀读”](/ch6#sec_replication_consistent_prefix) 中看到的情况相似。更新依赖先前的插入，因此必须保证所有节点先处理插入，再处理更新。仅仅给每次写入附加时间戳并不够，因为不能相信各节点的时钟同步得足以让领导者 2 正确排列这些事件（见 [第 9 章](/ch9#ch_distributed)）。
+Đây cũng là vấn đề về quan hệ nhân quả, tương tự trường hợp đã thấy ở ["Consistent prefix reads"](/ch6#sec_replication_consistent_prefix). Bản cập nhật phụ thuộc vào lần chèn trước đó, nên phải đảm bảo mọi node xử lý lần chèn trước rồi mới xử lý bản cập nhật. Chỉ gắn timestamp cho mỗi lần ghi là chưa đủ, vì không thể tin đồng hồ của các node được đồng bộ đủ chính xác để leader 2 sắp xếp đúng các sự kiện này (xem [Chương 9](/ch9#ch_distributed)).
 
-要正确排列这些事件，可以采用本章稍后介绍的 *版本向量*（*version vector*；见 [“检测并发写入”](/ch6#sec_replication_concurrent)）。不过，许多多主复制系统并未使用可靠的更新排序技术，因而容易遇到 {{< xref fig="6-8" page="/ch6" anchor="fig_replication_causality" >}}图 6-8{{< /xref >}} 所示的问题。如果使用多主复制，应当了解这些风险，仔细阅读文档，并充分测试数据库，确认它确实提供了你以为它会提供的保证。
+Để sắp xếp đúng các sự kiện này, có thể dùng *version vector* (*version vector*, xem ["Phát hiện ghi đồng thời"](/ch6#sec_replication_concurrent)) sẽ được giới thiệu ở phần sau của chương. Tuy nhiên, nhiều hệ thống sao chép đa leader (*multi-leader replication*) không dùng kỹ thuật sắp xếp bản cập nhật đáng tin cậy nên dễ gặp vấn đề ở {{< xref fig="6-8" page="/ch6" anchor="fig_replication_causality" >}}Hình 6-8{{< /xref >}}. Nếu dùng sao chép đa leader (*multi-leader replication*), bạn nên nắm các rủi ro này, đọc kỹ tài liệu và kiểm thử cơ sở dữ liệu kỹ lưỡng để chắc chắn nó thực sự cung cấp các đảm bảo mà bạn tưởng.
 
-### 同步引擎与本地优先软件 {#sec_replication_offline_clients}
+### Sync engine và phần mềm local-first {#sec_replication_offline_clients}
 
-应用程序需要在断网时继续工作，是另一个适合多主复制的场景。
+Ứng dụng cần tiếp tục hoạt động khi mất kết nối mạng là một tình huống khác phù hợp với sao chép đa leader (*multi-leader replication*).
 
-以手机、笔记本电脑和其他设备上的日历应用为例。无论设备有没有联网，你都需要随时查看会议（发出读请求）和添加会议（发出写请求）。离线期间所作的变更，应在设备下次上线时与服务器及其他设备同步。
+Hãy lấy ví dụ ứng dụng lịch trên điện thoại, laptop và các thiết bị khác. Dù thiết bị có kết nối mạng hay không, bạn đều cần xem cuộc họp (gửi yêu cầu đọc) và thêm cuộc họp (gửi yêu cầu ghi) bất cứ lúc nào. Các thay đổi thực hiện khi ngoại tuyến phải được đồng bộ với server và các thiết bị khác vào lần tiếp theo thiết bị trực tuyến.
 
-这种情况下，每台设备都有一个充当领导者的本地数据库副本，可以接受写入；各设备上的日历副本之间则通过异步多主复制过程进行同步。复制延迟可能长达数小时甚至数天，取决于设备何时重新联网。
+Trong trường hợp này, mỗi thiết bị có một bản sao cơ sở dữ liệu cục bộ đóng vai leader, có thể nhận ghi, còn các bản sao lịch trên các thiết bị đồng bộ với nhau qua một quy trình sao chép đa leader (*multi-leader replication*) bất đồng bộ. Replication lag có thể lên đến hàng giờ hoặc hàng ngày, tùy lúc thiết bị kết nối mạng lại.
 
-从架构上看，这种配置相当于把地区间多主复制推到极致：每台设备都是一个“地区”，它们之间的网络连接极不可靠。
+Về kiến trúc, cấu hình này tương đương việc đẩy sao chép đa leader (*multi-leader replication*) giữa các region đến cực điểm: mỗi thiết bị là một "region", và kết nối mạng giữa chúng cực kỳ không đáng tin cậy.
 
-#### 实时协作、离线优先和本地优先应用 {#real-time-collaboration-offline-first-and-local-first-apps}
+#### Cộng tác thời gian thực, offline-first và ứng dụng local-first {#real-time-collaboration-offline-first-and-local-first-apps}
 
-此外，许多现代 Web 应用还提供 *实时协作* 功能，例如用于文档和电子表格的 Google Docs 与 Sheets、用于图形设计的 Figma，以及用于项目管理的 Linear。这些应用之所以响应迅速，是因为用户输入会立即反映在界面上，无需等待与服务器的一次网络往返；一位用户所作的编辑也会以很低的延迟呈现给协作者 [^32] [^33] [^34]。
+Ngoài ra, nhiều ứng dụng Web hiện đại còn cung cấp tính năng *cộng tác thời gian thực*, ví dụ Google Docs và Sheets cho tài liệu và bảng tính, Figma cho thiết kế đồ họa, Linear cho quản lý dự án. Các ứng dụng này phản hồi nhanh vì thao tác nhập của người dùng được phản ánh ngay lên giao diện, không cần chờ một vòng đi về qua mạng đến server. Các chỉnh sửa của một người cũng hiển thị cho người cộng tác với độ trễ rất thấp [^32] [^33] [^34].
 
-这同样形成了多主架构：每个打开共享文件的浏览器标签页都是一个副本，对文件所作的更新会异步复制到其他打开该文件的用户设备上。即使应用程序不支持离线编辑，只要多个用户可以不等服务器响应便各自编辑，它就已经是多主系统。
+Điều này cũng tạo thành kiến trúc đa leader: mỗi tab trình duyệt đang mở tệp chia sẻ là một replica, và các cập nhật lên tệp được sao chép bất đồng bộ (*asynchronous replication*) sang thiết bị của những người dùng khác đang mở tệp đó. Ngay cả khi ứng dụng không hỗ trợ chỉnh sửa ngoại tuyến, chỉ cần nhiều người dùng có thể cùng chỉnh sửa mà không đợi server phản hồi thì nó đã là hệ thống đa leader.
 
-离线编辑与实时协作需要相似的复制基础设施：应用程序必须捕获用户对文件作出的所有变更，在线时立即发给协作者，离线时则先保存在本地，稍后再发送。同时，应用程序还要接收协作者的变更，将其合并到用户的本地文件副本，并更新界面以显示最新版本。多个用户并发修改文件时，还可能需要用冲突解决逻辑合并这些变更。
+Chỉnh sửa ngoại tuyến và cộng tác thời gian thực cần hạ tầng sao chép (*replication*) tương tự: ứng dụng phải ghi lại mọi thay đổi người dùng thực hiện trên tệp, gửi ngay cho người cộng tác khi trực tuyến, còn khi ngoại tuyến thì lưu cục bộ rồi gửi sau. Đồng thời, ứng dụng còn phải nhận thay đổi của người cộng tác, hợp nhất vào bản sao cục bộ của người dùng và cập nhật giao diện để hiển thị phiên bản mới nhất. Khi nhiều người dùng sửa tệp đồng thời, có thể cần logic giải quyết xung đột để hợp nhất các thay đổi.
 
-支持这一过程的软件库称为 *同步引擎*（*sync engine*）。这个想法由来已久，但“同步引擎”一词近来才受到关注 [^35] [^36] [^37]。允许用户离线时继续编辑文件的应用程序称为 *离线优先*（*offline-first*）应用 [^38]，它可以用同步引擎来实现。*本地优先软件*（*local-first software*）则不仅要支持离线优先，还要保证即使软件开发者关闭所有在线服务，协作应用仍能继续工作 [^39]。一种实现方式是采用开放标准的同步协议，并让多个服务提供商都能支持这一协议 [^40]。例如，Git 就是本地优先的协作系统（虽然它不支持实时协作），因为可以通过 GitHub、GitLab 或其他任意代码仓库托管服务进行同步。
+Thư viện phần mềm hỗ trợ quá trình này gọi là *sync engine* (*sync engine*). Ý tưởng này đã có từ lâu, nhưng thuật ngữ "sync engine" chỉ mới được chú ý gần đây [^35] [^36] [^37]. Ứng dụng cho phép người dùng tiếp tục sửa tệp khi ngoại tuyến gọi là ứng dụng *offline-first* (*offline-first*) [^38], có thể xây dựng bằng sync engine. *Phần mềm local-first* (*local-first software*) đòi hỏi nhiều hơn: ngoài hỗ trợ offline-first, nó còn phải đảm bảo ứng dụng cộng tác tiếp tục hoạt động ngay cả khi nhà phát triển phần mềm tắt hết dịch vụ trực tuyến [^39]. Một cách thực hiện là dùng giao thức đồng bộ theo chuẩn mở, để nhiều nhà cung cấp dịch vụ cùng hỗ trợ giao thức đó [^40]. Ví dụ, Git là hệ thống cộng tác local-first (dù không hỗ trợ cộng tác thời gian thực), vì có thể đồng bộ qua GitHub, GitLab hay bất kỳ dịch vụ lưu trữ kho mã nào khác.
 
-#### 同步引擎的利弊 {#pros-and-cons-of-sync-engines}
+#### Ưu và nhược điểm của sync engine {#pros-and-cons-of-sync-engines}
 
-如今构建 Web 应用的主流方式，是让客户端只保留极少的持久状态；每当需要显示新数据或更新数据时，就向服务器发出请求。使用同步引擎时则相反：客户端持有持久状态，与服务器的通信移到后台进行。这种方式有多项优点：
+Cách phổ biến hiện nay để xây ứng dụng Web là để client chỉ giữ rất ít trạng thái bền vững, mỗi khi cần hiển thị dữ liệu mới hoặc cập nhật dữ liệu, nó gửi yêu cầu đến server. Với sync engine thì ngược lại: client nắm trạng thái bền vững, còn việc liên lạc với server chuyển xuống chạy nền. Cách này có nhiều ưu điểm:
 
-* 数据在本地，用户界面的响应速度可以远快于等待服务调用返回数据。有些应用追求在图形系统的 *下一帧* 响应用户输入：对于刷新率为 60 Hz 的显示器，这意味着要在 16 毫秒内完成渲染。
-* 允许用户离线工作很有价值，尤其是在连接时断时续的移动设备上。使用同步引擎后，应用程序无需另设离线模式：离线不过是网络延迟变得非常大。
-* 与在应用代码中显式调用服务相比，同步引擎简化了前端应用的编程模型。正如 [“远程过程调用（RPC）的问题”](/ch5#sec_problems_with_rpc) 中所述，每次服务调用都要处理错误。例如，更新服务器数据的请求失败后，用户界面必须以某种方式反映错误。同步引擎让应用直接读写几乎不会失败的本地数据，从而形成更具声明性的编程风格 [^41]。
-* 要实时显示其他用户所作的编辑，需要接收变更通知，并据此高效更新用户界面。同步引擎与 *响应式编程*（*reactive programming*）模型结合，是实现这一功能的好办法 [^42]。
+* Dữ liệu nằm cục bộ nên giao diện người dùng có thể phản hồi nhanh hơn nhiều so với việc đợi lời gọi dịch vụ trả dữ liệu về. Một số ứng dụng đặt mục tiêu phản hồi thao tác nhập của người dùng ở *khung hình kế tiếp* của hệ thống đồ họa: với màn hình tần số làm tươi 60 Hz, nghĩa là phải render xong trong 16 mili giây.
+* Cho phép người dùng làm việc ngoại tuyến rất có giá trị, nhất là trên thiết bị di động với kết nối chập chờn. Với sync engine, ứng dụng không cần chế độ ngoại tuyến riêng: ngoại tuyến chỉ là trường hợp độ trễ mạng rất lớn.
+* So với việc gọi dịch vụ tường minh trong mã ứng dụng, sync engine đơn giản hóa mô hình lập trình của ứng dụng frontend. Như đã nói ở ["Vấn đề của lời gọi thủ tục từ xa (RPC)"](/ch5#sec_problems_with_rpc), mỗi lời gọi dịch vụ đều phải xử lý lỗi. Ví dụ, khi yêu cầu cập nhật dữ liệu trên server thất bại, giao diện phải phản ánh lỗi bằng cách nào đó. Sync engine để ứng dụng đọc ghi trực tiếp lên dữ liệu cục bộ, vốn hầu như không thất bại, tạo ra phong cách lập trình mang tính khai báo hơn [^41].
+* Để hiển thị thời gian thực các chỉnh sửa của người dùng khác, cần nhận thông báo thay đổi và cập nhật giao diện một cách hiệu quả. Kết hợp sync engine với mô hình *reactive programming* (*reactive programming*) là cách tốt để làm điều này [^42].
 
-如果能事先下载用户可能需要的全部数据，并持久保存在客户端，同步引擎的效果最好。这样一来，需要时就能离线访问；但也意味着，如果用户可以访问的数据量非常大，同步引擎便不适用。例如，下载用户自己创建的全部文件通常没问题（单个用户一般不会产生那么多数据），下载一个电子商务网站的全部商品目录则多半不合理。
+Sync engine hiệu quả nhất khi có thể tải trước toàn bộ dữ liệu người dùng có thể cần và lưu bền vững ở client. Khi đó có thể truy cập ngoại tuyến lúc cần, nhưng cũng có nghĩa là nếu lượng dữ liệu người dùng được phép truy cập rất lớn thì sync engine không phù hợp. Ví dụ, tải toàn bộ tệp do chính người dùng tạo ra thường không vấn đề (một người dùng thường không tạo ra nhiều dữ liệu đến thế), còn tải toàn bộ danh mục sản phẩm của một trang thương mại điện tử thì phần lớn là không hợp lý.
 
-Lotus Notes 在 20 世纪 80 年代率先采用了同步引擎的思想 [^43]，尽管当时并未使用这个名称；日历等特定应用的同步功能也已存在多年。如今有不少通用同步引擎，其中一些依赖专有后端服务，例如 Google Firestore、Realm 或 Ditto；另一些提供开源后端，适合构建本地优先软件，例如 PouchDB/CouchDB、Automerge 或 Yjs。
+Lotus Notes tiên phong áp dụng ý tưởng sync engine vào thập niên 1980 [^43], dù khi đó chưa dùng tên này. Chức năng đồng bộ cho các ứng dụng cụ thể như lịch cũng đã tồn tại nhiều năm. Ngày nay có khá nhiều sync engine đa dụng, trong đó một số dựa vào dịch vụ backend độc quyền như Google Firestore, Realm hay Ditto, số khác có backend mã nguồn mở, phù hợp để xây phần mềm local-first, như PouchDB/CouchDB, Automerge hay Yjs.
 
-多人视频游戏也需要立即响应玩家的本地操作，再与通过网络异步收到的其他玩家操作协调。在游戏开发术语中，与同步引擎对应的部分称为 *网络代码*（netcode）。网络代码所用的技术针对游戏需求高度定制 [^44]，无法直接移植到其他软件，因此本书不再展开。
+Trò chơi điện tử nhiều người chơi cũng cần phản hồi ngay các thao tác cục bộ của người chơi, rồi điều hòa với thao tác của người chơi khác nhận được bất đồng bộ qua mạng. Trong thuật ngữ phát triển game, phần tương ứng với sync engine gọi là *netcode*. Kỹ thuật dùng trong netcode được tùy biến rất sâu cho nhu cầu của game [^44], không thể chuyển sang phần mềm khác một cách trực tiếp, nên cuốn sách này không đi sâu.
 
 
-### 处理写入冲突 {#sec_replication_write_conflicts}
+### Xử lý xung đột ghi {#sec_replication_write_conflicts}
 
-多主复制最大的难题——无论是地理分布式的服务端数据库，还是终端用户设备上的本地优先同步引擎——都是不同领导者上的并发写入可能彼此冲突，需要解决。
+Khó khăn lớn nhất của sao chép đa leader (*multi-leader replication*) — dù là cơ sở dữ liệu server phân tán theo địa lý hay sync engine local-first trên thiết bị người dùng cuối — là các lần ghi đồng thời trên những leader khác nhau có thể xung đột với nhau và cần được giải quyết.
 
-例如，{{< xref fig="6-9" page="/ch6" anchor="fig_replication_write_conflict" >}}图 6-9{{< /xref >}} 展示了两个用户同时编辑一个维基页面。用户 1 把页面标题从 A 改为 B，用户 2 则独立地把标题从 A 改为 C。两位用户的变更都成功应用到各自的本地领导者，但异步复制这些变更时，系统发现了冲突。单主数据库不会遇到这个问题。
+Chẳng hạn, {{< xref fig="6-9" page="/ch6" anchor="fig_replication_write_conflict" >}}Hình 6-9{{< /xref >}} cho thấy hai người dùng cùng lúc chỉnh sửa một trang wiki. Người dùng 1 đổi tiêu đề trang từ A thành B, còn người dùng 2 độc lập đổi tiêu đề từ A thành C. Thay đổi của cả hai đều được áp dụng thành công lên leader cục bộ của mỗi bên, nhưng khi sao chép bất đồng bộ (*asynchronous replication*) các thay đổi này, hệ thống phát hiện xung đột. Cơ sở dữ liệu đơn leader không gặp vấn đề này.
 
-{{< fig num="6-9" id="fig_replication_write_conflict" src="/fig/ddia_0609.png" caption="两个领导者并发更新同一条记录，造成写入冲突。" class="ddia-figure ddia-figure--wide" width="2880" height="1488" />}}
+{{< fig num="6-9" id="fig_replication_write_conflict" src="/fig/ddia_0609.png" caption="Hai leader cập nhật đồng thời cùng một bản ghi, gây ra xung đột ghi." class="ddia-figure ddia-figure--wide" width="2880" height="1488" />}}
 
 > [!NOTE]
-> 我们称 {{< xref fig="6-9" page="/ch6" anchor="fig_replication_write_conflict" >}}图 6-9{{< /xref >}} 中的两次写入为 *并发写入*（*concurrent writes*），因为最初执行写入时，两者都不知道对方。它们在物理时间上是否真的同时发生并不重要；如果写入发生在离线期间，两者甚至可能相隔很久。真正重要的是，一次写入发生时，另一次写入是否已经生效。
+> Ta gọi hai lần ghi ở {{< xref fig="6-9" page="/ch6" anchor="fig_replication_write_conflict" >}}Hình 6-9{{< /xref >}} là *ghi đồng thời* (*concurrent writes*), vì khi chúng được thực hiện lần đầu, bên nào cũng không biết về bên kia. Việc chúng có thực sự xảy ra cùng lúc theo thời gian vật lý hay không không quan trọng. Nếu các lần ghi xảy ra khi ngoại tuyến, chúng thậm chí có thể cách nhau rất lâu. Điều thực sự quan trọng là khi một lần ghi xảy ra, lần ghi kia đã có hiệu lực hay chưa.
 
-我们会在 [“检测并发写入”](/ch6#sec_replication_concurrent) 中讨论数据库如何判断两次写入是否并发。现在先假定冲突已经能够检测，接下来考虑怎样解决才最合适。
+Ta sẽ bàn cách cơ sở dữ liệu xác định hai lần ghi có đồng thời hay không ở ["Phát hiện ghi đồng thời"](/ch6#sec_replication_concurrent). Tạm thời cứ giả định xung đột đã phát hiện được, và xét cách giải quyết nào là tốt nhất.
 
-#### 冲突避免 {#conflict-avoidance}
+#### Tránh xung đột {#conflict-avoidance}
 
-一种策略是从一开始就避免冲突。例如，如果应用程序能确保某条记录的所有写入都经过同一个领导者，那么即使整个数据库采用多主复制，也不会产生冲突。同步引擎客户端离线更新时无法使用这种办法，但在跨地域复制的服务端系统中有时可行 [^30]。
+Một chiến lược là tránh xung đột ngay từ đầu. Chẳng hạn, nếu ứng dụng đảm bảo mọi lần ghi vào một bản ghi nhất định đều đi qua cùng một leader, thì dù toàn bộ cơ sở dữ liệu dùng sao chép đa leader (*multi-leader replication*) cũng không phát sinh xung đột. Client của sync engine khi cập nhật ngoại tuyến không dùng được cách này, nhưng với hệ thống phía server sao chép (*replication*) xuyên region thì đôi khi khả thi [^30].
 
-例如，在用户只能编辑自己数据的应用程序中，可以保证某位用户的请求总是路由到同一个地区，并使用该地区的领导者读写。不同用户可以有不同的“主”地区（也许根据与用户的地理距离来选择），但从任一用户的角度看，本质上仍是单主配置。
+Ví dụ, trong ứng dụng mà người dùng chỉ được sửa dữ liệu của chính mình, có thể đảm bảo yêu cầu của một người dùng luôn được định tuyến đến cùng một region, và đọc ghi bằng leader của region đó. Những người dùng khác nhau có thể có region "chính" khác nhau (có thể chọn theo khoảng cách địa lý đến người dùng), nhưng từ góc nhìn của mỗi người dùng thì về bản chất vẫn là cấu hình đơn leader.
 
-不过，有时需要改变某条记录的指定领导者：可能是一个地区不可用，必须把流量改送另一个地区；也可能是用户搬到了别处，现在离另一个地区更近。如果用户恰好在指定领导者切换期间执行写入，就可能发生冲突，必须用下面某种方法解决。因此，只要允许改变领导者，冲突避免就可能失效。
+Tuy nhiên, đôi khi cần đổi leader được chỉ định cho một bản ghi: có thể một region không khả dụng và phải chuyển lưu lượng sang region khác, hoặc người dùng chuyển chỗ ở và giờ gần region khác hơn. Nếu người dùng đúng lúc ghi dữ liệu trong khi leader được chỉ định đang chuyển đổi, xung đột có thể xảy ra và phải giải quyết bằng một trong các cách bên dưới. Do đó, nếu cho phép đổi leader thì việc tránh xung đột có thể không còn hiệu lực.
 
-再举一个冲突避免的例子。假设要插入新记录，并用自增计数器生成唯一 ID。系统有两个领导者时，可以让一个只生成奇数，另一个只生成偶数。这样两个领导者便不会并发地把同一个 ID 分配给不同记录。[“ID 生成器和逻辑时钟”](/ch10#sec_consistency_logical) 将讨论其他 ID 分配方案。
+Một ví dụ khác về tránh xung đột. Giả sử cần chèn bản ghi mới và dùng bộ đếm tự tăng để sinh ID duy nhất. Khi hệ thống có hai leader, có thể cho một leader chỉ sinh số lẻ và leader kia chỉ sinh số chẵn. Như vậy hai leader sẽ không đồng thời gán cùng một ID cho các bản ghi khác nhau. ["Bộ sinh ID và đồng hồ logic"](/ch10#sec_consistency_logical) sẽ bàn các cách cấp phát ID khác.
 
 
-#### 最后写入者胜（丢弃并发写入） {#sec_replication_lww}
+#### Last write wins (loại bỏ các lần ghi đồng thời) {#sec_replication_lww}
 
-如果无法避免冲突，最简单的解决办法是给每次写入附加时间戳，并始终采用时间戳最大的值。例如在 {{< xref fig="6-9" page="/ch6" anchor="fig_replication_write_conflict" >}}图 6-9{{< /xref >}} 中，假设用户 1 写入的时间戳大于用户 2。两个领导者都会判定页面的新标题应为 B，并丢弃把标题设为 C 的写入。如果两次写入碰巧拥有相同时间戳，还可以比较值来决定胜者（例如字符串可以选择字母顺序在前的值）。
+Nếu không thể tránh xung đột, cách giải quyết đơn giản nhất là gắn timestamp cho mỗi lần ghi và luôn lấy giá trị có timestamp lớn nhất. Ví dụ ở {{< xref fig="6-9" page="/ch6" anchor="fig_replication_write_conflict" >}}Hình 6-9{{< /xref >}}, giả sử lần ghi của người dùng 1 có timestamp lớn hơn người dùng 2. Cả hai leader sẽ xác định tiêu đề mới của trang là B và loại bỏ lần ghi đặt tiêu đề thành C. Nếu hai lần ghi tình cờ có cùng timestamp, có thể so sánh giá trị để chọn bên thắng (ví dụ với chuỗi, chọn giá trị đứng trước theo thứ tự bảng chữ cái).
 
-这种方法称为 *最后写入者胜*（last write wins，LWW），因为时间戳最大的写入被视为“最后”一次写入。不过，这个名称容易误导：当两次写入像 {{< xref fig="6-9" page="/ch6" anchor="fig_replication_write_conflict" >}}图 6-9{{< /xref >}} 中那样并发时，根本无从定义哪次较早、哪次较晚，因此并发写入的时间戳顺序实质上是随机的。
+Phương pháp này gọi là *last write wins* (LWW) (*last write wins*), vì lần ghi có timestamp lớn nhất được coi là lần ghi "cuối cùng". Tuy nhiên, tên gọi này dễ gây hiểu lầm: khi hai lần ghi đồng thời như ở {{< xref fig="6-9" page="/ch6" anchor="fig_replication_write_conflict" >}}Hình 6-9{{< /xref >}}, hoàn toàn không thể xác định lần nào trước, lần nào sau, nên thứ tự timestamp của các lần ghi đồng thời thực chất là ngẫu nhiên.
 
-所以，LWW 的真正含义是：同一条记录在不同领导者上并发写入时，随机挑选其中一次作为胜者，其他写入则静默丢弃，即使它们都已在各自的领导者上成功处理。这样固然能让所有副本最终收敛到一致状态，代价却是数据丢失。
+Vì vậy, ý nghĩa thực sự của LWW là: khi cùng một bản ghi được ghi đồng thời trên các leader khác nhau, chọn ngẫu nhiên một lần ghi làm bên thắng, còn các lần ghi khác bị âm thầm loại bỏ, dù chúng đã được xử lý thành công trên leader của mình. Cách này tuy giúp mọi replica cuối cùng hội tụ về cùng một trạng thái nhất quán, nhưng cái giá phải trả là mất dữ liệu.
 
-如果能够避免冲突——例如只插入以 UUID 等唯一键标识的记录，而且从不更新——LWW 就没有问题。但如果要更新现有记录，或不同领导者可能插入键相同的记录，就必须判断丢失更新对应用程序是否可以接受。不能接受时，应采用下面介绍的其他冲突解决方式。
+Nếu tránh được xung đột — ví dụ chỉ chèn các bản ghi được định danh bằng khóa duy nhất như UUID và không bao giờ cập nhật — thì LWW không có vấn đề gì. Nhưng nếu cần cập nhật bản ghi hiện có, hoặc các leader khác nhau có thể chèn bản ghi cùng khóa, thì phải xét xem mất bản cập nhật có chấp nhận được với ứng dụng hay không. Nếu không, nên dùng các cách giải quyết xung đột khác dưới đây.
 
-LWW 还有一个问题：如果写入时间戳来自实时时钟（例如 Unix 时间戳），系统会对时钟同步极为敏感。假如一个节点的时钟快于其他节点，再尝试覆盖该节点写入的值时，新写入的时间戳可能反而更小，因而被忽略，尽管它显然发生得更晚。使用 *逻辑时钟*（*logical clock*）可以解决这个问题，参见 [“ID 生成器和逻辑时钟”](/ch10#sec_consistency_logical)。
+LWW còn một vấn đề nữa: nếu timestamp của lần ghi lấy từ đồng hồ thực (ví dụ Unix timestamp), hệ thống sẽ cực kỳ nhạy với việc đồng bộ đồng hồ. Giả sử đồng hồ của một node chạy nhanh hơn các node khác. Khi sau đó cố ghi đè giá trị mà node này đã ghi, timestamp của lần ghi mới có thể lại nhỏ hơn và bị bỏ qua, dù rõ ràng nó xảy ra muộn hơn. Dùng *đồng hồ logic* (*logical clock*) có thể giải quyết vấn đề này, xem ["Bộ sinh ID và đồng hồ logic"](/ch10#sec_consistency_logical).
 
-#### 手动冲突解决 {#manual-conflict-resolution}
+#### Giải quyết xung đột thủ công {#manual-conflict-resolution}
 
-如果不愿随机丢弃某些写入，下一个选择是手工解决冲突。你可能熟悉 Git 等版本控制系统中的做法：两个分支上的提交修改了同一文件的同一行，合并分支时就会产生合并冲突，必须先解决冲突才能完成合并。
+Nếu không muốn loại bỏ ngẫu nhiên một số lần ghi, lựa chọn tiếp theo là giải quyết xung đột thủ công. Bạn có thể đã quen với cách làm ở các hệ thống quản lý phiên bản như Git: khi commit trên hai nhánh cùng sửa một dòng của một tệp, việc hợp nhất nhánh sẽ sinh ra xung đột merge, và phải giải quyết xung đột thì mới hoàn tất merge.
 
-在数据库中，让一次冲突阻塞整个复制过程，直到有人解决，显然并不现实。数据库通常会保存一条记录的所有并发写入值——例如 {{< xref fig="6-9" page="/ch6" anchor="fig_replication_write_conflict" >}}图 6-9{{< /xref >}} 中的 B 和 C。这些值有时称为 *兄弟值*（*siblings*）。下次查询该记录时，数据库返回 *全部* 值，而不只是最新的一个。随后可以任意选择解决办法：在应用代码中自动处理（例如把 B 与 C 拼成“B/C”），或询问用户；最后再向数据库写回一个新值，消解冲突。
+Trong cơ sở dữ liệu, để một xung đột chặn toàn bộ quá trình sao chép (*replication*) cho đến khi có người giải quyết rõ ràng là không thực tế. Cơ sở dữ liệu thường lưu mọi giá trị được ghi đồng thời của một bản ghi — ví dụ B và C ở {{< xref fig="6-9" page="/ch6" anchor="fig_replication_write_conflict" >}}Hình 6-9{{< /xref >}}. Các giá trị này đôi khi gọi là *siblings* (*siblings*). Lần truy vấn bản ghi kế tiếp, cơ sở dữ liệu trả về *tất cả* giá trị chứ không chỉ giá trị mới nhất. Sau đó có thể tùy ý chọn cách giải quyết: xử lý tự động trong mã ứng dụng (ví dụ ghép B và C thành "B/C"), hoặc hỏi người dùng, cuối cùng ghi lại một giá trị mới vào cơ sở dữ liệu để giải quyết xung đột.
 
-CouchDB 等系统采用这种冲突解决方式，但它也有不少问题：
+CouchDB và một số hệ thống khác dùng cách giải quyết xung đột này, nhưng nó có khá nhiều vấn đề:
 
-* 数据库 API 会发生变化。例如，维基页面标题原本只是字符串，现在却变成一组字符串；通常只有一个元素，发生冲突时却可能有多个。应用代码处理这种数据会相当别扭。
-* 让用户手工合并兄弟值，无论对应用开发者还是用户都是沉重负担：开发者必须制作冲突解决界面，用户则可能不明白自己为什么要做这件事、又该做什么。很多情况下，自动合并比打扰用户更合适。
-* 自动合并兄弟值如果不够谨慎，也会产生意外结果。例如，亚马逊购物车过去允许并发更新，再把任一兄弟值中出现的所有商品都保留下来，也就是取购物车的并集。如果顾客在一个兄弟值中删除商品，而另一个兄弟值仍含有该商品，已经删除的商品便会意外重现 [^45]。{{< xref fig="6-10" page="/ch6" anchor="fig_replication_amazon_anomaly" >}}图 6-10{{< /xref >}} 展示了这种情况：设备 1 删除 Book，设备 2 同时删除 DVD，合并冲突后两件商品却都回来了。
-* 如果多个节点同时观察到冲突并各自解决，解决过程本身还可能引入新冲突，而且各节点给出的结果可能不一致。例如，如果没有固定排列顺序，一个节点可能把 B 和 C 合并成“B/C”，另一个却合并成“C/B”；再合并“B/C”与“C/B”时，结果可能变成“B/C/C/B”之类的怪东西。
+* API của cơ sở dữ liệu thay đổi. Ví dụ, tiêu đề trang wiki vốn chỉ là một chuỗi, nay lại thành một tập chuỗi. Thường chỉ có một phần tử, nhưng khi có xung đột thì có thể có nhiều. Mã ứng dụng xử lý loại dữ liệu này khá vướng víu.
+* Bắt người dùng tự hợp nhất các sibling là gánh nặng lớn cho cả nhà phát triển lẫn người dùng: nhà phát triển phải làm giao diện giải quyết xung đột, còn người dùng có thể không hiểu vì sao mình phải làm việc này và phải làm gì. Trong nhiều trường hợp, hợp nhất tự động tốt hơn là làm phiền người dùng.
+* Hợp nhất sibling tự động nếu không cẩn thận cũng có thể cho kết quả bất ngờ. Ví dụ, giỏ hàng của Amazon trước đây cho phép cập nhật đồng thời, rồi giữ lại mọi mặt hàng xuất hiện trong bất kỳ sibling nào, tức lấy hợp của các giỏ hàng. Nếu khách xóa một mặt hàng ở một sibling trong khi sibling kia vẫn còn mặt hàng đó, mặt hàng đã xóa sẽ bất ngờ xuất hiện lại [^45]. {{< xref fig="6-10" page="/ch6" anchor="fig_replication_amazon_anomaly" >}}Hình 6-10{{< /xref >}} minh họa tình huống này: thiết bị 1 xóa Book, thiết bị 2 đồng thời xóa DVD, sau khi giải quyết xung đột thì cả hai mặt hàng đều quay lại.
+* Nếu nhiều node cùng lúc quan sát thấy xung đột và mỗi node tự giải quyết, thì bản thân quá trình giải quyết có thể sinh thêm xung đột, và kết quả các node đưa ra có thể không nhất quán. Ví dụ, nếu không có thứ tự sắp xếp cố định, một node có thể hợp nhất B và C thành "B/C", node khác lại thành "C/B". Khi hợp nhất tiếp "B/C" với "C/B", kết quả có thể thành thứ kỳ quặc như "B/C/C/B".
 
-{{< fig num="6-10" id="fig_replication_amazon_anomaly" src="/fig/ddia_0610.png" caption="亚马逊购物车异常示例：以并集方式合并购物车冲突时，已删除的商品可能重新出现。" class="ddia-figure ddia-figure--wide" width="2658" height="1065" />}}
+{{< fig num="6-10" id="fig_replication_amazon_anomaly" src="/fig/ddia_0610.png" caption="Ví dụ dị thường giỏ hàng Amazon: khi hợp nhất xung đột giỏ hàng bằng phép hợp, mặt hàng đã xóa có thể xuất hiện lại." class="ddia-figure ddia-figure--wide" width="2658" height="1065" />}}
 
 
 <a id="sec_replication_automatic_resolution"></a>
 
-#### 自动冲突解决 {#automatic-conflict-resolution}
+#### Giải quyết xung đột tự động {#automatic-conflict-resolution}
 
-对许多应用程序而言，处理冲突的最佳方式，是用算法自动把并发写入合并成一致状态。自动冲突解决可以保证所有副本 *收敛*（*converge*）到同一状态：只要处理过相同的一组写入，各副本的状态就相同，与写入到达的顺序无关。
+Với nhiều ứng dụng, cách xử lý xung đột tốt nhất là dùng thuật toán tự động hợp nhất các lần ghi đồng thời thành một trạng thái nhất quán. Giải quyết xung đột tự động có thể đảm bảo mọi replica *hội tụ* (*converge*) về cùng một trạng thái: miễn là đã xử lý cùng một tập lần ghi, trạng thái các replica sẽ giống nhau, bất kể các lần ghi đến theo thứ tự nào.
 
-LWW 是冲突解决算法的一个简单例子。针对不同数据类型，人们还开发了更复杂的合并算法，目标是尽可能保留所有更新的预期效果，从而避免数据丢失：
+LWW là một ví dụ đơn giản về thuật toán giải quyết xung đột. Với các kiểu dữ liệu khác nhau, người ta đã phát triển những thuật toán hợp nhất phức tạp hơn, nhằm giữ lại tối đa tác dụng dự kiến của mọi cập nhật, nhờ đó tránh mất dữ liệu:
 
-* 如果数据是文本（例如维基页面的标题或正文），可以检测相邻版本之间插入或删除了哪些字符。合并结果会保留任一兄弟值中的所有插入和删除。如果用户在同一位置并发插入文本，可以按确定性的顺序排列，确保所有节点得到相同结果。
-* 如果数据是元素集合，无论像待办事项列表一样有序，还是像购物车一样无序，都可以像合并文本那样跟踪插入和删除。为避免 {{< xref fig="6-10" page="/ch6" anchor="fig_replication_amazon_anomaly" >}}图 6-10{{< /xref >}} 中的购物车异常，算法会记住 Book 和 DVD 已被删除，因此合并结果为 Cart = {Soap}。
-* 如果数据是可以递增或递减的整数计数器（例如社交媒体帖子的点赞数），合并算法可以计算各兄弟值上分别发生了多少次递增和递减，再正确相加，既不重复计数，也不丢失更新。
-* 如果数据是键值映射，可以对同一个键下的值采用其他某种冲突解决算法；不同键上的更新则可以彼此独立地处理。
+* Nếu dữ liệu là văn bản (ví dụ tiêu đề hay nội dung trang wiki), có thể phát hiện những ký tự nào được chèn hoặc xóa giữa các phiên bản liền kề. Kết quả hợp nhất giữ lại mọi lần chèn và xóa ở bất kỳ sibling nào. Nếu người dùng đồng thời chèn văn bản tại cùng một vị trí, có thể sắp xếp theo thứ tự xác định để mọi node cho cùng kết quả.
+* Nếu dữ liệu là tập hợp phần tử, dù có thứ tự như danh sách việc cần làm hay không có thứ tự như giỏ hàng, đều có thể theo dõi chèn và xóa giống như hợp nhất văn bản. Để tránh dị thường giỏ hàng ở {{< xref fig="6-10" page="/ch6" anchor="fig_replication_amazon_anomaly" >}}Hình 6-10{{< /xref >}}, thuật toán ghi nhớ rằng Book và DVD đã bị xóa, nên kết quả hợp nhất là Cart = {Soap}.
+* Nếu dữ liệu là bộ đếm số nguyên có thể tăng hoặc giảm (ví dụ số lượt thích của một bài đăng mạng xã hội), thuật toán hợp nhất có thể tính xem trên từng sibling đã xảy ra bao nhiêu lần tăng và giảm, rồi cộng lại cho đúng, không đếm trùng cũng không mất cập nhật.
+* Nếu dữ liệu là map khóa–giá trị, có thể áp dụng một thuật toán giải quyết xung đột nào đó cho các giá trị dưới cùng một khóa. Các cập nhật trên khóa khác nhau thì xử lý độc lập.
 
-冲突解决并非无所不能。例如，如果规定一个列表最多包含五个元素，而多位用户并发添加元素，使总数超过五个，那么唯一的选择就是丢掉其中一些。即便如此，自动冲突解决仍足以构建许多实用应用。一旦决定构建可协作的离线优先或本地优先应用，冲突解决就不可避免，而自动化往往是最佳选择。
+Giải quyết xung đột không phải vạn năng. Ví dụ, nếu quy định một danh sách tối đa năm phần tử mà nhiều người dùng đồng thời thêm phần tử khiến tổng vượt năm, thì lựa chọn duy nhất là bỏ bớt một số. Dù vậy, giải quyết xung đột tự động vẫn đủ để xây nhiều ứng dụng hữu ích. Một khi đã quyết định xây ứng dụng offline-first hay local-first có thể cộng tác, giải quyết xung đột là không thể tránh, và tự động hóa thường là lựa chọn tốt nhất.
 
-### CRDT 与操作变换 {#sec_replication_crdts}
+### CRDT và operational transformation {#sec_replication_crdts}
 
-实现自动冲突解决时，通常使用两类算法：*无冲突复制数据类型*（CRDT）[^46] 和 *操作变换*（OT）[^47]。二者的设计理念与性能特征不同，但都能自动合并前面提到的各种数据。
+Khi triển khai giải quyết xung đột tự động, thường dùng hai loại thuật toán: *conflict-free replicated data type* (CRDT) [^46] và *operational transformation* (OT) [^47]. Hai loại có triết lý thiết kế và đặc tính hiệu năng khác nhau, nhưng đều có thể tự động hợp nhất các loại dữ liệu đã nêu ở trên.
 
-{{< xref fig="6-11" page="/ch6" anchor="fig_replication_ot_crdt" >}}图 6-11{{< /xref >}} 展示了 OT 和 CRDT 分别如何合并文本的并发更新。假设两个副本起初都保存文本“ice”。一个副本在开头插入字母“n”，得到“nice”；与此同时，另一个副本在末尾插入感叹号，得到“ice!”。
+{{< xref fig="6-11" page="/ch6" anchor="fig_replication_ot_crdt" >}}Hình 6-11{{< /xref >}} cho thấy OT và CRDT lần lượt hợp nhất các cập nhật đồng thời của văn bản ra sao. Giả sử hai replica ban đầu cùng chứa văn bản "ice". Một replica chèn chữ "n" vào đầu, thành "nice". Cùng lúc đó, replica kia chèn dấu chấm than vào cuối, thành "ice!".
 
-{{< fig num="6-11" id="fig_replication_ot_crdt" src="/fig/ddia_0611.png" caption="OT 与 CRDT 分别如何合并字符串中的两次并发插入。" class="ddia-figure ddia-figure--wide" width="2658" height="981" />}}
+{{< fig num="6-11" id="fig_replication_ot_crdt" src="/fig/ddia_0611.png" caption="OT và CRDT lần lượt hợp nhất hai lần chèn đồng thời vào một chuỗi như thế nào." class="ddia-figure ddia-figure--wide" width="2658" height="981" />}}
 
-两类算法用不同方式得到合并结果“nice!”：
+Hai loại thuật toán dùng hai cách khác nhau để cho ra kết quả hợp nhất "nice!":
 
 OT
-:   记录字符插入或删除位置的索引：“n”插入索引 0，“!”插入索引 3。然后两个副本交换操作。在索引 0 插入“n”可以原样应用；但如果直接在状态“nice”的索引 3 插入“!”，结果会变成错误的“nic!e”。因此，必须根据已经应用的并发操作变换每个操作的索引。这里，为了计入较小索引处插入的“n”，需要把“!”的插入位置变换为索引 4。
+:   Ghi lại chỉ số vị trí chèn hoặc xóa ký tự: "n" được chèn ở chỉ số 0, "!" được chèn ở chỉ số 3. Sau đó hai replica trao đổi các thao tác. Việc chèn "n" ở chỉ số 0 có thể áp dụng nguyên trạng, nhưng nếu chèn "!" trực tiếp ở chỉ số 3 của trạng thái "nice" thì kết quả sẽ sai thành "nic!e". Do đó phải biến đổi chỉ số của mỗi thao tác theo các thao tác đồng thời đã được áp dụng. Ở đây, để tính đến "n" đã chèn ở chỉ số nhỏ hơn, cần biến đổi vị trí chèn "!" thành chỉ số 4.
 
 CRDT
-:   大多数 CRDT 不使用索引，而是给每个字符分配唯一且不可变的 ID，再据此确定插入和删除位置。例如在 {{< xref fig="6-11" page="/ch6" anchor="fig_replication_ot_crdt" >}}图 6-11{{< /xref >}} 中，“i”的 ID 是 1A，“c”的 ID 是 2A，依此类推。插入感叹号时，生成的操作既包含新字符的 ID（4B），也包含插入位置之前那个现有字符的 ID（3A）。要插在字符串开头，就把前驱字符 ID 设为“nil”。同一位置的并发插入按字符 ID 排列。这样无需变换操作，也能保证各副本收敛。
+:   Hầu hết CRDT không dùng chỉ số mà gán cho mỗi ký tự một ID duy nhất và bất biến, rồi dựa vào đó xác định vị trí chèn và xóa. Ví dụ ở {{< xref fig="6-11" page="/ch6" anchor="fig_replication_ot_crdt" >}}Hình 6-11{{< /xref >}}, ID của "i" là 1A, của "c" là 2A, v.v. Khi chèn dấu chấm than, thao tác sinh ra chứa cả ID của ký tự mới (4B) lẫn ID của ký tự hiện có đứng trước vị trí chèn (3A). Muốn chèn vào đầu chuỗi thì đặt ID ký tự đứng trước là "nil". Các lần chèn đồng thời tại cùng một vị trí được sắp xếp theo ID ký tự. Nhờ đó không cần biến đổi thao tác mà vẫn đảm bảo các replica hội tụ.
 
-许多算法都建立在这些思路的不同变体上。列表和数组可以采用类似方法，把字符换成列表元素；键值映射等其他数据类型也很容易加入。OT 与 CRDT 在性能和功能上各有取舍，但也可以把二者的优点结合到同一种算法中 [^48]。
+Nhiều thuật toán được xây dựng trên các biến thể khác nhau của những ý tưởng này. Danh sách và mảng có thể dùng cách tương tự, thay ký tự bằng phần tử danh sách. Các kiểu dữ liệu khác như map khóa–giá trị cũng dễ bổ sung. OT và CRDT có đánh đổi riêng về hiệu năng và tính năng, nhưng cũng có thể kết hợp ưu điểm của cả hai trong cùng một thuật toán [^48].
 
-OT 最常用于文本的实时协作编辑，例如 Google Docs [^32]；CRDT 则用于 Redis Enterprise、Riak、Azure Cosmos DB 等分布式数据库 [^49]。面向 JSON 数据的同步引擎既可以用 CRDT 实现（如 Automerge、Yjs），也可以用 OT 实现（如 ShareDB）。
+OT được dùng nhiều nhất cho soạn thảo cộng tác văn bản theo thời gian thực, ví dụ Google Docs [^32], còn CRDT được dùng trong các cơ sở dữ liệu phân tán như Redis Enterprise, Riak, Azure Cosmos DB [^49]. Sync engine cho dữ liệu JSON có thể cài đặt bằng CRDT (như Automerge, Yjs) hoặc OT (như ShareDB).
 
-#### 什么是冲突？ {#what-is-a-conflict}
+#### Xung đột là gì? {#what-is-a-conflict}
 
-有些冲突显而易见。在 {{< xref fig="6-9" page="/ch6" anchor="fig_replication_write_conflict" >}}图 6-9{{< /xref >}} 的例子中，两次写入并发修改同一条记录的同一个字段，把它设成两个不同的值。毫无疑问，这就是冲突。
+Một số xung đột rất rõ ràng. Trong ví dụ ở {{< xref fig="6-9" page="/ch6" anchor="fig_replication_write_conflict" >}}Hình 6-9{{< /xref >}}, hai lần ghi đồng thời sửa cùng một trường của cùng một bản ghi, đặt nó thành hai giá trị khác nhau. Không nghi ngờ gì, đó là xung đột.
 
-另一些冲突则更为微妙，不易发现。以会议室预订系统为例，它记录哪个房间在什么时间由哪组人预订。应用程序必须确保同一时刻每个房间只分配给一组人，也就是说，同一房间的预订不能重叠。如果两项不同预订在同一时间占用同一房间，就会产生冲突。即使应用程序在允许预订前检查空闲情况，只要两次预订分别在不同领导者上进行，仍可能发生冲突。
+Những xung đột khác tinh vi hơn, khó nhận ra. Lấy hệ thống đặt phòng họp làm ví dụ: nó ghi lại phòng nào được nhóm nào đặt vào thời gian nào. Ứng dụng phải đảm bảo tại mỗi thời điểm một phòng chỉ được giao cho một nhóm, nghĩa là các lượt đặt cùng phòng không được chồng lấn. Nếu hai lượt đặt khác nhau cùng chiếm một phòng vào cùng thời điểm thì sinh ra xung đột. Ngay cả khi ứng dụng kiểm tra phòng trống trước khi cho đặt, xung đột vẫn có thể xảy ra nếu hai lượt đặt được thực hiện trên hai leader khác nhau.
 
-这个问题没有现成的简短答案，不过在接下来的章节中，我们会逐步加深理解。[第 8 章](/ch8#ch_transactions) 将给出更多冲突示例；[“排序事件以捕获因果关系”](/ch13#sec_future_capture_causality) 则会讨论在复制系统中可伸缩地检测与解决冲突的方法。
+Vấn đề này không có câu trả lời ngắn gọn có sẵn, nhưng ở các phần tiếp theo ta sẽ dần hiểu sâu hơn. [Chương 8](/ch8#ch_transactions) sẽ đưa thêm ví dụ về xung đột, còn ["Sắp xếp sự kiện để nắm bắt quan hệ nhân quả"](/ch13#sec_future_capture_causality) sẽ bàn các cách phát hiện và giải quyết xung đột trong hệ thống sao chép (*replication*) một cách có khả năng mở rộng.
 
+## Sao chép không leader (*leaderless replication*) {#sec_replication_leaderless}
 
-## 无主复制 {#sec_replication_leaderless}
+Sao chép đơn leader (*single-leader replication*) và đa leader đã bàn ở trên đều dựa trên cùng một ý tưởng: client gửi yêu cầu ghi đến một node (leader), rồi hệ thống cơ sở dữ liệu lo việc sao chép (*replication*) lần ghi đó sang các replica khác. Leader quyết định thứ tự xử lý các lần ghi, còn follower áp dụng các lần ghi của leader theo cùng thứ tự đó.
 
-本章此前讨论的单主复制与多主复制，都基于同一个思路：客户端把写请求发给某个节点（领导者），再由数据库系统负责把写入复制到其他副本。领导者决定处理写入的顺序，追随者则按相同顺序应用领导者的写入。
-
-另一些数据存储系统采取了不同办法：放弃领导者概念，允许任何副本直接接受客户端写入。最早的一些复制数据系统采用的就是无主模型 [^1] [^50]，但在关系数据库占据主导地位的年代，这个思路几乎被遗忘。2007 年，亚马逊把它用于内部的 *Dynamo* 系统 [^45]，无主架构由此再度流行。Riak、Cassandra 和 ScyllaDB 都是受 Dynamo 启发、采用无主复制模型的开源数据存储，因此这类数据库也称为 *Dynamo 风格*（*Dynamo-style*）数据库。
-
-
-> [!NOTE]
-> 最初的 *Dynamo* 系统只在论文中有所描述 [^45]，从未在亚马逊之外发布。名称相近的 *DynamoDB* 是 AWS 后来推出的云数据库，但架构完全不同：它采用基于 Multi-Paxos 共识算法的单主复制 [^5]。
-
-
-在一些无主实现中，客户端直接把写入发给多个副本；另一些实现则由 *协调者*（*coordinator*）节点代客户端完成这件事。不过，与有领导者的数据库不同，协调者不会强制规定写入顺序。我们将看到，这项设计差异会深刻影响数据库的使用方式。
-
-### 当节点故障时写入数据库 {#id287}
-
-假设一个数据库有三个副本，其中一个暂时不可用，也许正在重启以安装系统更新。在单主配置中，要继续处理写入，可能需要执行故障切换（参见 [“处理节点故障”](/ch6#sec_replication_failover)）。
-
-无主配置则根本没有故障切换。{{< xref fig="6-12" page="/ch6" anchor="fig_replication_quorum_node_outage" >}}图 6-12{{< /xref >}} 展示了此时的情形：客户端（用户 1234）把写入并行发给三个副本；两个可用副本接受写入，不可用副本则错过了它。假设三个副本中有两个确认就足以判定写入成功：用户 1234 收到两个 *ok* 响应后，系统便认为写入成功，客户端直接忽略有一个副本漏掉写入这一事实。
-
-{{< fig num="6-12" id="fig_replication_quorum_node_outage" src="/fig/ddia_0612.png" caption="节点停机后的仲裁写、仲裁读和读修复。" class="ddia-figure ddia-figure--wide" width="2880" height="1572" />}}
-
-
-现在设想不可用的节点恢复上线，客户端开始从它读取。该节点停机期间发生的写入都没有保存在这里，因此从它读取时，响应中可能包含 *陈旧*（过时）的值。
-
-为解决这个问题，客户端读取数据库时，不能只把请求发给一个副本：*读请求也要并行发往多个节点*。不同节点可能给出不同响应，例如一个返回最新值，另一个返回陈旧值。
-
-要分辨哪些响应是最新的、哪些已经过时，每个写入的值都必须带有版本号或时间戳，类似 [“最后写入者胜（丢弃并发写入）”](/ch6#sec_replication_lww) 中介绍的做法。客户端收到多个读取结果时，采用时间戳最大的值——即使只有一个副本返回该值，其他几个副本都返回旧值。更多细节参见 [“检测并发写入”](/ch6#sec_replication_concurrent)。
-
-#### 追赶错过的写入 {#sec_replication_read_repair}
-
-复制系统应当保证所有数据最终都会复制到每个副本。不可用节点恢复上线后，怎样补上停机期间错过的写入？Dynamo 风格的数据存储会使用以下几种机制：
-
-读修复（read repair）
-:   客户端并行读取多个节点时，可以发现陈旧响应。例如在 {{< xref fig="6-12" page="/ch6" anchor="fig_replication_quorum_node_outage" >}}图 6-12{{< /xref >}} 中，用户 2345 从副本 3 得到版本 6 的值，从副本 1 和副本 2 得到版本 7 的值。客户端发现副本 3 的值已经过时，于是把较新的值写回这个副本。对于经常读取的值，这种方法很有效。
-
-提示移交（hinted handoff）
-:   某个副本不可用时，另一个副本可以替它保存写入，并把这些写入记录为 *提示*。原本应接收这些写入的副本恢复后，保存提示的副本会将它们发送过去，然后删除提示。即使某些值从未被读取、无法通过读修复更新，这个 *移交* 过程也能让副本赶上进度。
-
-反熵（anti-entropy）
-:   此外，还有一个后台进程定期查找副本之间的数据差异，把缺失的数据从一个副本复制到另一个。与基于领导者的复制日志不同，这个 *反熵过程*（*anti-entropy process*）并不按特定顺序复制写入，数据得到复制之前可能有很长延迟。
-
-#### 读写仲裁 {#sec_replication_quorum_condition}
-
-在 {{< xref fig="6-12" page="/ch6" anchor="fig_replication_quorum_node_outage" >}}图 6-12{{< /xref >}} 的例子中，写入只在三个副本中的两个上完成，我们仍判定它成功。如果只有一个副本接受写入呢？这个下限究竟能压到多低？
-
-如果能保证每次成功写入至少保存在三个副本中的两个上，那么最多只有一个副本是陈旧的。因此，只要读取至少两个副本，就可以确信其中至少一个是最新的。即使第三个副本停机或响应缓慢，读取仍能返回最新值。
-
-更一般地说，假设有 *n* 个副本，每次写入必须得到 *w* 个节点确认才算成功，每次读取则至少查询 *r* 个节点。（上述例子中，*n* = 3、*w* = 2、*r* = 2。）只要 *w* + *r* > *n*，读取时就有望得到最新值，因为所查询的 *r* 个节点中，至少有一个必然是最新的。遵守这些 *r*、*w* 取值的操作称为 *仲裁读*（*quorum read*）和 *仲裁写*（*quorum write*）[^50]。可以把 *r* 和 *w* 看作一次读或写要成立所需的最低票数。
-
-在 Dynamo 风格的数据库中，参数 *n*、*w*、*r* 通常都可以配置。常见做法是让 *n* 取奇数（通常为 3 或 5），并令 *w* = *r* = (*n* + 1) / 2（向上取整）；不过也可以根据需要调整。例如，写少读多的工作负载可能适合设为 *w* = *n*、*r* = 1。这样读取更快，缺点是只要一个节点失效，所有数据库写入都会失败。
+Một số hệ thống lưu trữ dữ liệu chọn cách khác: bỏ khái niệm leader, cho phép bất kỳ replica nào nhận ghi trực tiếp từ client. Một số hệ thống dữ liệu sao chép (*replication*) đầu tiên dùng chính mô hình không leader [^1] [^50], nhưng trong thời kỳ cơ sở dữ liệu quan hệ thống trị, ý tưởng này gần như bị lãng quên. Năm 2007, Amazon dùng nó cho hệ thống *Dynamo* nội bộ [^45], và kiến trúc không leader nhờ đó lại phổ biến. Riak, Cassandra và ScyllaDB đều là các kho dữ liệu mã nguồn mở lấy cảm hứng từ Dynamo và dùng mô hình sao chép không leader (*leaderless replication*), nên loại cơ sở dữ liệu này còn gọi là cơ sở dữ liệu *kiểu Dynamo* (*Dynamo-style*).
 
 
 > [!NOTE]
-> 集群中的节点数可以多于 *n*，但任意给定值只存储在 *n* 个节点上。这样就能对数据集进行分片，支持单个节点无法容纳的数据集。我们会在 [第 7 章](/ch7#ch_sharding) 继续讨论分片。
+> Hệ thống *Dynamo* gốc chỉ được mô tả trong một bài báo [^45] và chưa từng được phát hành bên ngoài Amazon. *DynamoDB*, tên gần giống, là cơ sở dữ liệu đám mây do AWS ra mắt sau này, nhưng kiến trúc hoàn toàn khác: nó dùng sao chép đơn leader (*single-leader replication*) dựa trên thuật toán đồng thuận Multi-Paxos [^5].
 
 
-仲裁条件 *w* + *r* > *n* 使系统能够按以下方式容忍节点不可用：
+Ở một số cách triển khai không leader, client gửi lần ghi trực tiếp đến nhiều replica, ở số khác, một node *coordinator* (*coordinator*) làm việc đó thay client. Tuy nhiên, khác với cơ sở dữ liệu có leader, coordinator không áp đặt thứ tự ghi. Ta sẽ thấy sự khác biệt thiết kế này ảnh hưởng sâu sắc đến cách dùng cơ sở dữ liệu.
 
-* 如果 *w* < *n*，有一个节点不可用时仍可处理写入。
-* 如果 *r* < *n*，有一个节点不可用时仍可处理读取。
-* 当 *n* = 3、*w* = 2、*r* = 2 时，可以像 {{< xref fig="6-12" page="/ch6" anchor="fig_replication_quorum_node_outage" >}}图 6-12{{< /xref >}} 那样容忍一个节点不可用。
-* 当 *n* = 5、*w* = 3、*r* = 3 时，可以容忍两个节点不可用，如 {{< xref fig="6-13" page="/ch6" anchor="fig_replication_quorum_overlap" >}}图 6-13{{< /xref >}} 所示。
+### Ghi dữ liệu khi node gặp sự cố {#id287}
 
-通常，读写请求总会并行发送到全部 *n* 个副本。参数 *w* 和 *r* 决定要等待多少个节点，也就是在判定读或写成功之前，*n* 个节点中必须有多少个报告成功。
+Giả sử một cơ sở dữ liệu có ba replica, trong đó một replica tạm thời không khả dụng, có thể đang khởi động lại để cài bản cập nhật hệ thống. Trong cấu hình đơn leader, để tiếp tục xử lý ghi có thể phải thực hiện failover (xem ["Xử lý sự cố node"](/ch6#sec_replication_failover)).
 
-{{< fig num="6-13" id="fig_replication_quorum_overlap" src="/fig/ddia_0613.png" caption="如果 w + r > n，读取的 r 个副本中至少有一个必然见过最近一次成功写入。" class="ddia-figure ddia-figure--wide" width="2880" height="1226" />}}
+Cấu hình không leader hoàn toàn không có failover. {{< xref fig="6-12" page="/ch6" anchor="fig_replication_quorum_node_outage" >}}Hình 6-12{{< /xref >}} cho thấy tình huống: client (người dùng 1234) gửi lần ghi song song đến cả ba replica. Hai replica khả dụng nhận lần ghi, còn replica không khả dụng bỏ lỡ nó. Giả sử chỉ cần hai trong ba replica xác nhận là đủ coi lần ghi thành công: sau khi người dùng 1234 nhận hai phản hồi *ok*, hệ thống coi lần ghi là thành công, và client bỏ qua việc một replica đã bỏ lỡ lần ghi.
 
-
-如果可用节点少于所需的 *w* 或 *r*，写入或读取就会返回错误。节点不可用可能有许多原因：节点停机（崩溃或断电）、执行操作时出错（磁盘已满，无法写入）、客户端与节点之间网络中断，等等。我们只关心节点是否返回成功响应，无需区分故障的具体类型。
-
-### 仲裁一致性的局限 {#sec_replication_quorum_limitations}
-
-如果有 *n* 个副本，并选择满足 *w* + *r* > *n* 的 *w* 和 *r*，通常可以期望每次读取都返回某个键最近写入的值。这是因为写入所涉及的节点集合与读取所涉及的节点集合必然有交集；也就是说，读取的节点中至少有一个保存着最新值，如 {{< xref fig="6-13" page="/ch6" anchor="fig_replication_quorum_overlap" >}}图 6-13{{< /xref >}} 所示。
-
-*r* 和 *w* 通常取节点的多数（多于 *n*/2），因为这样既能保证 *w* + *r* > *n*，又能容忍最多 *n*/2（向下取整）个节点失效。不过，法定人数并不一定非得是多数；真正重要的是，读操作与写操作所用的节点集合至少有一个共同节点。法定人数还可以有其他安排，为分布式算法的设计提供一定灵活性 [^51]。
-
-也可以把 *w* 和 *r* 设得更小，使 *w* + *r* ≤ *n*，即不满足仲裁条件。此时读写请求仍会发往 *n* 个节点，只是操作成功所需的成功响应更少。
-
-*w* 和 *r* 越小，越容易读到陈旧值，因为读操作更可能没有覆盖保存最新值的节点。好处则是延迟更低、可用性更高：网络中断导致许多副本不可达时，系统仍有更大机会继续处理读写。只有可达副本数低于 *w* 或 *r* 时，数据库才会分别变得不可写或不可读。
-
-然而，即使 *w* + *r* > *n*，仍有一些边缘情况会让一致性属性变得难以理解，例如：
-
-* 如果保存新值的节点失效，又从保存旧值的副本恢复数据，保存新值的副本数可能降到 *w* 以下，破坏仲裁条件。
-* 再平衡期间，一部分数据会从一个节点迁移到另一个节点（见 [第 7 章](/ch7#ch_sharding)），各节点对“某个值的 *n* 个副本应由哪些节点保存”可能看法不一，使读仲裁与写仲裁不再相交。
-* 如果读操作与写操作并发，读取可能看见并发写入的值，也可能看不见。尤其是，某次读取可能看到新值，后续读取却看到旧值，参见 [“线性一致性与仲裁”](/ch10#sec_consistency_quorum_linearizable)。
-* 如果一次写入在部分副本上成功、在其余副本上失败（例如某些节点磁盘已满），总成功数少于 *w*，那么整体写入会判定失败，但成功副本上的写入不会回滚。这意味着即使系统报告写入失败，后续读取仍可能返回这次写入的值 [^52]。
-* 如果数据库用实时时钟的时间戳判断写入的新旧（例如 Cassandra 和 ScyllaDB），另一个时钟较快的节点只要写过同一个键，后续写入就可能被静默丢弃。我们在 [“最后写入者胜（丢弃并发写入）”](/ch6#sec_replication_lww) 中已经见过这个问题，还会在 [“对同步时钟的依赖”](/ch9#sec_distributed_clocks_relying) 中进一步讨论。
-* 如果两次写入并发发生，一个副本可能先处理其中一次，另一个副本则先处理另一次，由此产生冲突，与多主复制中的情况相似（参见 [“处理写入冲突”](/ch6#sec_replication_write_conflicts)）。我们会在 [“检测并发写入”](/ch6#sec_replication_concurrent) 中再谈这个问题。
-
-因此，仲裁看似保证读取返回最近写入的值，实际却没有那么简单。Dynamo 风格数据库通常针对能够容忍最终一致性的场景优化。参数 *w* 和 *r* 可以调节读到陈旧值的概率 [^53]，却不宜被当作绝对保证。
-
-#### 监控陈旧性 {#monitoring-staleness}
-
-从运维角度看，监控数据库返回的结果是否最新非常重要。即使应用程序能够容忍陈旧读取，也必须了解复制是否健康。如果复制大幅落后，系统应发出告警，以便调查网络故障、节点过载等原因。
-
-采用基于领导者的复制时，数据库通常会暴露复制延迟指标，供监控系统采集。这是因为写入在领导者和追随者上按相同顺序应用，每个节点都有自己在复制日志中的位置，也就是已经在本地应用了多少次写入。用领导者当前位置减去追随者当前位置，便可度量复制延迟。
-
-无主复制系统没有固定的写入应用顺序，监控起来更加困难。副本为了移交而保存的提示数量可以作为一项健康指标，却很难作出有意义的解释 [^54]。最终一致性有意给出了一项模糊保证，但为了可运维性，必须能够量化“最终”究竟有多远。
+{{< fig num="6-12" id="fig_replication_quorum_node_outage" src="/fig/ddia_0612.png" caption="Ghi quorum, đọc quorum và read repair sau khi một node ngừng hoạt động." class="ddia-figure ddia-figure--wide" width="2880" height="1572" />}}
 
 
-### 单主与无主复制的性能 {#sec_replication_leaderless_perf}
+Giờ hãy hình dung node không khả dụng phục hồi và client bắt đầu đọc từ nó. Mọi lần ghi xảy ra trong lúc nó ngừng hoạt động đều không được lưu ở đây, nên khi đọc từ nó, phản hồi có thể chứa giá trị *cũ* (lỗi thời).
 
-基于单个领导者的复制系统能够提供强一致性保证，而无主系统很难甚至不可能做到。不过，正如 [“复制延迟的问题”](/ch6#sec_replication_lag) 中所见，在基于领导者的复制系统里，如果从异步更新的追随者读取，同样可能得到陈旧值。
+Để giải quyết vấn đề này, khi đọc cơ sở dữ liệu, client không thể chỉ gửi yêu cầu đến một replica: *yêu cầu đọc cũng được gửi song song đến nhiều node*. Các node khác nhau có thể trả phản hồi khác nhau, chẳng hạn một node trả giá trị mới nhất, node khác trả giá trị cũ.
 
-从领导者读取可以保证响应最新，却存在性能问题：
+Để phân biệt phản hồi nào mới nhất, phản hồi nào đã lỗi thời, mỗi giá trị được ghi đều phải mang số phiên bản hoặc timestamp, tương tự cách đã giới thiệu ở ["Last write wins (loại bỏ các lần ghi đồng thời)"](/ch6#sec_replication_lww). Khi client nhận nhiều kết quả đọc, nó lấy giá trị có timestamp lớn nhất — dù chỉ một replica trả giá trị đó còn mấy replica kia đều trả giá trị cũ. Chi tiết hơn xem ["Phát hiện ghi đồng thời"](/ch6#sec_replication_concurrent).
 
-* 读取吞吐量受领导者处理能力限制；相比之下，读伸缩可以把读取分散到异步更新的副本，但这些副本可能返回陈旧值。
-* 领导者失效后，必须等系统检测到故障并完成故障切换，才能继续处理请求。即使故障切换很快，响应时间的短暂上升也会被用户察觉；如果耗时很长，系统就会在此期间不可用。
-* 系统对领导者的性能问题极其敏感。如果领导者因过载或资源争用而响应缓慢，用户的响应时间也会立即增加。
+#### Bắt kịp các lần ghi bị bỏ lỡ {#sec_replication_read_repair}
 
-无主架构的一大优点，是面对这些问题时韧性更强。系统无需故障切换，而且请求原本就会并行发往多个副本，因此一个副本变慢或不可用，对响应时间的影响很小：客户端只需采用响应较快的其他副本所返回的结果。采用最快响应的做法称为 *请求对冲*（*request hedging*），可以显著降低尾延迟 [^55]。
+Hệ thống sao chép (*replication*) phải đảm bảo mọi dữ liệu cuối cùng đều được sao chép (*replication*) đến từng replica. Khi node không khả dụng phục hồi, làm sao nó bổ sung các lần ghi đã bỏ lỡ lúc ngừng hoạt động? Kho dữ liệu kiểu Dynamo dùng một số cơ chế sau:
 
-无主系统之所以有这种韧性，根本原因是它不区分正常情况和故障情况。这对于处理所谓的 *灰色失效*（*gray failure*）尤其有利：节点并未彻底停机，却处于降级状态，处理请求异常缓慢 [^56]；节点单纯过载时也是如此（例如节点离线一段时间后，靠提示移交恢复可能产生大量额外负载）。基于领导者的系统必须判断情况是否严重到需要故障切换，而故障切换本身又可能带来进一步中断；无主系统根本不需要作出这项判断。
+*Read repair* (*read repair*)
+:   Khi client đọc song song nhiều node, nó có thể phát hiện phản hồi cũ. Ví dụ ở {{< xref fig="6-12" page="/ch6" anchor="fig_replication_quorum_node_outage" >}}Hình 6-12{{< /xref >}}, người dùng 2345 nhận giá trị phiên bản 6 từ replica 3, và giá trị phiên bản 7 từ replica 1 và 2. Client thấy giá trị của replica 3 đã lỗi thời nên ghi giá trị mới hơn ngược lại replica này. Cách này hiệu quả với những giá trị được đọc thường xuyên.
 
-当然，无主系统也可能遇到性能问题：
+*Hinted handoff* (*hinted handoff*)
+:   Khi một replica không khả dụng, replica khác có thể lưu các lần ghi thay nó, và ghi chúng lại dưới dạng *gợi ý* (*hint*). Khi replica lẽ ra phải nhận các lần ghi này phục hồi, replica đang giữ gợi ý sẽ gửi chúng đi rồi xóa gợi ý. Quá trình *chuyển giao* này giúp replica bắt kịp, ngay cả với những giá trị chưa từng được đọc nên không thể cập nhật bằng read repair.
 
-* 即使不需要执行故障切换，也必须由一个副本发现另一个副本不可用，才能替它保存错过写入的提示。不可用副本恢复后，移交过程还要把这些提示发给它。在系统本已承压时，这会给副本增加额外负载 [^54]。
-* 副本越多，法定人数越大，请求完成前必须等待的响应也越多。即使只等待最快的 *r* 或 *w* 个副本，即使所有请求并行发出，更大的 *r* 或 *w* 仍会提高遇到慢副本的概率，从而增加总体响应时间（参见 [“响应时间指标的应用”](/ch2#sec_introduction_slo_sla)）。
-* 大范围网络中断使客户端与大量副本断开时，可能根本无法组成法定人数。有些无主数据库允许任何可达副本接受写入，即使它不属于该键通常所在的副本集合（Riak 和 Dynamo 称之为 *宽松仲裁*，*sloppy quorum* [^45]；Cassandra 和 ScyllaDB 称之为 *一致性级别 ANY*）。后续读取不保证能看到这次写入，但对某些应用而言，这仍好过写入直接失败。
+*Anti-entropy* (*anti-entropy*)
+:   Ngoài ra, có một tiến trình nền định kỳ tìm điểm khác biệt dữ liệu giữa các replica và sao chép (*replication*) dữ liệu thiếu từ replica này sang replica khác. Khác với replication log của sao chép dựa trên leader (*leader-based replication*), *quá trình anti-entropy* (*anti-entropy process*) này không sao chép (*replication*) các lần ghi theo thứ tự cụ thể, và có thể mất khá lâu dữ liệu mới được sao chép (*replication*).
 
-多主复制抵御网络中断的能力甚至可能强于无主复制，因为读写只需与一个领导者通信，而领导者可以与客户端位于同一地区。不过，一个领导者上的写入会异步传播给其他领导者，读取结果因而可能任意陈旧。仲裁读写提供了一种折中：既有良好的容错能力，也有很高概率读到最新数据。
+#### Đọc và ghi quorum {#sec_replication_quorum_condition}
 
-#### 多地区操作 {#multi-region-operation}
+Trong ví dụ ở {{< xref fig="6-12" page="/ch6" anchor="fig_replication_quorum_node_outage" >}}Hình 6-12{{< /xref >}}, lần ghi chỉ hoàn tất trên hai trong ba replica mà ta vẫn coi là thành công. Nếu chỉ một replica nhận ghi thì sao? Ngưỡng dưới này có thể hạ thấp đến đâu?
 
-我们此前把跨地区复制作为多主复制的一个用例（见 [“多主复制”](/ch6#sec_replication_multi_leader)）。无主复制同样适合多地区运行，因为它本来就是为了容忍相互冲突的并发写入、网络中断和延迟尖峰而设计的。
+Nếu đảm bảo mỗi lần ghi thành công được lưu ít nhất trên hai trong ba replica, thì tối đa chỉ một replica là cũ. Do đó, chỉ cần đọc ít nhất hai replica là có thể chắc chắn ít nhất một replica là mới nhất. Ngay cả khi replica thứ ba ngừng hoạt động hoặc phản hồi chậm, lần đọc vẫn trả về giá trị mới nhất.
 
-Cassandra 和 ScyllaDB 在常规无主模型中实现多地区支持：客户端把写入直接发往所有地区的副本，并可选择多种一致性级别，规定请求至少得到多少响应才算成功。例如，可以要求所有地区的全部副本共同组成一个法定人数，也可以要求每个地区各自组成法定人数，或只要求客户端所在地区达到法定人数。本地法定人数无需等待其他地区的慢请求，但也更容易返回陈旧结果。
+Tổng quát hơn, giả sử có *n* replica, mỗi lần ghi phải được *w* node xác nhận mới thành công, và mỗi lần đọc truy vấn ít nhất *r* node. (Trong ví dụ trên, *n* = 3, *w* = 2, *r* = 2.) Miễn là *w* + *r* > *n*, ta kỳ vọng khi đọc sẽ nhận được giá trị mới nhất, vì trong *r* node được truy vấn, ít nhất một node chắc chắn là mới nhất. Các thao tác tuân theo giá trị *r*, *w* này gọi là *đọc quorum* (*quorum read*) và *ghi quorum* (*quorum write*) [^50]. Có thể coi *r* và *w* là số phiếu tối thiểu cần có để một lần đọc hoặc ghi hợp lệ.
 
-Riak 则把客户端与数据库节点之间的所有通信限制在本地地区，因此 *n* 表示一个地区内的副本数。数据库集群之间的跨地区复制在后台异步进行，方式与多主复制相似。
-
-
-### 检测并发写入 {#sec_replication_concurrent}
-
-与多主复制一样，无主数据库允许对同一个键并发写入，由此产生需要解决的冲突。冲突可能在写入发生时出现，但并非总是如此；它也可能到读修复、提示移交或反熵阶段才被发现。
-
-问题在于，网络延迟会变化，系统还可能部分失效，所以事件抵达不同节点的顺序可能不同。例如，{{< xref fig="6-14" page="/ch6" anchor="fig_replication_concurrency" >}}图 6-14{{< /xref >}} 展示了客户端 A 和 B 同时写入三节点数据存储中的键 *X*：
-
-* 节点 1 收到 A 的写入，但由于短暂中断，一直没有收到 B 的写入。
-* 节点 2 先收到 A 的写入，再收到 B 的写入。
-* 节点 3 先收到 B 的写入，再收到 A 的写入。
-
-{{< fig num="6-14" id="fig_replication_concurrency" src="/fig/ddia_0614.png" caption="Dynamo 风格数据存储中的并发写入没有明确定义的顺序。" class="ddia-figure ddia-figure--wide" width="2880" height="1406" />}}
+Trong cơ sở dữ liệu kiểu Dynamo, các tham số *n*, *w*, *r* thường đều cấu hình được. Cách làm phổ biến là chọn *n* lẻ (thường là 3 hoặc 5) và đặt *w* = *r* = (*n* + 1) / 2 (làm tròn lên), nhưng có thể điều chỉnh tùy nhu cầu. Chẳng hạn, khối lượng công việc ít ghi nhiều đọc có thể hợp với *w* = *n*, *r* = 1. Khi đó đọc nhanh hơn, nhưng nhược điểm là chỉ cần một node hỏng là mọi lần ghi cơ sở dữ liệu đều thất bại.
 
 
-如果每个节点一收到客户端写请求就直接覆盖键的值，各节点将永久不一致，如 {{< xref fig="6-14" page="/ch6" anchor="fig_replication_concurrency" >}}图 6-14{{< /xref >}} 最后的 *get* 请求所示：节点 2 认为 *X* 的最终值是 B，其他节点却认为是 A。
-
-为了达到最终一致，各副本必须收敛到同一个值。可以采用 [“处理写入冲突”](/ch6#sec_replication_write_conflicts) 中讨论过的任意冲突解决机制，例如 Cassandra 和 ScyllaDB 使用的最后写入者胜、手工解决，或 [“CRDT 与操作变换”](/ch6#sec_replication_crdts) 中介绍且 Riak 使用的 CRDT。
-
-最后写入者胜很容易实现：给每次写入附加时间戳，时间戳较大的值总是覆盖较小的值。但时间戳无法告诉你两个值究竟是否冲突：它们可能是并发写入的，也可能先后写入。如果要显式解决冲突，系统必须更仔细地检测并发写入。
-
-#### “先发生”关系与并发 {#sec_replication_happens_before}
-
-怎样判断两个操作是否并发？先看几个例子来建立直觉：
-
-* 在 {{< xref fig="6-8" page="/ch6" anchor="fig_replication_causality" >}}图 6-8{{< /xref >}} 中，两次写入并不并发：A 的插入 *先发生于* B 的递增，因为 B 所递增的值正是 A 插入的值。换句话说，B 的操作建立在 A 的操作之上，所以 B 必然发生得更晚。也可以说，B *因果依赖* 于 A。
-* {{< xref fig="6-14" page="/ch6" anchor="fig_replication_concurrency" >}}图 6-14{{< /xref >}} 中的两次写入则是并发的：每个客户端开始操作时，都不知道另一个客户端也在操作同一个键。因此，两次操作之间没有因果依赖。
-
-如果操作 B 知道 A、依赖 A，或以某种方式建立在 A 之上，就称操作 A *先发生于*（*happens before*）操作 B。一项操作是否先发生于另一项操作，是定义并发的关键。事实上，只要两个操作谁也不先发生于另一个——也就是说，谁都不知道对方——就可以称它们 *并发*（*concurrent*）[^57]。
-
-因此，对于任意两个操作 A 与 B，只有三种可能：A 先发生于 B；B 先发生于 A；或者 A 与 B 并发。我们需要一种算法判断两次操作是否并发。如果一项操作先发生于另一项，后发生的操作就应覆盖先前操作；如果两者并发，则出现了需要解决的冲突。
+> [!NOTE]
+> Số node trong cụm có thể nhiều hơn *n*, nhưng một giá trị bất kỳ chỉ được lưu trên *n* node. Nhờ vậy có thể sharding tập dữ liệu, hỗ trợ tập dữ liệu mà một node không chứa nổi. Ta sẽ tiếp tục bàn về sharding ở [Chương 7](/ch7#ch_sharding).
 
 
-> [!TIP] 并发、时间与相对论
+Điều kiện quorum *w* + *r* > *n* cho phép hệ thống chịu được node không khả dụng theo cách sau:
+
+* Nếu *w* < *n*, vẫn xử lý được ghi khi một node không khả dụng.
+* Nếu *r* < *n*, vẫn xử lý được đọc khi một node không khả dụng.
+* Với *n* = 3, *w* = 2, *r* = 2, có thể chịu được một node không khả dụng, như ở {{< xref fig="6-12" page="/ch6" anchor="fig_replication_quorum_node_outage" >}}Hình 6-12{{< /xref >}}.
+* Với *n* = 5, *w* = 3, *r* = 3, có thể chịu được hai node không khả dụng, như ở {{< xref fig="6-13" page="/ch6" anchor="fig_replication_quorum_overlap" >}}Hình 6-13{{< /xref >}}.
+
+Thông thường, yêu cầu đọc và ghi luôn được gửi song song đến cả *n* replica. Các tham số *w* và *r* quyết định phải đợi bao nhiêu node, tức là trong *n* node phải có bao nhiêu node báo thành công thì mới coi lần đọc hoặc ghi là thành công.
+
+{{< fig num="6-13" id="fig_replication_quorum_overlap" src="/fig/ddia_0613.png" caption="Nếu w + r > n, trong r replica được đọc, ít nhất một replica chắc chắn đã thấy lần ghi thành công gần nhất." class="ddia-figure ddia-figure--wide" width="2880" height="1226" />}}
+
+
+Nếu số node khả dụng ít hơn *w* hoặc *r* cần thiết, lần ghi hoặc đọc sẽ trả về lỗi. Node không khả dụng có thể do nhiều nguyên nhân: node ngừng hoạt động (sập hoặc mất điện), lỗi khi thực hiện thao tác (đĩa đầy, không ghi được), mạng giữa client và node gián đoạn, v.v. Ta chỉ quan tâm node có trả về phản hồi thành công hay không, không cần phân biệt loại sự cố cụ thể.
+
+### Giới hạn của nhất quán quorum {#sec_replication_quorum_limitations}
+
+Nếu có *n* replica và chọn *w*, *r* thỏa *w* + *r* > *n*, thường có thể kỳ vọng mỗi lần đọc trả về giá trị được ghi gần nhất của một khóa. Đó là vì tập node tham gia lần ghi và tập node tham gia lần đọc chắc chắn giao nhau. Nghĩa là trong các node được đọc, ít nhất một node giữ giá trị mới nhất, như ở {{< xref fig="6-13" page="/ch6" anchor="fig_replication_quorum_overlap" >}}Hình 6-13{{< /xref >}}.
+
+*r* và *w* thường được chọn là đa số node (nhiều hơn *n*/2), vì như vậy vừa đảm bảo *w* + *r* > *n*, vừa chịu được tối đa *n*/2 (làm tròn xuống) node hỏng. Tuy nhiên, quorum không nhất thiết phải là đa số. Điều thực sự quan trọng là tập node dùng cho thao tác đọc và tập node dùng cho thao tác ghi có ít nhất một node chung. Quorum còn có thể bố trí theo cách khác, mang lại sự linh hoạt nhất định cho thiết kế thuật toán phân tán [^51].
+
+Cũng có thể đặt *w* và *r* nhỏ hơn, sao cho *w* + *r* ≤ *n*, tức không thỏa điều kiện quorum. Khi đó yêu cầu đọc và ghi vẫn được gửi đến *n* node, nhưng thao tác cần ít phản hồi thành công hơn để được coi là thành công.
+
+*w* và *r* càng nhỏ thì càng dễ đọc phải giá trị cũ, vì lần đọc nhiều khả năng không phủ tới node giữ giá trị mới nhất. Bù lại là độ trễ thấp hơn và tính sẵn sàng cao hơn: khi mạng gián đoạn khiến nhiều replica không với tới được, hệ thống có nhiều cơ hội hơn để tiếp tục xử lý đọc ghi. Chỉ khi số replica với tới được thấp hơn *w* hoặc *r* thì cơ sở dữ liệu mới lần lượt không ghi được hoặc không đọc được.
+
+Tuy nhiên, ngay cả khi *w* + *r* > *n*, vẫn có một số trường hợp biên khiến các thuộc tính nhất quán khó hiểu, ví dụ:
+
+* Nếu node giữ giá trị mới bị hỏng, rồi khôi phục dữ liệu từ replica giữ giá trị cũ, số replica giữ giá trị mới có thể tụt xuống dưới *w*, phá vỡ điều kiện quorum.
+* Trong lúc cân bằng lại, một phần dữ liệu được chuyển từ node này sang node khác (xem [Chương 7](/ch7#ch_sharding)). Các node có thể bất đồng về việc *n* bản sao của một giá trị nên do những node nào giữ, khiến quorum đọc và quorum ghi không còn giao nhau.
+* Nếu thao tác đọc diễn ra đồng thời với thao tác ghi, lần đọc có thể thấy hoặc không thấy giá trị của lần ghi đồng thời. Đặc biệt, một lần đọc có thể thấy giá trị mới, trong khi lần đọc sau lại thấy giá trị cũ, xem ["Linearizability và quorum"](/ch10#sec_consistency_quorum_linearizable).
+* Nếu một lần ghi thành công trên một số replica nhưng thất bại trên các replica còn lại (ví dụ đĩa của một số node đã đầy), tổng số lần thành công ít hơn *w*, thì lần ghi tổng thể bị coi là thất bại, nhưng lần ghi trên các replica thành công không được rollback. Nghĩa là dù hệ thống báo ghi thất bại, các lần đọc sau đó vẫn có thể trả về giá trị của lần ghi này [^52].
+* Nếu cơ sở dữ liệu dùng timestamp của đồng hồ thực để xác định lần ghi nào mới hơn (như Cassandra và ScyllaDB), một node khác có đồng hồ nhanh hơn, hễ đã ghi cùng một khóa thì các lần ghi sau đó có thể bị âm thầm loại bỏ. Ta đã gặp vấn đề này ở ["Last write wins (loại bỏ các lần ghi đồng thời)"](/ch6#sec_replication_lww), và sẽ bàn thêm ở ["Phụ thuộc vào đồng hồ đồng bộ"](/ch9#sec_distributed_clocks_relying).
+* Nếu hai lần ghi xảy ra đồng thời, một replica có thể xử lý lần này trước, replica khác lại xử lý lần kia trước, sinh ra xung đột tương tự sao chép đa leader (*multi-leader replication*) (xem ["Xử lý xung đột ghi"](/ch6#sec_replication_write_conflicts)). Ta sẽ quay lại vấn đề này ở ["Phát hiện ghi đồng thời"](/ch6#sec_replication_concurrent).
+
+Vì vậy, quorum thoạt trông như đảm bảo lần đọc trả về giá trị ghi gần nhất, nhưng thực tế không đơn giản như thế. Cơ sở dữ liệu kiểu Dynamo thường được tối ưu cho các trường hợp chấp nhận được nhất quán cuối cùng. Các tham số *w* và *r* cho phép điều chỉnh xác suất đọc phải giá trị cũ [^53], nhưng không nên coi chúng là đảm bảo tuyệt đối.
+
+#### Giám sát độ cũ {#monitoring-staleness}
+
+Từ góc độ vận hành, giám sát xem kết quả cơ sở dữ liệu trả về có mới hay không là rất quan trọng. Ngay cả khi ứng dụng chịu được việc đọc dữ liệu cũ, bạn vẫn cần biết việc sao chép (*replication*) có khỏe mạnh hay không. Nếu sao chép (*replication*) tụt hậu nghiêm trọng, hệ thống nên phát cảnh báo để điều tra các nguyên nhân như lỗi mạng hay node quá tải.
+
+Với sao chép dựa trên leader (*leader-based replication*), cơ sở dữ liệu thường cung cấp các chỉ số replication lag để hệ thống giám sát thu thập. Đó là vì các lần ghi được áp dụng trên leader và follower theo cùng thứ tự, và mỗi node có vị trí riêng trong replication log, tức số lần ghi đã được áp dụng cục bộ. Lấy vị trí hiện tại của leader trừ đi vị trí hiện tại của follower là đo được replication lag.
+
+Hệ thống sao chép không leader (*leaderless replication*) không có thứ tự áp dụng ghi cố định, nên việc giám sát khó hơn. Số lượng gợi ý mà replica lưu để chuyển giao có thể dùng làm chỉ số sức khỏe, nhưng rất khó diễn giải một cách có ý nghĩa [^54]. Nhất quán cuối cùng cố ý đưa ra một đảm bảo mơ hồ, nhưng để vận hành được, ta phải định lượng được "cuối cùng" là bao xa.
+
+
+### Hiệu năng của sao chép đơn leader (*single-leader replication*) và không leader {#sec_replication_leaderless_perf}
+
+Hệ thống sao chép (*replication*) dựa trên một leader có thể cung cấp đảm bảo nhất quán mạnh, còn hệ thống không leader rất khó, thậm chí không thể làm được. Tuy nhiên, như đã thấy ở ["Vấn đề của replication lag"](/ch6#sec_replication_lag), trong hệ thống sao chép dựa trên leader (*leader-based replication*), nếu đọc từ follower cập nhật bất đồng bộ thì vẫn có thể nhận giá trị cũ.
+
+Đọc từ leader đảm bảo phản hồi mới nhất, nhưng có vấn đề về hiệu năng:
+
+* Thông lượng đọc bị giới hạn bởi khả năng xử lý của leader, ngược lại, mở rộng đọc có thể dàn đọc ra các replica cập nhật bất đồng bộ, nhưng các replica này có thể trả giá trị cũ.
+* Khi leader hỏng, phải đợi hệ thống phát hiện sự cố và hoàn tất failover mới tiếp tục xử lý yêu cầu. Dù failover nhanh, sự tăng vọt ngắn của thời gian phản hồi cũng bị người dùng nhận ra. Nếu mất nhiều thời gian, hệ thống sẽ không khả dụng trong khoảng đó.
+* Hệ thống cực kỳ nhạy với vấn đề hiệu năng của leader. Nếu leader phản hồi chậm vì quá tải hoặc tranh chấp tài nguyên, thời gian phản hồi của người dùng cũng tăng ngay.
+
+Ưu điểm lớn của kiến trúc không leader là bền bỉ hơn trước những vấn đề này. Hệ thống không cần failover, và vì yêu cầu vốn đã được gửi song song đến nhiều replica nên một replica chậm hoặc không khả dụng ảnh hưởng rất ít đến thời gian phản hồi: client chỉ cần dùng kết quả của các replica khác phản hồi nhanh hơn. Cách dùng phản hồi nhanh nhất này gọi là *request hedging* (*request hedging*), có thể giảm đáng kể độ trễ đuôi [^55].
+
+Nguyên nhân gốc rễ khiến hệ thống không leader bền bỉ như vậy là nó không phân biệt trường hợp bình thường với trường hợp sự cố. Điều này đặc biệt có lợi khi xử lý cái gọi là *gray failure* (*gray failure*): node không hỏng hẳn mà ở trạng thái suy giảm, xử lý yêu cầu chậm bất thường [^56]. Node đơn thuần quá tải cũng vậy (ví dụ sau khi node ngoại tuyến một thời gian, phục hồi bằng hinted handoff có thể sinh rất nhiều tải phụ). Hệ thống dựa trên leader phải phán đoán tình hình có đủ nghiêm trọng để failover hay không, mà bản thân failover lại có thể gây thêm gián đoạn. Hệ thống không leader hoàn toàn không cần phán đoán này.
+
+Tất nhiên, hệ thống không leader cũng có thể gặp vấn đề hiệu năng:
+
+* Dù không cần failover, vẫn phải có một replica phát hiện replica khác không khả dụng thì mới lưu được gợi ý về các lần ghi bị bỏ lỡ. Khi replica không khả dụng phục hồi, quá trình chuyển giao còn phải gửi các gợi ý này cho nó. Khi hệ thống vốn đã chịu áp lực, điều này đặt thêm tải lên replica [^54].
+* Replica càng nhiều, quorum càng lớn, số phản hồi phải đợi trước khi yêu cầu hoàn tất càng nhiều. Ngay cả khi chỉ đợi *r* hoặc *w* replica nhanh nhất, ngay cả khi mọi yêu cầu được gửi song song, *r* hay *w* lớn hơn vẫn làm tăng xác suất gặp replica chậm, từ đó tăng thời gian phản hồi tổng thể (xem ["Áp dụng các chỉ số thời gian phản hồi"](/ch2#sec_introduction_slo_sla)).
+* Khi sự cố mạng diện rộng khiến client mất kết nối với nhiều replica, có thể hoàn toàn không lập được quorum. Một số cơ sở dữ liệu không leader cho phép bất kỳ replica nào với tới được nhận ghi, dù nó không thuộc tập replica thông thường của khóa đó (Riak và Dynamo gọi là *sloppy quorum* (*sloppy quorum*) [^45]. Cassandra và ScyllaDB gọi là *mức nhất quán ANY*). Các lần đọc sau đó không đảm bảo thấy lần ghi này, nhưng với một số ứng dụng, vẫn tốt hơn là ghi thất bại hẳn.
+
+Sao chép đa leader (*multi-leader replication*) thậm chí có thể chịu được gián đoạn mạng tốt hơn sao chép không leader (*leaderless replication*), vì đọc ghi chỉ cần liên lạc với một leader, và leader đó có thể nằm cùng region với client. Tuy nhiên, các lần ghi trên một leader được lan truyền bất đồng bộ sang các leader khác nên kết quả đọc có thể cũ tùy ý. Đọc và ghi quorum đưa ra một sự dung hòa: vừa chịu lỗi tốt, vừa có xác suất cao đọc được dữ liệu mới nhất.
+
+#### Vận hành đa region {#multi-region-operation}
+
+Trước đây ta coi sao chép (*replication*) xuyên region là một trường hợp dùng của sao chép đa leader (*multi-leader replication*) (xem ["Sao chép đa leader (*multi-leader replication*)"](/ch6#sec_replication_multi_leader)). Sao chép không leader (*leaderless replication*) cũng phù hợp để vận hành đa region, vì nó vốn được thiết kế để chịu được các lần ghi đồng thời xung đột, gián đoạn mạng và độ trễ tăng vọt.
+
+Cassandra và ScyllaDB hỗ trợ đa region trong mô hình không leader thông thường: client gửi ghi trực tiếp đến các replica ở mọi region, và có thể chọn nhiều mức nhất quán để quy định yêu cầu cần ít nhất bao nhiêu phản hồi mới coi là thành công. Chẳng hạn, có thể yêu cầu toàn bộ replica ở mọi region cùng tạo thành một quorum, hoặc yêu cầu mỗi region tự tạo quorum riêng, hoặc chỉ yêu cầu quorum ở region của client. Quorum cục bộ không phải đợi các yêu cầu chậm từ region khác, nhưng cũng dễ trả kết quả cũ hơn.
+
+Riak thì giới hạn mọi liên lạc giữa client và node cơ sở dữ liệu trong region cục bộ, nên *n* biểu thị số replica trong một region. Việc sao chép (*replication*) xuyên region giữa các cụm cơ sở dữ liệu diễn ra bất đồng bộ ở nền, theo cách tương tự sao chép đa leader (*multi-leader replication*).
+
+
+### Phát hiện ghi đồng thời {#sec_replication_concurrent}
+
+Cũng như sao chép đa leader (*multi-leader replication*), cơ sở dữ liệu không leader cho phép ghi đồng thời vào cùng một khóa, dẫn đến xung đột cần giải quyết. Xung đột có thể xuất hiện ngay khi ghi, nhưng không phải lúc nào cũng vậy. Nó cũng có thể chỉ bị phát hiện ở giai đoạn read repair, hinted handoff hoặc anti-entropy.
+
+Vấn đề là độ trễ mạng thay đổi và hệ thống có thể hỏng từng phần, nên các sự kiện có thể đến các node theo thứ tự khác nhau. Ví dụ, {{< xref fig="6-14" page="/ch6" anchor="fig_replication_concurrency" >}}Hình 6-14{{< /xref >}} cho thấy client A và B đồng thời ghi khóa *X* trong kho dữ liệu ba node:
+
+* Node 1 nhận lần ghi của A, nhưng do gián đoạn ngắn nên không bao giờ nhận được lần ghi của B.
+* Node 2 nhận lần ghi của A trước, rồi đến lần ghi của B.
+* Node 3 nhận lần ghi của B trước, rồi đến lần ghi của A.
+
+{{< fig num="6-14" id="fig_replication_concurrency" src="/fig/ddia_0614.png" caption="Các lần ghi đồng thời trong kho dữ liệu kiểu Dynamo không có thứ tự được xác định rõ." class="ddia-figure ddia-figure--wide" width="2880" height="1406" />}}
+
+
+Nếu mỗi node chỉ cần nhận được yêu cầu ghi của client là ghi đè giá trị của khóa, các node sẽ không nhất quán vĩnh viễn, như yêu cầu *get* cuối cùng ở {{< xref fig="6-14" page="/ch6" anchor="fig_replication_concurrency" >}}Hình 6-14{{< /xref >}} cho thấy: node 2 cho rằng giá trị cuối cùng của *X* là B, còn các node khác cho rằng là A.
+
+Để đạt nhất quán cuối cùng, các replica phải hội tụ về cùng một giá trị. Có thể dùng bất kỳ cơ chế giải quyết xung đột nào đã bàn ở ["Xử lý xung đột ghi"](/ch6#sec_replication_write_conflicts), ví dụ last write wins như Cassandra và ScyllaDB dùng, giải quyết thủ công, hoặc CRDT như giới thiệu ở ["CRDT và operational transformation"](/ch6#sec_replication_crdts) và Riak dùng.
+
+Last write wins rất dễ triển khai: gắn timestamp cho mỗi lần ghi, giá trị có timestamp lớn hơn luôn ghi đè giá trị nhỏ hơn. Nhưng timestamp không cho bạn biết hai giá trị có thực sự xung đột hay không: chúng có thể được ghi đồng thời, hoặc ghi lần lượt. Nếu muốn giải quyết xung đột tường minh, hệ thống phải phát hiện ghi đồng thời kỹ hơn.
+
+#### Quan hệ “xảy ra trước” và tính đồng thời {#sec_replication_happens_before}
+
+Làm sao biết hai thao tác có đồng thời hay không? Hãy xem vài ví dụ để có trực giác:
+
+* Ở {{< xref fig="6-8" page="/ch6" anchor="fig_replication_causality" >}}Hình 6-8{{< /xref >}}, hai lần ghi không đồng thời: lần chèn của A *xảy ra trước* lần tăng của B, vì giá trị B tăng chính là giá trị A đã chèn. Nói cách khác, thao tác của B dựa trên thao tác của A, nên B chắc chắn xảy ra muộn hơn. Cũng có thể nói B *phụ thuộc nhân quả* vào A.
+* Ngược lại, hai lần ghi ở {{< xref fig="6-14" page="/ch6" anchor="fig_replication_concurrency" >}}Hình 6-14{{< /xref >}} là đồng thời: khi mỗi client bắt đầu thao tác, nó không biết client kia cũng đang thao tác trên cùng khóa. Do đó giữa hai thao tác không có phụ thuộc nhân quả.
+
+Nếu thao tác B biết về A, phụ thuộc vào A, hoặc bằng cách nào đó dựa trên A, ta nói thao tác A *xảy ra trước* (*happens before*) thao tác B. Một thao tác có xảy ra trước thao tác kia hay không là chìa khóa để định nghĩa tính đồng thời. Thực ra, chỉ cần hai thao tác không thao tác nào xảy ra trước thao tác kia — tức là không bên nào biết về bên kia — thì có thể gọi chúng là *đồng thời* (*concurrent*) [^57].
+
+Vì vậy, với hai thao tác A và B bất kỳ, chỉ có ba khả năng: A xảy ra trước B, B xảy ra trước A, hoặc A và B đồng thời. Ta cần một thuật toán để xác định hai thao tác có đồng thời hay không. Nếu một thao tác xảy ra trước thao tác kia, thao tác sau phải ghi đè thao tác trước. Nếu chúng đồng thời, có một xung đột cần giải quyết.
+
+
+> [!TIP] Tính đồng thời, thời gian và thuyết tương đối
 >
-> 两项操作似乎只有在“同一时刻”发生时才应称为并发，实际上它们在物理时间上是否重叠并不重要。由于分布式系统中的时钟问题，判断两件事是否恰好同时发生相当困难，我们会在 [第 9 章](/ch9#ch_distributed) 进一步讨论。
+> Có vẻ hai thao tác chỉ nên gọi là đồng thời nếu chúng xảy ra "cùng một lúc", nhưng thực ra việc chúng có chồng lấn về thời gian vật lý hay không không quan trọng. Do vấn đề đồng hồ trong hệ thống phân tán, việc xác định hai sự kiện có xảy ra đúng cùng lúc hay không khá khó. Ta sẽ bàn thêm ở [Chương 9](/ch9#ch_distributed).
 >
-> 定义并发时，精确时间并不重要：只要两项操作彼此都不知道对方，就称它们并发，无论它们实际发生在什么物理时刻。人们有时把这个原理与物理学中的狭义相对论联系起来 [^57]。狭义相对论提出，信息传播不可能超过光速。因此，如果相隔一定距离的两个事件之间，时间差短于光传播这段距离所需的时间，它们就不可能相互影响。
+> Khi định nghĩa tính đồng thời, thời gian chính xác không quan trọng: chỉ cần hai thao tác không biết về nhau thì ta gọi chúng là đồng thời, bất kể thực tế chúng xảy ra vào thời điểm vật lý nào. Đôi khi người ta liên hệ nguyên lý này với thuyết tương đối hẹp trong vật lý [^57]. Thuyết tương đối hẹp cho rằng thông tin không thể truyền nhanh hơn tốc độ ánh sáng. Do đó, nếu hai sự kiện cách nhau một khoảng, và độ chênh lệch thời gian giữa chúng ngắn hơn thời gian ánh sáng truyền qua khoảng cách đó, thì chúng không thể ảnh hưởng lẫn nhau.
 >
-> 在计算机系统中，即使按光速计算，一项操作原则上来得及影响另一项，两者仍可能并发。例如，当时网络很慢或已经中断，两项操作即使相隔一段时间，仍会因网络问题而彼此无法知晓。
+> Trong hệ thống máy tính, ngay cả khi xét theo tốc độ ánh sáng một thao tác về nguyên tắc vẫn kịp ảnh hưởng đến thao tác kia, hai thao tác vẫn có thể đồng thời. Chẳng hạn, khi mạng chậm hoặc đã gián đoạn, hai thao tác dù cách nhau một khoảng thời gian vẫn không thể biết về nhau vì sự cố mạng.
 
 
-#### 捕获先发生关系 {#capturing-the-happens-before-relationship}
+#### Nắm bắt quan hệ xảy ra trước {#capturing-the-happens-before-relationship}
 
-下面看一种算法，它可以判断两项操作是并发的，还是一项先发生于另一项。为简单起见，先从只有一个副本的数据库开始。弄清单副本的做法后，再推广到拥有多个副本的无主数据库。
+Dưới đây là một thuật toán có thể xác định hai thao tác là đồng thời hay một thao tác xảy ra trước thao tác kia. Để đơn giản, ta bắt đầu với cơ sở dữ liệu chỉ có một replica. Khi đã hiểu cách làm với một replica, ta mở rộng sang cơ sở dữ liệu không leader có nhiều replica.
 
-{{< xref fig="6-15" page="/ch6" anchor="fig_replication_causality_single" >}}图 6-15{{< /xref >}} 展示了两个客户端并发地向同一个购物车添加商品。（如果这个例子太无聊，也可以设想两名空中交通管制员并发地把飞机加入正在监视的空域。）购物车最初为空，两个客户端先后共向数据库发出五次写入：
+{{< xref fig="6-15" page="/ch6" anchor="fig_replication_causality_single" >}}Hình 6-15{{< /xref >}} cho thấy hai client đồng thời thêm mặt hàng vào cùng một giỏ hàng. (Nếu ví dụ này quá nhàm chán, hãy tưởng tượng hai kiểm soát viên không lưu đồng thời thêm máy bay vào vùng trời họ đang giám sát.) Giỏ hàng ban đầu trống, hai client lần lượt gửi tổng cộng năm lần ghi đến cơ sở dữ liệu:
 
-1. 客户端 1 把 `milk` 加入购物车。这是该键的第一次写入，服务器成功保存它并分配版本 1；然后把值和版本号一起返回给客户端。
-2. 客户端 2 把 `eggs` 加入购物车，却不知道客户端 1 同时加入了 `milk`（它以为 `eggs` 是购物车中唯一的商品）。服务器为这次写入分配版本 2，把 `eggs` 和 `milk` 保存为两个独立的值（兄弟值），再把 *两个* 值连同版本号 2 一起返回给客户端。
-3. 客户端 1 不知道客户端 2 的写入，又想加入 `flour`，因此它认为购物车内容应为 `[milk, flour]`。它把这个值连同服务器此前给出的版本号 1 一起发送。服务器可以根据版本号判断：`[milk, flour]` 取代了先前的 `[milk]`，却与 `[eggs]` 并发。因此，服务器为 `[milk, flour]` 分配版本 3，覆盖版本 1 的 `[milk]`，保留版本 2 的 `[eggs]`，并把剩下的两个值都返回给客户端。
-4. 与此同时，客户端 2 想加入 `ham`，并不知道客户端 1 刚刚加入 `flour`。客户端 2 在上一次响应中收到了 `[milk]` 和 `[eggs]`，于是将两者合并，再加入 `ham`，形成新值 `[eggs, milk, ham]`。它把这个值连同先前的版本号 2 一起发给服务器。服务器判断版本 2 可以覆盖 `[eggs]`，但与 `[milk, flour]` 并发；剩下的两个值便是版本 3 的 `[milk, flour]` 和版本 4 的 `[eggs, milk, ham]`。
-5. 最后，客户端 1 想加入 `bacon`。它此前在版本 3 的响应中收到 `[milk, flour]` 和 `[eggs]`，于是合并二者，加入 `bacon`，把最终值 `[milk, flour, eggs, bacon]` 连同版本号 3 发给服务器。这个值覆盖 `[milk, flour]`（`[eggs]` 已在上一步被覆盖），却与 `[eggs, milk, ham]` 并发，因此服务器保留这两个并发值。
+1. Client 1 thêm `milk` vào giỏ hàng. Đây là lần ghi đầu tiên cho khóa này, server lưu thành công và gán phiên bản 1. Sau đó trả giá trị cùng số phiên bản cho client.
+2. Client 2 thêm `eggs` vào giỏ hàng, mà không biết client 1 đồng thời thêm `milk` (nó tưởng `eggs` là mặt hàng duy nhất trong giỏ). Server gán phiên bản 2 cho lần ghi này, lưu `eggs` và `milk` thành hai giá trị riêng biệt (sibling), rồi trả *cả hai* giá trị cùng số phiên bản 2 cho client.
+3. Client 1 không biết lần ghi của client 2, lại muốn thêm `flour`, nên cho rằng nội dung giỏ hàng phải là `[milk, flour]`. Nó gửi giá trị này cùng số phiên bản 1 mà server đã đưa trước đó. Server dựa vào số phiên bản có thể xác định: `[milk, flour]` thay thế `[milk]` trước đó, nhưng đồng thời với `[eggs]`. Vì vậy server gán phiên bản 3 cho `[milk, flour]`, ghi đè `[milk]` phiên bản 1, giữ `[eggs]` phiên bản 2, và trả cả hai giá trị còn lại cho client.
+4. Cùng lúc đó, client 2 muốn thêm `ham`, mà không biết client 1 vừa thêm `flour`. Client 2 đã nhận `[milk]` và `[eggs]` trong phản hồi trước, nên hợp nhất hai giá trị này rồi thêm `ham`, thành giá trị mới `[eggs, milk, ham]`. Nó gửi giá trị này cùng số phiên bản 2 trước đó cho server. Server xác định phiên bản 2 có thể ghi đè `[eggs]`, nhưng đồng thời với `[milk, flour]`. Hai giá trị còn lại là `[milk, flour]` phiên bản 3 và `[eggs, milk, ham]` phiên bản 4.
+5. Cuối cùng, client 1 muốn thêm `bacon`. Trước đó, ở phản hồi phiên bản 3, nó nhận `[milk, flour]` và `[eggs]`, nên hợp nhất hai giá trị, thêm `bacon`, rồi gửi giá trị cuối `[milk, flour, eggs, bacon]` cùng số phiên bản 3 cho server. Giá trị này ghi đè `[milk, flour]` (`[eggs]` đã bị ghi đè ở bước trước), nhưng đồng thời với `[eggs, milk, ham]`, nên server giữ cả hai giá trị đồng thời này.
 
-{{< fig num="6-15" id="fig_replication_causality_single" src="/fig/ddia_0615.png" caption="捕获两个客户端并发编辑购物车时的因果依赖。" class="ddia-figure ddia-figure--wide" width="2880" height="1633" />}}
-
-
-{{< xref fig="6-15" page="/ch6" anchor="fig_replication_causality_single" >}}图 6-15{{< /xref >}} 中各操作之间的数据流，在 {{< xref fig="6-16" page="/ch6" anchor="fig_replication_causal_dependencies" >}}图 6-16{{< /xref >}} 中以图形表示。箭头指出哪项操作 *先发生于* 另一项，也就是说，后发生的操作 *知道* 或 *依赖* 先发生的操作。在这个例子里，客户端从未完全掌握服务器上的最新数据，因为始终有另一项操作并发进行。但值的旧版本最终会被覆盖，而且不会丢失任何写入。
-
-{{< fig num="6-16" id="fig_replication_causal_dependencies" src="/fig/ddia_0616.png" caption="图 6-15 中因果依赖关系的图示。" link="#fig_replication_causality_single" class="ddia-figure ddia-figure--panorama" width="2880" height="718" />}}
+{{< fig num="6-15" id="fig_replication_causality_single" src="/fig/ddia_0615.png" caption="Nắm bắt các phụ thuộc nhân quả khi hai client đồng thời chỉnh sửa giỏ hàng." class="ddia-figure ddia-figure--wide" width="2880" height="1633" />}}
 
 
-请注意，服务器仅凭版本号就能判断两项操作是否并发，无需解释值本身，因此值可以是任意数据结构。算法如下：
+Luồng dữ liệu giữa các thao tác ở {{< xref fig="6-15" page="/ch6" anchor="fig_replication_causality_single" >}}Hình 6-15{{< /xref >}} được biểu diễn bằng đồ thị ở {{< xref fig="6-16" page="/ch6" anchor="fig_replication_causal_dependencies" >}}Hình 6-16{{< /xref >}}. Mũi tên cho biết thao tác nào *xảy ra trước* thao tác khác, tức là thao tác sau *biết* hoặc *phụ thuộc* vào thao tác trước. Trong ví dụ này, client không bao giờ nắm đầy đủ dữ liệu mới nhất trên server, vì luôn có thao tác khác diễn ra đồng thời. Nhưng các phiên bản giá trị cũ cuối cùng sẽ bị ghi đè, và không lần ghi nào bị mất.
 
-* 服务器为每个键维护一个版本号；每次写入该键时递增版本号，并把新版本号与写入值一同保存。
-* 客户端读取一个键时，服务器返回所有兄弟值（即尚未被覆盖的全部值）以及最新版本号。客户端写入前必须先读取。
-* 客户端写入一个键时，必须带上前一次读取所得的版本号，还必须把上次读取收到的所有值合并起来，例如使用 CRDT，或询问用户。写请求的响应与读取相似，也会返回所有兄弟值，因此可以像购物车例子那样连续执行多次写入。
-* 服务器收到带有特定版本号的写入时，可以覆盖版本号不高于它的所有值，因为这些值已被合并进新值；版本号更高的值则必须保留，因为它们与传入写入并发。
-
-写入带上前一次读取所得的版本号，就说明这次写入基于哪个先前状态。如果写入不含版本号，它就与其他所有写入并发，因而不会覆盖任何内容，只会作为后续读取返回的值之一。
-
-#### 版本向量 {#version-vectors}
-
-{{< xref fig="6-15" page="/ch6" anchor="fig_replication_causality_single" >}}图 6-15{{< /xref >}} 的例子只有一个副本。如果没有领导者，而且多个副本都能接受写入，算法需要怎样改变？
-
-{{< xref fig="6-15" page="/ch6" anchor="fig_replication_causality_single" >}}图 6-15{{< /xref >}} 用一个版本号捕获操作之间的依赖关系，但多个副本并发接受写入时，一个版本号就不够了。此时必须针对每个键，给 *每个副本* 分别维护版本号。副本处理写入时递增自己的版本号，同时记录自己见过的其他副本版本号。这些信息表明哪些值应当覆盖，哪些值应作为兄弟值保留。
-
-所有副本的版本号集合称为 *版本向量* [^58]。这种思路有若干变体，其中最值得关注的也许是 *点化版本向量*（*dotted version vector*）[^59] [^60]，Riak 2.0 采用了这种变体 [^61] [^62]。这里不展开细节；它的工作方式与购物车例子非常相似。
-
-与 {{< xref fig="6-15" page="/ch6" anchor="fig_replication_causality_single" >}}图 6-15{{< /xref >}} 中的版本号一样，读取时数据库副本会把版本向量发给客户端，随后写入时客户端必须再把它带回数据库。（Riak 把版本向量编码成一个字符串，称为 *因果上下文*，*causal context*。）版本向量让数据库能够区分覆盖写入和并发写入。
-
-版本向量还保证：先从一个副本读取，再把写入发给另一个副本，是安全的。这样做可能产生兄弟值，但只要正确合并兄弟值，就不会丢失数据。
+{{< fig num="6-16" id="fig_replication_causal_dependencies" src="/fig/ddia_0616.png" caption="Biểu diễn đồ thị các quan hệ phụ thuộc nhân quả ở Hình 6-15." link="#fig_replication_causality_single" class="ddia-figure ddia-figure--panorama" width="2880" height="718" />}}
 
 
-> [!TIP] 版本向量与向量时钟
+Lưu ý rằng server chỉ dựa vào số phiên bản là xác định được hai thao tác có đồng thời hay không, không cần diễn giải bản thân giá trị, nên giá trị có thể là cấu trúc dữ liệu bất kỳ. Thuật toán như sau:
+
+* Server duy trì một số phiên bản cho mỗi khóa, mỗi lần ghi khóa đó thì tăng số phiên bản, và lưu số phiên bản mới cùng giá trị được ghi.
+* Khi client đọc một khóa, server trả về mọi giá trị sibling (tức mọi giá trị chưa bị ghi đè) cùng số phiên bản mới nhất. Client phải đọc trước khi ghi.
+* Khi client ghi một khóa, nó phải kèm số phiên bản từ lần đọc trước, và phải hợp nhất mọi giá trị nhận được ở lần đọc trước đó, chẳng hạn dùng CRDT hoặc hỏi người dùng. Phản hồi của yêu cầu ghi giống phản hồi đọc, cũng trả về mọi sibling, nên có thể thực hiện nhiều lần ghi liên tiếp như ví dụ giỏ hàng.
+* Khi server nhận lần ghi với một số phiên bản cụ thể, nó có thể ghi đè mọi giá trị có số phiên bản không cao hơn, vì các giá trị đó đã được hợp nhất vào giá trị mới. Giá trị có số phiên bản cao hơn phải được giữ lại, vì chúng đồng thời với lần ghi đến.
+
+Lần ghi kèm số phiên bản của lần đọc trước cho biết lần ghi này dựa trên trạng thái trước đó nào. Nếu lần ghi không có số phiên bản, nó đồng thời với mọi lần ghi khác, nên không ghi đè gì cả mà chỉ trở thành một trong các giá trị được trả về ở những lần đọc sau.
+
+#### Version vector {#version-vectors}
+
+Ví dụ ở {{< xref fig="6-15" page="/ch6" anchor="fig_replication_causality_single" >}}Hình 6-15{{< /xref >}} chỉ có một replica. Nếu không có leader mà nhiều replica đều nhận được ghi thì thuật toán cần thay đổi thế nào?
+
+{{< xref fig="6-15" page="/ch6" anchor="fig_replication_causality_single" >}}Hình 6-15{{< /xref >}} dùng một số phiên bản để nắm bắt quan hệ phụ thuộc giữa các thao tác, nhưng khi nhiều replica đồng thời nhận ghi thì một số phiên bản là không đủ. Lúc này phải duy trì số phiên bản riêng cho *từng replica*, theo từng khóa. Khi replica xử lý một lần ghi, nó tăng số phiên bản của chính mình, đồng thời ghi lại số phiên bản của các replica khác mà nó đã thấy. Thông tin này cho biết giá trị nào cần ghi đè, giá trị nào cần giữ lại làm sibling.
+
+Tập hợp số phiên bản của mọi replica gọi là *version vector* (*version vector*) [^58]. Ý tưởng này có một số biến thể, trong đó đáng chú ý nhất có lẽ là *dotted version vector* (*dotted version vector*) [^59] [^60], được Riak 2.0 sử dụng [^61] [^62]. Ở đây ta không đi vào chi tiết. Cách hoạt động của nó rất giống ví dụ giỏ hàng.
+
+Giống số phiên bản ở {{< xref fig="6-15" page="/ch6" anchor="fig_replication_causality_single" >}}Hình 6-15{{< /xref >}}, khi đọc, replica cơ sở dữ liệu gửi version vector cho client, và ở lần ghi sau đó client phải gửi lại nó cho cơ sở dữ liệu. (Riak mã hóa version vector thành một chuỗi gọi là *ngữ cảnh nhân quả*, *causal context*.) Version vector cho phép cơ sở dữ liệu phân biệt lần ghi đè với lần ghi đồng thời.
+
+Version vector cũng đảm bảo việc đọc từ một replica rồi gửi lần ghi sang replica khác là an toàn. Làm vậy có thể sinh sibling, nhưng miễn là hợp nhất sibling đúng cách thì không mất dữ liệu.
+
+
+> [!TIP] Version vector và vector clock
 >
-> *版本向量* 有时也称为 *向量时钟*（*vector clock*），尽管两者并不完全相同。区别十分微妙，细节请参阅相关文献 [^60] [^63] [^64]。简而言之，比较副本状态时，应当使用版本向量。
+> *Version vector* đôi khi còn gọi là *vector clock* (*vector clock*), dù hai thứ không hoàn toàn giống nhau. Sự khác biệt khá tinh tế, chi tiết xem tài liệu liên quan [^60] [^63] [^64]. Nói ngắn gọn, khi so sánh trạng thái của các replica, nên dùng version vector.
+
+## Tóm tắt {#summary}
+
+Chương này đã xem xét vấn đề sao chép (*replication*). Sao chép (*replication*) phục vụ nhiều mục đích:
+
+*Tính sẵn sàng cao*
+:   Hệ thống tiếp tục chạy ngay cả khi một hoặc nhiều máy, một availability zone, thậm chí cả một region ngừng hoạt động
+
+*Hoạt động ngoại tuyến*
+:   Ứng dụng vẫn tiếp tục làm việc khi mạng bị gián đoạn
+
+*Độ trễ*
+:   Đặt dữ liệu gần người dùng về mặt địa lý để họ tương tác với nó nhanh hơn
+
+*Khả năng mở rộng*
+:   Dàn tải đọc ra nhiều replica để xử lý lượng đọc vượt quá khả năng của một máy
+
+Mục tiêu của sao chép (*replication*) có vẻ đơn giản — giữ bản sao của cùng một dữ liệu trên nhiều máy — nhưng thực tế cực kỳ hóc búa. Nó đòi hỏi ta cân nhắc kỹ về tính đồng thời, về mọi thứ có thể trục trặc, và cách đối phó với hậu quả của sự cố. Ít nhất phải xử lý node không khả dụng và gián đoạn mạng, và đó còn chưa kể các sự cố tinh vi hơn như hỏng dữ liệu âm thầm do lỗi phần mềm hoặc lỗi phần cứng.
+
+Ta đã bàn ba cách sao chép (*replication*) chính:
+
+*Sao chép đơn leader* (*single-leader replication*)
+:   Client gửi mọi lần ghi đến một node (leader), leader gửi luồng sự kiện thay đổi dữ liệu cho các replica khác (follower). Có thể đọc trên bất kỳ replica nào, nhưng kết quả từ follower có thể đã cũ.
+
+*Sao chép đa leader* (*multi-leader replication*)
+:   Client gửi mỗi lần ghi đến một trong nhiều leader, leader nào cũng nhận được ghi. Các leader gửi luồng sự kiện thay đổi dữ liệu cho nhau và cho các follower.
+
+*Sao chép không leader* (*leaderless replication*)
+:   Client gửi mỗi lần ghi đến nhiều node, và đọc song song từ nhiều node để phát hiện và sửa các node giữ dữ liệu cũ.
+
+Mỗi cách có ưu nhược điểm riêng. Sao chép đơn leader (*single-leader replication*) phổ biến vì tương đối dễ hiểu và cho nhất quán mạnh. Sao chép đa leader (*multi-leader replication*) và không leader bền bỉ hơn trước sự cố node, gián đoạn mạng và độ trễ tăng vọt, nhưng cái giá là phải giải quyết xung đột và chỉ cung cấp đảm bảo nhất quán yếu hơn.
+
+Sao chép (*replication*) có thể đồng bộ hoặc bất đồng bộ. Lựa chọn này ảnh hưởng sâu sắc đến hành vi của hệ thống khi có sự cố. Khi hệ thống chạy trơn tru, sao chép bất đồng bộ (*asynchronous replication*) có thể rất nhanh, nhưng vẫn phải làm rõ điều gì xảy ra khi replication lag tăng lên và khi server hỏng. Nếu leader hỏng và bạn đưa một follower cập nhật bất đồng bộ lên làm leader mới, dữ liệu vừa commit gần đây có thể bị mất.
+
+Ta đã xem xét một số dị thường do replication lag gây ra, và bàn vài mô hình nhất quán giúp quyết định ứng dụng nên hành xử ra sao khi có replication lag:
+
+*Nhất quán read-after-write*
+:   Người dùng luôn phải thấy dữ liệu mình đã gửi.
+
+*Monotonic reads*
+:   Sau khi người dùng đã thấy dữ liệu tại một thời điểm, về sau họ không được thấy dữ liệu ở thời điểm cũ hơn.
+
+*Consistent prefix reads*
+:   Người dùng phải thấy dữ liệu ở trạng thái phù hợp với quan hệ nhân quả, chẳng hạn thấy câu hỏi và câu trả lời theo đúng thứ tự.
+
+Cuối cùng, ta đã bàn cách sao chép đa leader (*multi-leader replication*) và không leader giúp mọi replica cuối cùng hội tụ về một trạng thái nhất quán: dùng version vector hoặc thuật toán tương tự để phát hiện những lần ghi nào là đồng thời, rồi dùng thuật toán giải quyết xung đột như CRDT để hợp nhất các giá trị được ghi đồng thời. Last write wins và giải quyết xung đột thủ công cũng là các phương án khả dĩ.
+
+Chương này luôn giả định mỗi replica giữ một bản sao đầy đủ của toàn bộ cơ sở dữ liệu, nhưng với tập dữ liệu lớn điều này không thực tế. Chương tiếp theo sẽ giới thiệu *sharding*, giúp mỗi máy chỉ cần lưu một phần dữ liệu.
 
 
-## 总结 {#summary}
-
-本章考察了复制问题。复制有多种用途：
-
-*高可用性*
-:   即使一台或多台机器、一个可用区乃至整个地区停机，系统仍能继续运行
-
-*离线运行*
-:   网络中断时，应用程序仍能继续工作
-
-*延迟*
-:   把数据放在地理上靠近用户的位置，让用户能够更快地与之交互
-
-*可伸缩性*
-:   把读取分散到多个副本，处理超出单台机器能力的读取量
-
-复制的目标看似简单——在多台机器上保留相同数据的副本——实际却极其棘手。它要求我们仔细考虑并发、所有可能出错的环节，以及怎样应对故障造成的后果。至少要处理节点不可用和网络中断，而且这还没有算上软件缺陷或硬件错误引起的静默数据损坏等更隐蔽的故障。
-
-我们讨论了三种主要的复制方式：
-
-*单主复制*
-:   客户端把所有写入发给一个节点（领导者），领导者再把数据变更事件流发送给其他副本（追随者）。读取可以在任意副本上执行，但追随者返回的结果可能陈旧。
-
-*多主复制*
-:   客户端把每次写入发给多个领导者中的一个，任意领导者都能接受写入。各领导者相互发送数据变更事件流，也会将其发送给追随者。
-
-*无主复制*
-:   客户端把每次写入发给多个节点，并行读取多个节点，从而发现并修复持有陈旧数据的节点。
-
-每种方式都有优缺点。单主复制很流行，因为它相对容易理解，又能提供强一致性。多主复制和无主复制面对节点故障、网络中断和延迟尖峰时韧性更强，代价是必须解决冲突，而且只能提供较弱的一致性保证。
-
-复制可以同步，也可以异步；发生故障时，这项选择会深刻影响系统行为。系统平稳运行时，异步复制可能很快，但仍必须弄清复制延迟增大或服务器失效时会发生什么。如果领导者失效，而你把一个异步更新的追随者提升为新领导者，最近提交的数据可能丢失。
-
-我们考察了复制延迟可能造成的几种反常现象，并讨论了几种一致性模型，以便判断应用程序在复制延迟下应有怎样的行为：
-
-*写后读一致性*
-:   用户应当总能看到自己提交的数据。
-
-*单调读*
-:   用户看到某一时刻的数据后，不应在稍后又看到更早时刻的数据。
-
-*一致前缀读*
-:   用户看到的数据状态应符合因果关系，例如以正确顺序看到问题及其回答。
-
-最后，我们讨论了多主复制和无主复制如何让所有副本最终收敛到一致状态：用版本向量或类似算法检测哪些写入并发，再用 CRDT 等冲突解决算法合并并发写入的值。最后写入者胜和手工解决冲突也是可选方案。
-
-本章一直假设每个副本都保存整个数据库的完整拷贝，但对大型数据集而言，这并不现实。下一章将介绍 *分片*，使每台机器只需存储一部分数据。
 
 
-
-
-### 参考文献
+### Tài liệu tham khảo
 
 
 [^1]: B. G. Lindsay, P. G. Selinger, C. Galtieri, J. N. Gray, R. A. Lorie, T. G. Price, F. Putzolu, I. L. Traiger, and B. W. Wade. [Notes on Distributed Databases](https://dominoweb.draco.res.ibm.com/reports/RJ2571.pdf). IBM Research, Research Report RJ2571(33471), July 1979. Archived at [perma.cc/EPZ3-MHDD](https://perma.cc/EPZ3-MHDD)

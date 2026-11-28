@@ -3627,3 +3627,30 @@ en = "garbage collection"
 vi = "garbage collection"
 keep = true
 note = "Quen dùng nguyên gốc (GC), cả trong SSD lẫn runtime."
+
+[[term]]
+en = "master–slave replication"
+vi = "sao chép master–slave"
+show_en = true
+note = "Thuật ngữ cũ, nay bị coi là xúc phạm; chỉ nhắc để so sánh."
+
+[[term]]
+en = "controller node"
+vi = "node điều khiển"
+
+[[term]]
+en = "hint"
+vi = "gợi ý"
+ctx = "hinted handoff"
+
+[[term]]
+en = "sloppy quorum"
+vi = "sloppy quorum"
+keep = true
+note = "Tên cơ chế của Dynamo, giữ nguyên."
+
+[[term]]
+en = "version vector"
+vi = "version vector"
+keep = true
+note = "Tên cấu trúc dữ liệu, giữ nguyên (cùng họ với vector clock)."

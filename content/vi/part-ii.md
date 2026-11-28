@@ -1,6 +1,4 @@
 ---
-draft: true
-book_status: draft
 translationKey: ddia-v2-part-ii
 title: Dữ liệu phân tán
 book_kind: part
@@ -10,116 +8,116 @@ weight: 200
 breadcrumbs: false
 ---
 
-> 一个成功的技术，现实的优先级必须高于公关，你可以糊弄别人，但糊弄不了自然规律。
+> *Một công nghệ thành công thì thực tế phải được đặt trên quan hệ công chúng, vì có thể lừa được người khác chứ không thể lừa được tự nhiên.*
 >
-> —— 罗杰斯委员会报告（1986）
+> — Báo cáo của Ủy ban Rogers (1986)
 >
 
 -------
 
-在本书的 [第一部分](/part-i) 中，我们讨论了数据系统的基础概念。
-现在我们到了 [第二部分](/part-ii)，进入更高的层次，并提出一个问题：如果 *多台机器* 参与数据的存储和检索，会发生什么？
+Trong [Phần I](/part-i) của cuốn sách, ta đã bàn về những khái niệm nền tảng của hệ thống dữ liệu.
+Giờ đến [Phần II](/part-ii), ta bước lên một tầng cao hơn và đặt ra câu hỏi: điều gì xảy ra nếu *nhiều máy* cùng tham gia lưu trữ và truy xuất dữ liệu?
 
-你可能会出于各种各样的原因，希望将数据库分布到多台机器上：
+Bạn có thể muốn phân tán cơ sở dữ liệu lên nhiều máy vì đủ loại lý do:
 
-可伸缩性
-: 如果你的数据量、读取负载、写入负载超出单台机器的处理能力，可以将负载分散到多台计算机上。
+Khả năng mở rộng
+: Nếu khối lượng dữ liệu, tải đọc hoặc tải ghi vượt quá khả năng xử lý của một máy, bạn có thể dàn tải ra nhiều máy tính.
 
-容错 / 高可用性
-: 如果你的应用需要在单台机器（或多台机器，网络或整个数据中心）出现故障的情况下仍然能继续工作，则可使用多台机器，以提供冗余。一台故障时，另一台可以接管。
+Chịu lỗi / tính sẵn sàng cao
+: Nếu ứng dụng cần tiếp tục hoạt động khi một máy (hoặc nhiều máy, mạng, thậm chí cả một trung tâm dữ liệu) gặp sự cố, bạn có thể dùng nhiều máy để tạo ra sự dư thừa. Khi một máy hỏng, máy khác có thể tiếp quản.
 
-延迟
-: 如果在世界各地都有用户，你也许会考虑在全球范围部署多个服务器，从而每个用户可以从地理上最近的数据中心获取服务，避免了等待网络数据包穿越半个世界。
+Độ trễ
+: Nếu người dùng ở khắp nơi trên thế giới, bạn có thể cân nhắc triển khai nhiều server trên toàn cầu để mỗi người dùng được phục vụ từ trung tâm dữ liệu gần nhất về mặt địa lý, tránh phải chờ gói tin mạng băng qua nửa vòng trái đất.
 
-## 伸缩至更高的负载
+## Mở rộng để chịu tải cao hơn
 
-如果你需要的只是伸缩至更高的 *负载（load）*，最简单的方法就是购买更强大的机器（有时称为 *垂直伸缩*，即 vertical scaling，或 *向上伸缩*，即 scale up）。许多处理器，内存和磁盘可以在同一个操作系统下相互连接，快速的相互连接允许任意处理器访问内存或磁盘的任意部分。在这种 *共享内存架构（shared-memory architecture）* 中，所有的组件都可以看作一台单独的机器。
-
-> [!NOTE]
-> 在大型机中，尽管任意处理器都可以访问内存的任意部分，但总有一些内存区域与一些处理器更接近（称为 *非均匀内存访问（nonuniform memory access, NUMA）* [^1]）。为了有效利用这种架构特性，需要对处理进行细分，以便每个处理器主要访问临近的内存，这意味着即使表面上看起来只有一台机器在运行，*分区（partitioning）* 仍然是必要的。
-
-共享内存方法的问题在于，成本增长速度快于线性增长：一台有着双倍处理器数量，双倍内存大小，双倍磁盘容量的机器，通常成本会远远超过原来的两倍。而且可能因为存在瓶颈，并不足以处理双倍的载荷。
-
-共享内存架构可以提供有限的容错能力，高端机器可以使用热插拔的组件（不关机更换磁盘，内存模块，甚至处理器）—— 但它必然囿于单个地理位置的桎梏。
-
-另一种方法是 *共享磁盘架构（shared-disk architecture）*，它使用多台具有独立处理器和内存的机器，但将数据存储在机器之间共享的磁盘阵列上，这些磁盘通过快速网络连接。这种架构用于某些数据仓库，但竞争和锁定的开销限制了共享磁盘方法的可伸缩性 [^2]。
+Nếu thứ bạn cần chỉ là mở rộng để chịu *tải* (*load*) cao hơn, cách đơn giản nhất là mua máy mạnh hơn (đôi khi gọi là *mở rộng theo chiều dọc* (*vertical scaling*), hay *scale up*). Nhiều bộ xử lý, bộ nhớ và ổ đĩa có thể được nối với nhau dưới cùng một hệ điều hành, và kết nối tốc độ cao cho phép bất kỳ bộ xử lý nào truy cập bất kỳ phần nào của bộ nhớ hay ổ đĩa. Trong *kiến trúc chia sẻ bộ nhớ* (*shared-memory architecture*) này, mọi thành phần có thể coi là một máy duy nhất.
 
 > [!NOTE]
-> 网络附属存储（Network Attached Storage, NAS），或 *存储区网络（Storage Area Network, SAN）*
+> Trong các máy lớn (mainframe), dù bất kỳ bộ xử lý nào cũng có thể truy cập bất kỳ phần nào của bộ nhớ, vẫn có những vùng nhớ gần một số bộ xử lý hơn (gọi là *truy cập bộ nhớ không đồng nhất* (*nonuniform memory access*, NUMA) [^1]). Để tận dụng hiệu quả đặc điểm kiến trúc này, cần chia nhỏ việc xử lý sao cho mỗi bộ xử lý chủ yếu truy cập vùng nhớ lân cận, nghĩa là *phân vùng* (*partitioning*) vẫn cần thiết ngay cả khi bề ngoài chỉ có một máy đang chạy.
 
-### 无共享架构
+Vấn đề của cách tiếp cận chia sẻ bộ nhớ là chi phí tăng nhanh hơn tuyến tính: một máy có gấp đôi số bộ xử lý, gấp đôi bộ nhớ, gấp đôi dung lượng đĩa thường đắt hơn gấp đôi rất nhiều. Và do tồn tại các nút thắt cổ chai, nó cũng có thể không đủ sức xử lý gấp đôi tải.
 
-相比之下，*无共享架构* [^3]（shared-nothing architecture，有时被称为 *水平伸缩*，即 horizontal scaling，或 *向外伸缩*，即 scaling out）已经相当普及。
-在这种架构中，运行数据库软件的每台机器 / 虚拟机都称为 *节点（node）*。每个节点只使用各自的处理器，内存和磁盘。节点之间的任何协调，都是在软件层面使用传统网络实现的。
+Kiến trúc chia sẻ bộ nhớ có thể cung cấp khả năng chịu lỗi ở mức hạn chế: máy cao cấp có thể dùng linh kiện cắm nóng (thay đĩa, module nhớ, thậm chí bộ xử lý mà không cần tắt máy) — nhưng nó chắc chắn bị trói vào một vị trí địa lý duy nhất.
 
-无共享系统不需要使用特殊的硬件，所以你可以用任意机器 —— 比如性价比最好的机器。你也许可以跨多个地理区域分布数据从而减少用户延迟，或者在损失一整个数据中心的情况下幸免于难。
-随着云端虚拟机部署的出现，即使是小公司，现在无需 Google 级别的运维，也可以实现异地分布式架构。
+Một cách tiếp cận khác là *kiến trúc chia sẻ đĩa* (*shared-disk architecture*): dùng nhiều máy có bộ xử lý và bộ nhớ riêng, nhưng lưu dữ liệu trên một mảng đĩa dùng chung giữa các máy, các đĩa này được nối qua mạng tốc độ cao. Kiến trúc này được dùng cho một số kho dữ liệu, nhưng chi phí tranh chấp và khóa giới hạn khả năng mở rộng của hướng chia sẻ đĩa [^2].
 
-在这一部分里，我们将重点放在无共享架构上。它不见得是所有场景的最佳选择，但它是最需要你谨慎从事的架构。
-如果你的数据分布在多个节点上，你需要意识到这样一个分布式系统中约束和权衡 —— 数据库并不能魔术般地把这些东西隐藏起来。
+> [!NOTE]
+> Lưu trữ gắn mạng (*Network Attached Storage*, NAS) hoặc *mạng lưu trữ* (*Storage Area Network*, SAN)
 
-虽然分布式无共享架构有许多优点，但它通常也会给应用带来额外的复杂度，有时也会限制你可用数据模型的表达力。
-在某些情况下，一个简单的单线程程序可以比一个拥有超过 100 个 CPU 核的集群表现得更好 [^4]。另一方面，无共享系统可以非常强大。接下来的几章，将详细讨论分布式数据会带来的问题。
+### Kiến trúc shared-nothing
 
+Ngược lại, *kiến trúc shared-nothing* [^3] (đôi khi còn gọi là *mở rộng theo chiều ngang* (*horizontal scaling*), hay *scaling out*) đã khá phổ biến.
+Trong kiến trúc này, mỗi máy / máy ảo chạy phần mềm cơ sở dữ liệu được gọi là một *node*. Mỗi node chỉ dùng bộ xử lý, bộ nhớ và đĩa của riêng mình. Mọi sự phối hợp giữa các node đều được thực hiện ở tầng phần mềm, qua mạng thông thường.
 
-### 复制 vs 分区
+Hệ thống shared-nothing không cần phần cứng đặc biệt, nên bạn có thể dùng bất kỳ máy nào — chẳng hạn máy có tỷ lệ giá/hiệu năng tốt nhất. Bạn có thể phân tán dữ liệu qua nhiều vùng địa lý để giảm độ trễ cho người dùng, hoặc vẫn trụ vững khi mất cả một trung tâm dữ liệu.
+Với sự xuất hiện của máy ảo trên đám mây, ngay cả công ty nhỏ giờ cũng có thể xây kiến trúc phân tán đa vùng mà không cần vận hành ở quy mô Google.
 
-数据分布在多个节点上有两种常见的方式：
+Trong phần này, ta sẽ tập trung vào kiến trúc shared-nothing. Nó không nhất thiết là lựa chọn tốt nhất cho mọi tình huống, nhưng là kiến trúc đòi hỏi bạn thận trọng nhất.
+Nếu dữ liệu của bạn nằm trên nhiều node, bạn cần nhận ra những ràng buộc và đánh đổi của một hệ thống phân tán như vậy — cơ sở dữ liệu không thể giấu những thứ này đi một cách thần kỳ.
 
-复制（Replication）
-: 在几个不同的节点上保存数据的相同副本，可能放在不同的位置。复制提供了冗余：如果一些节点不可用，剩余的节点仍然可以提供数据服务。复制也有助于改善性能。[第六章](/ch6) 将讨论复制。
-
-分区（Partitioning，也称 *分片*，即 sharding）
-: 将一个大型数据库拆分成较小的子集（称为 *分区*，即 partitions），从而不同的分区可以指派给不同的 *节点*（nodes）。[第七章](/ch7) 将讨论分片。
-
-复制和分区是不同的机制，但它们经常同时使用。如 [图 II-1](#fig_replication_partitioning) 所示。
-
-{{< fig num="II-1" id="fig_replication_partitioning" src="/v1/ddia_part-ii_01.png" caption="一个数据库切分为两个分区，每个分区都有两个副本" class="ddia-figure ddia-figure--wide" width="2880" height="1606" />}}
+Dù kiến trúc shared-nothing phân tán có nhiều ưu điểm, nó thường kéo theo độ phức tạp bổ sung cho ứng dụng, đôi khi còn hạn chế sức biểu đạt của mô hình dữ liệu mà bạn có thể dùng.
+Trong một số trường hợp, một chương trình đơn luồng đơn giản có thể chạy tốt hơn một cụm có hơn 100 lõi CPU [^4]. Mặt khác, hệ thống shared-nothing có thể cực kỳ mạnh mẽ. Vài chương tiếp theo sẽ bàn chi tiết về các vấn đề mà dữ liệu phân tán đem lại.
 
 
-理解了这些概念，就可以开始讨论在分布式系统中需要做出的困难抉择。[第八章](/ch8) 将讨论 *事务（Transaction）*，这对于了解数据系统中可能出现的各种问题，以及我们可以做些什么很有帮助。
-[第九章](/ch9) 和 [第十章](/ch10) 将讨论分布式系统的根本局限性。
+### Sao chép và phân vùng
 
-在本书的 [第三部分](/part-iii) 中，将讨论如何将多个（可能是分布式的）数据存储集成为一个更大的系统，以满足复杂的应用需求。但首先，我们来聊聊分布式的数据。
+Có hai cách phổ biến để phân tán dữ liệu qua nhiều node:
 
+*Sao chép* (*replication*)
+: Giữ các bản sao giống hệt nhau của dữ liệu trên vài node khác nhau, có thể đặt ở các vị trí khác nhau. Sao chép (*replication*) tạo ra sự dư thừa: nếu một số node không khả dụng, các node còn lại vẫn có thể phục vụ dữ liệu. Sao chép (*replication*) cũng giúp cải thiện hiệu năng. [Chương 6](/ch6) sẽ bàn về sao chép.
 
-## [6. 复制](/ch6)
-- [单主复制](/ch6#sec_replication_leader)
-- [复制延迟的问题](/ch6#sec_replication_lag)
-- [多主复制](/ch6#sec_replication_multi_leader)
-- [无主复制](/ch6#sec_replication_leaderless)
-- [总结](/ch6#summary)
+*Phân vùng* (*partitioning*, còn gọi là *sharding*)
+: Chia một cơ sở dữ liệu lớn thành các tập con nhỏ hơn (gọi là *partition*), để các partition khác nhau có thể được giao cho các *node* khác nhau. [Chương 7](/ch7) sẽ bàn về sharding.
 
-## [7. 分片](/ch7)
-- [分片的利与弊](/ch7#sec_sharding_reasons)
-- [键值数据的分片](/ch7#sec_sharding_key_value)
-- [请求路由](/ch7#sec_sharding_routing)
-- [分片与二级索引](/ch7#sec_sharding_secondary_indexes)
-- [总结](/ch7#summary)
+Sao chép và phân vùng là hai cơ chế khác nhau, nhưng chúng thường được dùng cùng nhau, như minh họa ở [Hình II-1](#fig_replication_partitioning).
 
-## [8. 事务](/ch8)
-- [事务到底是什么？](/ch8#sec_transactions_overview)
-- [弱隔离级别](/ch8#sec_transactions_isolation_levels)
-- [可串行化](/ch8#sec_transactions_serializability)
-- [分布式事务](/ch8#sec_transactions_distributed)
-- [总结](/ch8#summary)
-- [参考文献](/ch8#references)
-
-## [9. 分布式系统的麻烦](/ch9)
-- [故障与部分失效](/ch9#sec_distributed_partial_failure)
-- [不可靠的网络](/ch9#sec_distributed_networks)
-- [不可靠的时钟](/ch9#sec_distributed_clocks)
-- [知识、真相和谎言](/ch9#sec_distributed_truth)
-- [总结](/ch9#summary)
-
-## [10. 一致性与共识](/ch10)
-- [线性一致性](/ch10#sec_consistency_linearizability)
-- [ID 生成器和逻辑时钟](/ch10#sec_consistency_logical)
-- [共识](/ch10#sec_consistency_consensus)
-- [总结](/ch10#summary)
+{{< fig num="II-1" id="fig_replication_partitioning" src="/v1/ddia_part-ii_01.png" caption="Một cơ sở dữ liệu được chia thành hai partition, mỗi partition có hai replica" class="ddia-figure ddia-figure--wide" width="2880" height="1606" />}}
 
 
-### 参考
+Khi đã hiểu các khái niệm này, ta có thể bắt đầu bàn về những lựa chọn khó khăn cần đưa ra trong hệ thống phân tán. [Chương 8](/ch8) sẽ bàn về *giao dịch* (*transaction*), rất hữu ích để hiểu các loại sự cố có thể xảy ra trong hệ thống dữ liệu và ta có thể làm gì với chúng.
+[Chương 9](/ch9) và [Chương 10](/ch10) sẽ bàn về những giới hạn căn bản của hệ thống phân tán.
+
+Trong [Phần III](/part-iii) của sách, ta sẽ bàn cách tích hợp nhiều kho dữ liệu (có thể là phân tán) thành một hệ thống lớn hơn để đáp ứng các nhu cầu ứng dụng phức tạp. Nhưng trước hết, ta hãy nói về dữ liệu phân tán.
+
+
+## [6. Sao chép](/ch6)
+- [Sao chép đơn leader](/ch6#sec_replication_leader)
+- [Vấn đề của replication lag](/ch6#sec_replication_lag)
+- [Sao chép đa leader](/ch6#sec_replication_multi_leader)
+- [Sao chép không leader](/ch6#sec_replication_leaderless)
+- [Tóm tắt](/ch6#summary)
+
+## [7. Phân mảnh](/ch7)
+- [Ưu và nhược điểm của sharding](/ch7#sec_sharding_reasons)
+- [Sharding dữ liệu khóa–giá trị](/ch7#sec_sharding_key_value)
+- [Định tuyến yêu cầu](/ch7#sec_sharding_routing)
+- [Sharding và chỉ mục phụ](/ch7#sec_sharding_secondary_indexes)
+- [Tóm tắt](/ch7#summary)
+
+## [8. Giao dịch](/ch8)
+- [Giao dịch thực chất là gì?](/ch8#sec_transactions_overview)
+- [Các mức cô lập yếu](/ch8#sec_transactions_isolation_levels)
+- [Serializability](/ch8#sec_transactions_serializability)
+- [Giao dịch phân tán](/ch8#sec_transactions_distributed)
+- [Tóm tắt](/ch8#summary)
+- [Tài liệu tham khảo](/ch8#references)
+
+## [9. Những rắc rối của hệ phân tán](/ch9)
+- [Lỗi và hỏng hóc từng phần](/ch9#sec_distributed_partial_failure)
+- [Mạng không đáng tin cậy](/ch9#sec_distributed_networks)
+- [Đồng hồ không đáng tin cậy](/ch9#sec_distributed_clocks)
+- [Tri thức, sự thật và lời nói dối](/ch9#sec_distributed_truth)
+- [Tóm tắt](/ch9#summary)
+
+## [10. Nhất quán và đồng thuận](/ch10)
+- [Linearizability](/ch10#sec_consistency_linearizability)
+- [Bộ sinh ID và đồng hồ logic](/ch10#sec_consistency_logical)
+- [Đồng thuận](/ch10#sec_consistency_consensus)
+- [Tóm tắt](/ch10#summary)
+
+
+### Tham khảo
 
 [^1]: Ulrich Drepper: “[What Every Programmer Should Know About Memory](https://people.freebsd.org/~lstewart/articles/cpumemory.pdf),” akka‐dia.org, November 21, 2007.
 [^2]: Ben Stopford: “[Shared Nothing vs. Shared Disk Architectures: An Independent View](http://www.benstopford.com/2009/11/24/understanding-the-shared-nothing-architecture/),” benstopford.com, November 24, 2009.
