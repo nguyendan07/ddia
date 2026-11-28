@@ -1,6 +1,4 @@
 ---
-draft: true
-book_status: draft
 translationKey: ddia-v2-ch9
 title: Những rắc rối của hệ phân tán
 book_kind: chapter
@@ -14,347 +12,345 @@ breadcrumbs: false
 
 ![](/map/ch08.png)
 
-> *意外这东西挺有意思：你没碰上之前，它就从来不会发生。*
+> *Tai nạn là thứ buồn cười thật. Chưa gặp thì chẳng bao giờ có, mà đã gặp rồi thì nó cứ thế xảy ra.*
 >
-> A.A. 米尔恩，《小熊维尼和老灰驴的家》（1928）
+> A.A. Milne, *The House at Pooh Corner* (1928)
 
-正如 [“可靠性与容错”](/ch2#sec_introduction_reliability) 中所讨论的，要使一个系统可靠，就要确保即使出了问题（即发生故障），整个系统仍能继续工作。然而，要预见并处理所有可能的故障并非易事。开发者很容易把注意力主要放在正常路径上（毕竟大多数时候一切都运行良好！），而忽略会带来大量边界情况的故障。
+Như đã bàn ở ["Độ tin cậy và khả năng chịu lỗi"](/ch2#sec_introduction_reliability), làm cho một hệ thống đáng tin cậy nghĩa là bảo đảm cả hệ thống vẫn tiếp tục chạy ngay cả khi có sự cố (tức là khi xảy ra lỗi). Tuy nhiên, lường trước mọi lỗi có thể xảy ra rồi xử lý chúng không dễ chút nào. Là lập trình viên, ta rất dễ chỉ tập trung vào đường đi suôn sẻ (xét cho cùng, phần lớn thời gian mọi thứ chạy tốt!) và bỏ qua lỗi, vì lỗi kéo theo vô số trường hợp biên.
 
-如果希望系统在发生故障时依然可靠，就必须从根本上转变思维方式，把注意力放在各种可能出错的地方，即使出错的概率很低。某件事只有百万分之一的概率出错并不意味着可以不管：系统足够大时，百万分之一的事件每天都会发生。经验丰富的系统运维人员会告诉你，任何 *可能* 出错的事情，*终究都会* 出错。
+Nếu muốn hệ thống đáng tin cậy khi có lỗi, bạn phải thay đổi căn bản tư duy và tập trung vào những chỗ có thể hỏng, dù xác suất rất thấp. Một việc chỉ có một phần triệu khả năng hỏng không có nghĩa là cứ mặc kệ: khi hệ thống đủ lớn, sự kiện một phần triệu xảy ra mỗi ngày. Những người vận hành hệ thống có kinh nghiệm sẽ nói với bạn rằng bất cứ thứ gì *có thể* hỏng thì *rồi sẽ* hỏng.
 
-而且，使用 *分布式系统*（*distributed system*）与在单台计算机上编写软件有着根本区别——最主要的区别，就是事情有了许多新奇而刺激的出错方式 [^1] [^2]。本章将带你领略实践中会遇到的问题，并帮助你理解哪些东西可以依赖，哪些不可以。
+Hơn nữa, làm việc với *hệ thống phân tán* (*distributed system*) khác căn bản so với viết phần mềm trên một máy tính duy nhất — khác biệt lớn nhất là có rất nhiều cách hỏng mới lạ và "thú vị" [^1] [^2]. Chương này sẽ đưa bạn làm quen với những vấn đề gặp phải trong thực tế, và giúp bạn hiểu cái gì có thể dựa vào, cái gì thì không.
 
-为了理解我们面对的挑战，接下来让我们把悲观主义发挥到极致，考察分布式系统里可能出错的种种事情。我们将讨论网络问题（[“不可靠的网络”](/ch9#sec_distributed_networks)），以及时钟和时序问题（[“不可靠的时钟”](/ch9#sec_distributed_clocks)）。这些问题造成的后果往往令人迷失方向，因此我们还要探讨如何认识分布式系统的状态，以及如何推断已经发生过的事情（[“知识、真相和谎言”](/ch9#sec_distributed_truth)）。随后在 [第 10 章](/ch10#ch_consistency) 中，我们将通过一些例子看看，面对这些故障时如何实现容错。
+Để hiểu thách thức trước mắt, ta hãy đẩy chủ nghĩa bi quan lên mức tối đa và xem xét đủ thứ có thể hỏng trong một hệ thống phân tán. Ta sẽ bàn về các vấn đề của mạng (["Mạng không đáng tin cậy"](/ch9#sec_distributed_networks)) cũng như của đồng hồ và thời gian (["Đồng hồ không đáng tin cậy"](/ch9#sec_distributed_clocks)). Hệ quả của những vấn đề này thường gây mất phương hướng, nên ta cũng sẽ khảo sát cách nhận biết trạng thái của một hệ thống phân tán và cách suy luận về những gì đã xảy ra (["Tri thức, sự thật và lời nói dối"](/ch9#sec_distributed_truth)). Sau đó, ở [Chương 10](/ch10#ch_consistency), ta sẽ xem qua một số ví dụ về cách đạt được khả năng chịu lỗi trước những sự cố này.
 
-## 故障与部分失效 {#sec_distributed_partial_failure}
+## Sự cố và hỏng hóc từng phần {#sec_distributed_partial_failure}
 
-当你在一台计算机上编写程序时，它通常会以相当可预测的方式运行：要么正常工作，要么彻底罢工。有缺陷的软件可能会让人觉得计算机偶尔也会“状态不好”（而重启往往能解决问题），但这通常只是软件写得糟糕所造成的表象。
+Khi viết chương trình trên một máy tính duy nhất, nó thường chạy theo cách khá dễ đoán: hoặc chạy đúng, hoặc hỏng hẳn. Phần mềm có lỗi đôi khi khiến ta có cảm giác máy tính "đang trục trặc" (và khởi động lại thường là xong), nhưng đó thường chỉ là hậu quả của phần mềm viết dở.
 
-从根本上说，单台计算机上的软件不应该时灵时不灵：只要硬件正常，同样的操作总会产生同样的结果（也就是 *确定性的*，*deterministic*）。如果硬件出了问题（例如内存损坏或连接器松动），后果通常是整个系统失效（例如内核恐慌、“蓝屏死机”或无法启动）。一台运行着良好软件的计算机，通常要么功能完好，要么完全失效，而不会停留在两者之间。
+Về nguyên tắc, phần mềm trên một máy đơn không nên chạy lúc được lúc không: khi phần cứng bình thường, cùng một thao tác luôn cho cùng một kết quả (đây là tính *tất định* (*deterministic*)). Nếu phần cứng gặp vấn đề (ví dụ bộ nhớ hỏng hoặc đầu nối lỏng), hậu quả thường là cả hệ thống hỏng (chẳng hạn kernel panic, "màn hình xanh chết chóc", hoặc không khởi động được). Một máy tính chạy phần mềm tốt thường hoặc hoạt động đầy đủ, hoặc hỏng hoàn toàn, chứ không nằm lơ lửng giữa hai trạng thái đó.
 
-这是计算机设计中的有意选择：发生内部故障时，我们宁愿让计算机彻底崩溃，也不愿让它返回错误结果，因为后者既难处理又容易造成混乱。于是，计算机把其底层模糊而混乱的物理现实隐藏起来，呈现出一个以数学般的完美方式运行的理想化系统模型。CPU 指令每次都会做同样的事情；写入内存或磁盘的数据会原样保留，不会随机损坏。正如 [“硬件与软件故障”](/ch2#sec_introduction_hardware_faults) 中所讨论的，事实并非真的如此——现实中，数据的确可能在没有任何警告的情况下损坏，CPU 偶尔也会悄无声息地给出错误结果——只不过这些情况足够罕见，通常可以忽略。
+Đây là lựa chọn có chủ ý trong thiết kế máy tính: khi có lỗi nội bộ, ta thà để máy sập hẳn còn hơn để nó trả về kết quả sai, vì kết quả sai vừa khó xử lý vừa dễ gây rối. Nhờ vậy máy tính che giấu thực tại vật lý mơ hồ, lộn xộn bên dưới và đưa ra một mô hình hệ thống lý tưởng hóa vận hành hoàn hảo như toán học. Một lệnh CPU lúc nào cũng làm cùng một việc. Dữ liệu ghi vào bộ nhớ hay đĩa được giữ nguyên, không bị hỏng ngẫu nhiên. Như đã bàn ở ["Lỗi phần cứng và phần mềm"](/ch2#sec_introduction_hardware_faults), thực tế không thật sự như vậy — dữ liệu hoàn toàn có thể hỏng mà không báo trước, và CPU đôi khi âm thầm cho kết quả sai — nhưng những trường hợp đó đủ hiếm để thường bỏ qua được.
 
-当软件运行在通过网络连接的多台计算机上时，情况就截然不同了。分布式系统中的故障要频繁得多，我们再也无法视而不见，只能直面物理世界混乱的现实。而在物理世界中，可能出错的事情多得惊人，下面这段轶事便是一个写照 [^3]：
+Khi phần mềm chạy trên nhiều máy nối với nhau bằng mạng, tình hình hoàn toàn khác. Lỗi trong hệ thống phân tán xảy ra thường xuyên hơn nhiều, ta không thể làm ngơ nữa mà buộc phải đối mặt với thực tế lộn xộn của thế giới vật lý. Và trong thế giới vật lý, số thứ có thể hỏng nhiều đến kinh ngạc, như giai thoại sau đây cho thấy: [^3]
 
-> 在我有限的从业经历中，我处理过单个数据中心（DC）内长期存在的网络分区、PDU（配电单元）故障、交换机故障、整个机架意外断电重启、整个数据中心骨干网故障、整个数据中心停电，以及一名低血糖司机开着福特皮卡撞进数据中心的 HVAC（供暖、通风与空调）系统。而我甚至还不是运维人员。
+> Trong kinh nghiệm hạn chế của tôi, tôi đã phải xử lý các vụ network partition kéo dài trong một trung tâm dữ liệu (DC), lỗi PDU (bộ phân phối điện), lỗi switch, cả một rack bất ngờ mất điện rồi khởi động lại, lỗi mạng backbone của cả trung tâm dữ liệu, mất điện toàn bộ trung tâm dữ liệu, và một tài xế bị hạ đường huyết lái chiếc xe bán tải Ford đâm vào hệ thống HVAC (sưởi, thông gió và điều hòa) của trung tâm dữ liệu. Mà tôi còn chẳng phải là dân vận hành.
 >
-> —— 柯达黑尔
+> — Coda Hale
 
-在分布式系统中，即使其他部分工作正常，系统的某些部分也很可能以不可预知的方式发生故障。这叫作 *部分失效*（*partial failure*）。棘手之处在于，部分失效是 *非确定性的*（*nondeterministic*）：任何涉及多个节点及其网络的操作，有时能够成功，有时却会莫名其妙地失败。正如我们稍后会看到的，你甚至可能根本 *不知道* 某件事究竟成功了没有！
+Trong hệ thống phân tán, rất có thể một phần nào đó của hệ thống hỏng theo cách không thể đoán trước, dù các phần còn lại vẫn chạy bình thường. Đây gọi là *hỏng hóc từng phần* (*partial failure*). Điều khó chịu là hỏng hóc từng phần có tính *phi tất định* (*nondeterministic*): bất kỳ thao tác nào liên quan đến nhiều node và mạng của chúng đôi khi thành công, đôi khi lại thất bại một cách khó lường. Như ta sẽ thấy, thậm chí bạn có thể *không biết* một việc đã thành công hay chưa!
 
-正是这种非确定性和部分失效的可能性，让分布式系统如此难以驾驭 [^4]。不过，如果分布式系统能够容忍部分失效，也会由此获得强大的能力。例如，你可以执行滚动升级：每次重启一个节点来安装软件更新，同时让整个系统始终不间断地工作。因此，借助容错，我们可以用不可靠的组件构建出比单节点系统更可靠的分布式系统。
+Chính tính phi tất định và khả năng xảy ra hỏng hóc từng phần khiến hệ thống phân tán khó làm việc đến vậy [^4]. Tuy nhiên, nếu hệ thống phân tán chịu được hỏng hóc từng phần thì nó cũng có được những khả năng mạnh mẽ. Chẳng hạn, bạn có thể thực hiện rolling upgrade: khởi động lại từng node một để cài bản cập nhật phần mềm, trong khi cả hệ thống vẫn chạy liên tục không gián đoạn. Như vậy, nhờ khả năng chịu lỗi, ta có thể xây dựng hệ thống phân tán đáng tin cậy hơn hệ thống một node, từ những thành phần không đáng tin cậy.
 
-不过，在实现容错之前，我们需要进一步了解究竟要容忍哪些故障。应当考虑尽可能广泛的故障——包括那些看来不太可能发生的故障——并在测试环境中人为制造这些情形，观察系统会怎样反应。在分布式系统中，多一些怀疑、悲观和偏执总会有所回报。
+Nhưng trước khi hiện thực khả năng chịu lỗi, ta cần hiểu rõ hơn về những lỗi mà ta phải chịu đựng. Điều quan trọng là xem xét thật nhiều loại lỗi có thể xảy ra — kể cả những lỗi khá khó xảy ra — và cố tình tạo ra những tình huống đó trong môi trường kiểm thử để xem chuyện gì sẽ xảy ra. Trong hệ thống phân tán, đa nghi, bi quan và cả hoang tưởng đều đáng giá.
 
-## 不可靠的网络 {#sec_distributed_networks}
+## Mạng không đáng tin cậy {#sec_distributed_networks}
 
-正如 [“共享内存、共享磁盘与无共享架构”](/ch2#sec_introduction_shared_nothing) 中所讨论的，本书关注的分布式系统大多是 *无共享系统*，也就是一组通过网络连接的机器。网络是这些机器彼此通信的唯一途径——我们假定每台机器都有自己的内存和磁盘，一台机器无法直接访问另一台机器的内存或磁盘，只能通过网络向服务发送请求。即使存储本身是共享的（例如 Amazon S3），机器也仍然要通过网络与共享存储服务通信。
+Như đã bàn ở ["Kiến trúc chia sẻ bộ nhớ, chia sẻ đĩa và shared-nothing"](/ch2#sec_introduction_shared_nothing), các hệ thống phân tán trong cuốn sách này phần lớn là *hệ thống shared-nothing*, tức là một tập hợp các máy nối với nhau bằng mạng. Mạng là cách duy nhất để các máy này liên lạc với nhau — ta giả định mỗi máy có bộ nhớ và đĩa riêng, máy này không thể truy cập trực tiếp bộ nhớ hay đĩa của máy kia mà chỉ có thể gửi yêu cầu đến một dịch vụ qua mạng. Ngay cả khi lưu trữ được chia sẻ (như Amazon S3), các máy vẫn phải giao tiếp với dịch vụ lưu trữ chung qua mạng.
 
-互联网和数据中心里的大多数内部网络（通常是以太网）都是 *异步分组网络*（*asynchronous packet network*）。在这种网络中，一个节点可以向另一个节点发送消息（即数据包），但网络既不保证消息何时到达，也不保证它一定能够到达。如果你发出请求并等待响应，可能会发生许多问题（其中一些如 {{< xref fig="9-1" page="/ch9" anchor="fig_distributed_network" >}}图 9-1{{< /xref >}} 所示）：
+Internet và phần lớn các mạng nội bộ trong trung tâm dữ liệu (thường là Ethernet) đều là *mạng gói bất đồng bộ* (*asynchronous packet network*). Trong loại mạng này, một node có thể gửi thông điệp (một gói tin) cho node khác, nhưng mạng không bảo đảm khi nào thông điệp đến, cũng không bảo đảm nó có đến hay không. Nếu bạn gửi yêu cầu và chờ phản hồi, nhiều chuyện có thể xảy ra (một số được minh họa ở {{< xref fig="9-1" page="/ch9" anchor="fig_distributed_network" >}}Hình 9-1{{< /xref >}}):
 
-1. 请求可能已经丢失（或许有人拔掉了网线）。
-2. 请求可能还在队列中等待，稍后才会送达（或许网络或接收方过载了）。
-3. 远程节点可能已经失效（或许它崩溃了，或是被关闭了）。
-4. 远程节点可能只是暂时停止响应（或许它正经历一次漫长的垃圾回收暂停；参见 [“进程暂停”](/ch9#sec_distributed_clocks_pauses)），稍后又会恢复响应。
-5. 远程节点可能已经处理了请求，但响应在网络中丢失了（或许某台网络交换机配置有误）。
-6. 远程节点可能已经处理了请求，但响应被延迟，稍后才会送达（或许网络或你自己的机器过载了）。
+1. Yêu cầu có thể đã bị mất (có thể ai đó rút dây mạng).
+2. Yêu cầu có thể đang nằm chờ trong hàng đợi và sẽ được chuyển đi sau (có thể mạng hoặc bên nhận đang quá tải).
+3. Node ở xa có thể đã hỏng (có thể nó sập, hoặc bị tắt).
+4. Node ở xa có thể tạm thời ngừng phản hồi (có thể nó đang chịu một lần tạm dừng garbage collection kéo dài, xem ["Tạm dừng tiến trình"](/ch9#sec_distributed_clocks_pauses)), rồi sẽ phản hồi lại sau.
+5. Node ở xa có thể đã xử lý yêu cầu, nhưng phản hồi bị mất trên đường (có thể một switch mạng bị cấu hình sai).
+6. Node ở xa có thể đã xử lý yêu cầu, nhưng phản hồi bị trễ và sẽ đến sau (có thể mạng hoặc chính máy của bạn đang quá tải).
 
-{{< fig num="9-1" id="fig_distributed_network" src="/fig/ddia_0901.png" caption="发出请求却没有收到响应时，无法分辨究竟是 (a) 请求丢失、(b) 远程节点宕机，还是 (c) 响应丢失。" class="ddia-figure ddia-figure--panorama" width="2880" height="898" />}}
+{{< fig num="9-1" id="fig_distributed_network" src="/fig/ddia_0901.png" caption="Khi gửi yêu cầu mà không nhận được phản hồi, không thể biết nguyên nhân là (a) yêu cầu bị mất, (b) node ở xa đã ngừng hoạt động, hay (c) phản hồi bị mất." class="ddia-figure ddia-figure--panorama" width="2880" height="898" />}}
 
 
-发送方甚至无法判断数据包是否送达：唯一的办法是由接收方发回响应消息，而这个响应同样可能丢失或延迟。在异步网络中，这些情形无法区分：你掌握的唯一信息只是“尚未收到响应”。向另一个节点发送请求却没有收到响应时，*不可能* 判断原因究竟是什么。
+Bên gửi thậm chí không thể biết gói tin đã đến nơi chưa: cách duy nhất là để bên nhận gửi lại một thông điệp phản hồi, mà phản hồi này cũng có thể bị mất hoặc bị trễ. Trong mạng bất đồng bộ, các tình huống này không thể phân biệt được: thông tin duy nhất bạn có là "chưa nhận được phản hồi". Khi gửi yêu cầu cho node khác mà không nhận được phản hồi, *không thể* biết nguyên nhân là gì.
 
-处理这个问题的惯常办法是设置 *超时*（*timeout*）：等待一段时间后便放弃，并假定响应不会再来。然而，即使发生超时，你仍然不知道远程节点是否收到了请求（如果请求仍在某处排队，那么即便发送方已经放弃，它仍可能在稍后送达接收方）。
+Cách xử lý thông thường cho vấn đề này là đặt timeout: chờ một khoảng thời gian rồi bỏ cuộc, giả định rằng phản hồi sẽ không đến nữa. Tuy nhiên, dù đã hết timeout, bạn vẫn không biết node ở xa có nhận được yêu cầu hay không (nếu yêu cầu vẫn đang xếp hàng đâu đó, nó vẫn có thể đến bên nhận sau, dù bên gửi đã bỏ cuộc).
 
-### TCP 的局限性 {#sec_distributed_tcp}
+### Giới hạn của TCP {#sec_distributed_tcp}
 
-网络数据包有大小上限（通常只有几千字节），但许多应用程序需要发送无法装进单个数据包的消息，例如请求和响应。这类应用程序通常使用 TCP（传输控制协议）建立一条 *连接*（*connection*），把较大的数据流拆成一个个数据包，再在接收端重新组装起来。
+Gói tin mạng có kích thước tối đa (thường chỉ vài nghìn byte), nhưng nhiều ứng dụng cần gửi những thông điệp không vừa trong một gói, chẳng hạn yêu cầu và phản hồi. Các ứng dụng này thường dùng TCP (Transmission Control Protocol) để thiết lập một *kết nối* (*connection*), chia luồng dữ liệu lớn thành từng gói tin rồi ghép lại ở đầu nhận.
 
 
 > [!NOTE]
-> 下面关于 TCP 的大部分讨论，也适用于较新的替代方案 QUIC、WebRTC 使用的流控制传输协议（SCTP）、BitTorrent 的 uTP 协议，以及其他传输协议。关于它与 UDP 的比较，参见 [“TCP 与 UDP”](/ch9#sidebar_distributed_tcp_udp)。
+> Phần lớn nội dung bàn về TCP dưới đây cũng áp dụng cho các giải pháp thay thế mới hơn như QUIC, giao thức SCTP (Stream Control Transmission Protocol) dùng trong WebRTC, giao thức uTP của BitTorrent và các giao thức truyền tải khác. So sánh với UDP, xem ["TCP và UDP"](/ch9#sidebar_distributed_tcp_udp).
 
 
-TCP 常被说成能提供“可靠”的传输，这里的“可靠”是指：它能检测并重传丢失的数据包，发现顺序错乱的数据包并将其恢复为正确顺序，还能用简单的校验和检测数据包损坏。TCP 也会判断应当以多快的速度发送数据，既尽可能快速传输，又不至于压垮网络或接收节点；这叫作 *拥塞控制*（*congestion control*）、*流量控制*（*flow control*）或 *背压*（*backpressure*）[^5]。
+TCP thường được nói là cung cấp đường truyền "đáng tin cậy", với nghĩa: nó phát hiện và truyền lại gói tin bị mất, phát hiện gói tin sai thứ tự và khôi phục đúng thứ tự, đồng thời phát hiện gói tin hỏng bằng checksum đơn giản. TCP cũng quyết định nên gửi dữ liệu nhanh đến mức nào, để vừa truyền nhanh nhất có thể vừa không làm quá tải mạng hay node nhận. Việc này gọi là *kiểm soát tắc nghẽn* (*congestion control*), *kiểm soát luồng* (*flow control*) hay backpressure [^5].
 
-当你把数据写入套接字来“发送”时，数据其实不会立即发出，只会先进入操作系统管理的缓冲区。拥塞控制算法判断目前有能力发送数据包后，才会从缓冲区取出一个数据包大小的数据，交给网络接口。数据包会经过若干交换机和路由器，最终由接收节点的操作系统把数据放进接收缓冲区，并向发送方发回确认包。直到这时，接收端操作系统才会通知应用程序又有数据到达 [^6]。
+Khi bạn "gửi" dữ liệu bằng cách ghi vào socket, dữ liệu không được gửi đi ngay mà trước hết đi vào bộ đệm do hệ điều hành quản lý. Khi thuật toán kiểm soát tắc nghẽn quyết định hiện có thể gửi gói tin, nó lấy từ bộ đệm một lượng dữ liệu bằng một gói tin và đưa cho card mạng. Gói tin đi qua một số switch và router, cuối cùng hệ điều hành của node nhận đặt dữ liệu vào bộ đệm nhận rồi gửi trả gói xác nhận cho bên gửi. Chỉ đến lúc đó hệ điều hành bên nhận mới báo cho ứng dụng rằng có thêm dữ liệu đến [^6].
 
-既然 TCP 提供了“可靠性”，是不是就不必再操心网络不可靠了？遗憾的是，并非如此。如果在一定的超时时间内没有收到确认，TCP 会认定数据包必定已经丢失，但它同样无法判断丢掉的究竟是发出的数据包，还是返回的确认包。TCP 虽然可以重发，却不能保证重发的数据包一定能够到达。如果网线被拔了，TCP 可没法替你把它插回去。最终，经过可配置的超时时间后，TCP 会放弃重试，并向应用程序报告错误。
+Vậy TCP đã "đáng tin cậy" thì ta không cần lo mạng không đáng tin cậy nữa sao? Tiếc là không. Nếu sau một khoảng timeout nhất định không nhận được xác nhận, TCP cho rằng gói tin chắc chắn đã mất, nhưng nó cũng không thể biết cái mất là gói tin đã gửi hay gói xác nhận trả về. TCP có thể gửi lại, nhưng không bảo đảm gói gửi lại sẽ đến nơi. Nếu dây mạng bị rút, TCP không thể tự cắm lại giúp bạn. Cuối cùng, sau một timeout có thể cấu hình, TCP ngừng thử lại và báo lỗi cho ứng dụng.
 
-如果 TCP 连接因错误而关闭——或许是远程节点崩溃了，也可能是网络中断了——你无法知道远程节点究竟处理了多少数据 [^6]。即使 TCP 已经确认某个数据包送达，也只说明远程节点的操作系统内核收到了它；应用程序仍可能在处理这份数据之前就崩溃。如果要确认请求成功，必须由应用程序本身明确返回成功响应 [^7]。
+Nếu kết nối TCP bị đóng do lỗi — có thể node ở xa sập, cũng có thể mạng bị đứt — bạn không thể biết node ở xa đã xử lý được bao nhiêu dữ liệu [^6]. Ngay cả khi TCP đã xác nhận một gói tin được chuyển đến, điều đó chỉ có nghĩa là kernel hệ điều hành của node ở xa đã nhận được nó, còn ứng dụng vẫn có thể sập trước khi kịp xử lý dữ liệu. Muốn biết chắc yêu cầu thành công, ứng dụng bên kia phải trả về một phản hồi thành công một cách tường minh [^7].
 
-尽管如此，TCP 依然非常有用，因为它让我们能够方便地收发无法装进单个数据包的消息。建立 TCP 连接后，还可以通过同一条连接发送多个请求和响应。通常的做法是先发送一个头部，注明紧随其后的消息有多少字节，再发送消息本身。HTTP 和许多 RPC 协议（参见 [“流经服务的数据流：REST 与 RPC”](/ch5#sec_encoding_dataflow_rpc)）都是这样工作的。
+Dù vậy, TCP vẫn rất hữu ích vì nó giúp ta dễ dàng gửi và nhận những thông điệp không vừa trong một gói tin. Sau khi thiết lập kết nối TCP, ta còn có thể gửi nhiều yêu cầu và phản hồi qua cùng kết nối đó. Cách làm thông thường là gửi một header cho biết thông điệp theo sau dài bao nhiêu byte, rồi mới gửi chính thông điệp. HTTP và nhiều giao thức RPC (xem ["Luồng dữ liệu qua dịch vụ: REST và RPC"](/ch5#sec_encoding_dataflow_rpc)) hoạt động như vậy.
 
-### 实践中的网络故障 {#sec_distributed_network_faults}
+### Lỗi mạng trong thực tế {#sec_distributed_network_faults}
 
-我们建设计算机网络已有几十年，按说早该找到让网络可靠的办法了。遗憾的是，我们至今仍未成功。系统性研究与大量轶事证据都表明，即使在由一家公司运营的数据中心这类受控环境中，网络问题也可能频繁得出人意料 [^8]：
+Ta đã xây dựng mạng máy tính từ nhiều thập kỷ nay, lẽ ra đã tìm ra cách làm cho mạng đáng tin cậy từ lâu. Tiếc là đến giờ ta vẫn chưa thành công. Các nghiên cứu có hệ thống lẫn nhiều bằng chứng giai thoại đều cho thấy, ngay cả trong môi trường được kiểm soát như trung tâm dữ liệu do một công ty vận hành, sự cố mạng cũng có thể thường xuyên đến bất ngờ: [^8]
 
-* 一项针对中型数据中心的研究发现，每月大约会发生 12 次网络故障，其中一半会断开一台机器，另一半则会断开整个机架 [^9]。
-* 另一项研究测量了架顶交换机、汇聚交换机和负载均衡器等组件的失效率 [^10]。研究发现，增加冗余网络设备并不能像预想的那样大幅减少故障，因为它防不住人为错误（例如交换机配置错误），而人为错误正是停机的一大主因。
-* 广域光纤链路的中断曾被归咎于奶牛 [^11]、海狸 [^12] 和鲨鱼 [^13]（不过随着海底电缆的防护改善，鲨鱼咬坏电缆的事件已经越来越少 [^14]）。当然，人类也难辞其咎：误配置 [^15]、盗割电缆 [^16] 和蓄意破坏 [^17] 都曾造成事故。
-* 在不同云区域之间的通信中，高百分位数的往返时间最长可达数 *分钟* [^18]。即使在同一个数据中心内，交换机软件升级出现问题并触发网络拓扑重配置时，数据包也可能延迟一分钟以上 [^19]。因此，我们必须假定消息可能遭到任意长时间的延迟。
-* 有时通信只会部分中断，能否连通取决于通信双方是谁。例如，A 与 B 可以通信，B 与 C 也可以通信，但 A 与 C 却无法通信 [^20] [^21]。还有些故障更出人意料，比如某个网络接口有时会丢弃所有入站数据包，却仍能正常发出数据包 [^22]：网络链路在一个方向上可用，并不保证反方向也可用。
-* 即使网络中断只持续了很短时间，其后续影响也可能远远长于最初的问题 [^8] [^20] [^23]。
+* Một nghiên cứu về trung tâm dữ liệu cỡ vừa cho thấy mỗi tháng xảy ra khoảng 12 sự cố mạng, trong đó một nửa làm đứt kết nối một máy, nửa còn lại làm đứt cả một rack [^9].
+* Một nghiên cứu khác đo tỷ lệ hỏng của các thành phần như switch top-of-rack, switch tổng hợp và bộ cân bằng tải [^10]. Nghiên cứu thấy rằng thêm thiết bị mạng dự phòng không giảm sự cố nhiều như kỳ vọng, vì nó không chống được lỗi do con người (như cấu hình switch sai), vốn là nguyên nhân chính gây gián đoạn dịch vụ.
+* Các vụ đứt đường truyền cáp quang diện rộng từng bị quy cho bò [^11], hải ly [^12] và cá mập [^13] (dù nhờ cáp biển được bảo vệ tốt hơn, các vụ cá mập cắn cáp ngày càng ít [^14]). Dĩ nhiên con người cũng không vô can: cấu hình sai [^15], trộm cắp cáp [^16] và phá hoại [^17] đều từng gây sự cố.
+* Với liên lạc giữa các vùng đám mây khác nhau, thời gian round-trip ở các phân vị cao có thể lên tới vài *phút* [^18]. Ngay trong một trung tâm dữ liệu, gói tin cũng có thể bị trễ hơn một phút khi nâng cấp phần mềm switch gặp vấn đề và kích hoạt cấu hình lại topology mạng [^19]. Vì vậy ta phải giả định rằng thông điệp có thể bị trễ lâu tùy ý.
+* Đôi khi liên lạc chỉ bị đứt một phần, tùy thuộc hai bên đang giao tiếp là ai. Chẳng hạn A và B liên lạc được, B và C liên lạc được, nhưng A và C thì không [^20] [^21]. Có những lỗi còn bất ngờ hơn, ví dụ một card mạng đôi khi bỏ mọi gói tin đến nhưng vẫn gửi gói tin đi bình thường: [^22] đường truyền chạy được ở một chiều không bảo đảm chiều ngược lại cũng chạy được.
+* Ngay cả khi mạng chỉ gián đoạn trong thời gian rất ngắn, hệ quả của nó có thể kéo dài hơn nhiều so với sự cố ban đầu [^8] [^20] [^23].
 
 
-> [!TIP] 网络分区
+> [!TIP] Network partition
 >
-> 当网络的一部分因网络故障而与其余部分隔绝时，这种情况有时称为 *网络分区*（*network partition*）或 *网络分裂*（*netsplit*），但它与其他类型的网络中断并没有本质区别。网络分区与存储系统的分片无关，后者有时也称为 *分区*（参见 [第 7 章](/ch7#ch_sharding)）。
+> Khi một phần của mạng bị cắt khỏi phần còn lại do sự cố mạng, tình huống này đôi khi được gọi là *network partition* hoặc *netsplit*, nhưng về bản chất nó không khác các loại gián đoạn mạng khác. Network partition không liên quan đến việc shard hóa một hệ thống lưu trữ, vốn đôi khi cũng gọi là *partition* (xem [Chương 7](/ch7#ch_sharding)).
 
 
-即使你的环境很少遇到网络故障，故障 *有可能* 发生这一事实也意味着软件必须能够处理它。只要通过网络通信，就有可能失败——这一点无可回避。
+Ngay cả khi môi trường của bạn hiếm khi gặp sự cố mạng, việc sự cố *có thể* xảy ra đồng nghĩa với việc phần mềm phải xử lý được chúng. Hễ giao tiếp qua mạng là có thể thất bại — không tránh được điều đó.
 
-如果没有明确定义并测试网络故障的处理方式，后果可能糟到没有下限。例如，即使网络已经恢复，集群仍可能陷入死锁，从此无法再处理请求 [^24]；甚至还可能删掉你的全部数据 [^25]。一旦软件落入设计者未曾预料的情形，它就可能做出任何出人意料的事情。
+Nếu cách xử lý sự cố mạng không được định nghĩa và kiểm thử rõ ràng, hậu quả có thể tệ không đáy. Chẳng hạn, cluster có thể rơi vào deadlock và vĩnh viễn không phục vụ được yêu cầu nữa, kể cả khi mạng đã hồi phục [^24], thậm chí còn có thể xóa sạch dữ liệu của bạn [^25]. Khi phần mềm rơi vào tình huống mà người thiết kế không lường trước, nó có thể làm bất cứ điều gì bất ngờ.
 
-处理网络故障不一定意味着要 *容忍* 它。如果网络通常相当可靠，那么在发生网络问题时直接向用户显示错误消息，也可以是一种合理策略。不过，你必须知道软件会如何应对网络问题，并确保系统能够从中恢复。可以考虑有意触发网络问题，测试系统会如何反应（这叫作 *故障注入*，*fault injection*；参见 [“故障注入”](/ch9#sec_fault_injection)）。
+Xử lý sự cố mạng không nhất thiết là *chịu đựng* nó. Nếu mạng thường khá đáng tin cậy, hiển thị thông báo lỗi cho người dùng khi mạng có vấn đề cũng có thể là chiến lược hợp lý. Tuy nhiên, bạn phải biết phần mềm sẽ phản ứng thế nào với sự cố mạng và bảo đảm hệ thống phục hồi được. Có thể cố tình gây ra sự cố mạng để kiểm thử xem hệ thống phản ứng ra sao (đây gọi là *chèn lỗi* (*fault injection*), xem ["Chèn lỗi"](/ch9#sec_fault_injection)).
 
-### 故障检测 {#id307}
+### Phát hiện lỗi {#id307}
 
-许多系统需要自动检测发生故障的节点。例如：
+Nhiều hệ thống cần tự động phát hiện node bị hỏng. Ví dụ:
 
-* 负载均衡器需要停止向已经宕机的节点发送请求（也就是把它 *移出轮询池*）。
-* 在采用单主复制的分布式数据库中，如果领导者失效，就需要把某个追随者提升为新的领导者（参见 [“处理节点故障”](/ch6#sec_replication_failover)）。
+* Bộ cân bằng tải cần ngừng gửi yêu cầu đến các node đã chết (tức là *loại nó khỏi vòng xoay*, take out of rotation).
+* Trong cơ sở dữ liệu phân tán dùng sao chép đơn leader (*single-leader replication*), nếu leader hỏng thì cần nâng một follower lên làm leader mới (xem ["Xử lý sự cố node"](/ch6#sec_replication_failover)).
 
-遗憾的是，网络的不确定性让人很难判断节点是否仍在工作。在某些特定情况下，你也许能收到明确表明某处出了问题的反馈：
+Tiếc là sự bất định của mạng khiến rất khó biết một node còn hoạt động hay không. Trong một số trường hợp cụ thể, bạn có thể nhận được phản hồi rõ ràng cho biết có chỗ nào đó hỏng:
 
-* 如果运行节点的机器可以访问，但目标端口没有进程监听（例如进程已经崩溃），操作系统会返回 `RST` 或 `FIN` 数据包，从而关闭或拒绝 TCP 连接。
-* 如果节点进程崩溃（或被管理员终止），但节点的操作系统仍在运行，可以由脚本把崩溃消息通知其他节点，让另一个节点不必等待超时便能迅速接管。例如，HBase 就采用这种方式 [^26]。
-* 如果你能访问数据中心里网络交换机的管理接口，就可以查询交换机，在硬件层面检测链路故障（例如远程机器是否已经断电）。但如果你通过互联网连接、身处无法访问交换机本身的共享数据中心，或是网络问题使管理接口也无法访问，这种办法就行不通了。
-* 如果路由器确信你要连接的 IP 地址不可达，它可能会返回一个 ICMP“目标不可达”数据包。不过，路由器也没有什么神奇的故障检测能力——它同样受到网络中其他参与者所面对的那些限制。
+* Nếu máy chạy node vẫn truy cập được nhưng không có tiến trình nào lắng nghe ở cổng đích (ví dụ tiến trình đã sập), hệ điều hành sẽ đóng hoặc từ chối kết nối TCP bằng gói `RST` hoặc `FIN`.
+* Nếu tiến trình của node sập (hoặc bị quản trị viên kill) nhưng hệ điều hành của node vẫn chạy, một script có thể thông báo sự cố cho các node khác để node khác tiếp quản nhanh chóng mà không phải chờ timeout. Ví dụ HBase làm như vậy [^26].
+* Nếu có quyền truy cập giao diện quản trị của các switch mạng trong trung tâm dữ liệu, bạn có thể truy vấn switch để phát hiện lỗi đường truyền ở mức phần cứng (ví dụ máy ở xa đã mất điện chưa). Cách này không dùng được nếu bạn kết nối qua Internet, nếu bạn ở trong một trung tâm dữ liệu dùng chung mà không truy cập được chính các switch, hoặc nếu sự cố mạng khiến cả giao diện quản trị cũng không truy cập được.
+* Nếu router biết chắc địa chỉ IP bạn định kết nối không truy cập được, nó có thể trả về gói ICMP "Destination Unreachable". Nhưng router cũng không có khả năng phát hiện lỗi thần kỳ nào — nó chịu cùng những hạn chế như mọi thành phần khác trong mạng.
 
-能够迅速得知远程节点宕机固然有用，但不能指望总有这样的反馈。发生问题时，你或许会从协议栈的某一层收到错误响应，但通常必须假定自己什么响应也收不到。你可以重试几次，等待超时；如果超时时间内一直没有回复，最终便宣告该节点已经死亡。
+Biết nhanh một node ở xa đã chết là hữu ích, nhưng không thể trông chờ lúc nào cũng có phản hồi như vậy. Khi có sự cố, bạn có thể nhận phản hồi lỗi từ một tầng nào đó của ngăn xếp giao thức, nhưng thường phải giả định là mình sẽ không nhận được gì. Bạn có thể thử lại vài lần, chờ timeout, và nếu trong thời gian timeout không có phản hồi thì cuối cùng tuyên bố node đã chết.
 
-### 超时和无界延迟 {#sec_distributed_queueing}
+### Timeout và độ trễ không giới hạn {#sec_distributed_queueing}
 
-如果超时是检测故障的唯一可靠方法，那么超时时间应该设为多长？遗憾的是，这个问题没有简单答案。
+Nếu timeout là cách đáng tin duy nhất để phát hiện lỗi, thì nên đặt timeout bao lâu? Tiếc là không có câu trả lời đơn giản.
 
-较长的超时意味着要等很久才能宣告节点死亡（在此期间，用户可能只能等待，或不断看到错误消息）。较短的超时可以更快发现故障，却更容易把只是暂时变慢的节点（例如节点或网络出现负载峰值）误判为死亡。
+Timeout dài nghĩa là phải chờ lâu mới tuyên bố một node đã chết (trong thời gian đó, người dùng có thể phải chờ hoặc liên tục thấy thông báo lỗi). Timeout ngắn phát hiện lỗi nhanh hơn, nhưng dễ tuyên bố nhầm một node chỉ đang chậm tạm thời (ví dụ do node hoặc mạng tăng tải đột ngột) là đã chết.
 
-过早宣告节点死亡会带来麻烦：如果节点其实仍然活着，并且正在执行某个操作（例如发送电子邮件），此时另一个节点又接管了它的工作，同一个操作最终可能执行两次。我们将在 [“知识、真相和谎言”](/ch9#sec_distributed_truth)、[第 10 章](/ch10#ch_consistency) 以及 [“数据库的端到端原则”](/ch13#sec_future_end_to_end) 中更详细地讨论这个问题。
+Tuyên bố node chết quá sớm là rắc rối: nếu node thật ra vẫn sống và đang thực hiện một thao tác (chẳng hạn gửi email), mà node khác lại tiếp quản công việc của nó, thì thao tác đó có thể bị thực hiện hai lần. Ta sẽ bàn chi tiết hơn về vấn đề này ở ["Tri thức, sự thật và lời nói dối"](/ch9#sec_distributed_truth), [Chương 10](/ch10#ch_consistency) và ["Nguyên lý end-to-end của cơ sở dữ liệu"](/ch13#sec_future_end_to_end).
 
-宣告节点死亡后，它承担的职责就要转移给其他节点，这会额外增加其他节点和网络的负担。如果系统本来就在高负载下勉力支撑，过早宣告节点死亡可能让局面进一步恶化。尤其可能出现这样的情况：节点其实没有死，只是过载导致响应缓慢；把它的负载转移给其他节点，又可能引发级联失效（极端情况下，所有节点互相宣告对方死亡，整个系统彻底停止工作——参见 [“当过载系统无法恢复时”](/ch2#sidebar_metastable)）。
+Khi một node bị tuyên bố đã chết, trách nhiệm của nó phải chuyển sang các node khác, làm tăng tải cho các node đó và cho mạng. Nếu hệ thống vốn đã đang gồng mình dưới tải cao, việc tuyên bố node chết quá sớm có thể làm tình hình tệ hơn. Đặc biệt, có thể xảy ra tình huống node thật ra chưa chết, chỉ phản hồi chậm vì quá tải. Khi đó, chuyển tải của nó sang các node khác lại có thể gây lỗi dây chuyền (trong trường hợp cực đoan, mọi node đều tuyên bố nhau đã chết và cả hệ thống ngừng hoạt động hoàn toàn — xem ["Khi hệ thống quá tải không thể phục hồi"](/ch2#sidebar_metastable)).
 
-设想一个虚构的系统，其网络保证数据包的最大延迟：每个数据包要么在时间 *d* 以内送达，要么丢失，绝不会在超过 *d* 之后才送达。再假定我们能够保证，任何尚未失效的节点总会在时间 *r* 以内处理完请求。在这种情况下，每个成功的请求都能保证在 2 *d* + *r* 以内收到响应；如果过了这么久仍未收到响应，就可以断定网络或远程节点没有正常工作。假如这些保证真的成立，那么 2 *d* + *r* 就是合理的超时时间。
+Hãy hình dung một hệ thống giả tưởng có mạng bảo đảm độ trễ tối đa của gói tin: mỗi gói tin hoặc được chuyển đến trong vòng thời gian *d*, hoặc bị mất, không bao giờ đến sau quá *d*. Giả sử ta cũng có thể bảo đảm rằng bất kỳ node nào chưa hỏng đều xử lý xong một yêu cầu trong vòng thời gian *r*. Khi đó, mọi yêu cầu thành công đều được bảo đảm nhận phản hồi trong vòng 2*d* + *r*, và nếu quá thời gian đó vẫn chưa có phản hồi, ta biết chắc mạng hoặc node ở xa đang không hoạt động bình thường. Nếu các bảo đảm này thật sự đúng thì 2*d* + *r* sẽ là timeout hợp lý.
 
-遗憾的是，我们使用的大多数系统都不具备上述任何一项保证：异步网络具有 *无界延迟*（*unbounded delay*；也就是说，它会尽快尝试送达数据包，但数据包所需的传输时间没有上限），大多数服务器实现也不能保证一定在某个最长时间内处理完请求（参见 [“响应时间保证”](/ch9#sec_distributed_clocks_realtime)）。对故障检测而言，系统仅仅在大多数时候运行得很快还不够：如果超时时间设得很短，一次短暂的往返时间尖峰就足以打乱整个系统。
+Tiếc là hầu hết các hệ thống ta dùng đều không có bảo đảm nào trong số trên: mạng bất đồng bộ có *độ trễ không giới hạn* (*unbounded delay*), tức là mạng cố gắng chuyển gói tin nhanh nhất có thể nhưng thời gian cần để gói tin đến không có cận trên, và phần lớn các bản hiện thực server cũng không thể bảo đảm xử lý xong yêu cầu trong một thời gian tối đa nào đó (xem ["Bảo đảm thời gian phản hồi"](/ch9#sec_distributed_clocks_realtime)). Với việc phát hiện lỗi, chỉ chạy nhanh ở phần lớn thời gian là chưa đủ: nếu đặt timeout thấp, một đợt tăng vọt ngắn của thời gian round-trip cũng đủ làm hệ thống rối loạn.
 
 <a id="sec_distributed_congestion"></a>
 
-#### 网络拥塞与排队 {#network-congestion-and-queueing}
+#### Tắc nghẽn mạng và xếp hàng {#network-congestion-and-queueing}
 
-开车出行时，交通拥堵往往是造成行程时间波动的最大因素。同样，在计算机网络上，数据包延迟的变化通常也是排队造成的 [^27]：
+Khi lái xe, kẹt xe thường là yếu tố lớn nhất khiến thời gian di chuyển dao động. Tương tự, trên mạng máy tính, sự biến thiên của độ trễ gói tin thường do xếp hàng gây ra: [^27]
 
-* 如果多个节点同时向同一个目的地发送数据包，网络交换机就必须让这些数据包排队，再逐一送入通往目的地的网络链路（如 {{< xref fig="9-2" page="/ch9" anchor="fig_distributed_switch_queueing" >}}图 9-2{{< /xref >}} 所示）。网络链路繁忙时，数据包可能需要等待一段时间才能获得发送机会，这叫作 *网络拥塞*（*network congestion*）。如果流入的数据太多，交换机队列被塞满，数据包就会被丢弃，因而必须重发——即使网络本身仍在正常工作。
-* 数据包抵达目标机器时，如果所有 CPU 核心都在忙，操作系统会把来自网络的请求放进队列，直到应用程序有能力处理为止。等待时间取决于机器的负载，可能任意之长 [^28]。
-* 在虚拟化环境中，当另一台虚拟机占用某个 CPU 核心时，正在运行的操作系统常常会暂停数十毫秒。在此期间，虚拟机无法消费任何网络数据，因此虚拟机监控器会将流入的数据排队（缓冲）[^29]，进一步增大网络延迟的波动。
-* 如前所述，为避免网络过载，TCP 会限制数据的发送速率。这意味着数据甚至还没进入网络，就已经在发送方额外排了一次队。
+* Nếu nhiều node cùng gửi gói tin đến một đích, switch mạng phải xếp chúng vào hàng đợi rồi đưa lần lượt vào đường truyền tới đích (như minh họa ở {{< xref fig="9-2" page="/ch9" anchor="fig_distributed_switch_queueing" >}}Hình 9-2{{< /xref >}}). Khi đường truyền bận, gói tin có thể phải chờ một lúc mới được gửi. Hiện tượng này gọi là *tắc nghẽn mạng* (*network congestion*). Nếu dữ liệu đến quá nhiều, hàng đợi của switch đầy và gói tin bị bỏ, phải gửi lại — dù mạng vẫn đang hoạt động bình thường.
+* Khi gói tin đến máy đích, nếu mọi lõi CPU đều đang bận, hệ điều hành xếp yêu cầu từ mạng vào hàng đợi cho đến khi ứng dụng sẵn sàng xử lý. Thời gian chờ tùy thuộc tải của máy, có thể dài tùy ý [^28].
+* Trong môi trường ảo hóa, khi một máy ảo khác chiếm một lõi CPU, hệ điều hành đang chạy thường bị tạm dừng vài chục mili giây. Trong thời gian đó, máy ảo không tiêu thụ được dữ liệu mạng nào, nên hypervisor xếp hàng (đệm) dữ liệu đến [^29], làm độ trễ mạng càng dao động mạnh.
+* Như đã nói, để tránh làm mạng quá tải, TCP giới hạn tốc độ gửi dữ liệu. Nghĩa là dữ liệu còn phải xếp hàng thêm một lần ở bên gửi trước khi vào mạng.
 
-{{< fig num="9-2" id="fig_distributed_switch_queueing" src="/fig/ddia_0902.png" caption="多台机器向同一个目的地发送网络流量时，交换机队列可能被塞满。图中端口 1、2 和 4 都在尝试向端口 3 发送数据包。" class="ddia-figure ddia-figure--wide" width="2880" height="1081" />}}
+{{< fig num="9-2" id="fig_distributed_switch_queueing" src="/fig/ddia_0902.png" caption="Khi nhiều máy gửi lưu lượng mạng đến cùng một đích, hàng đợi của switch có thể bị lấp đầy. Ở đây, các cổng 1, 2 và 4 đều đang cố gửi gói tin đến cổng 3." class="ddia-figure ddia-figure--wide" width="2880" height="1081" />}}
 
-此外，当 TCP 检测到数据包丢失并自动重传时，应用程序虽然不会直接看到丢包，却会感受到由此造成的延迟：先等待超时，再等待重传的数据包得到确认。
+Ngoài ra, khi TCP phát hiện gói tin bị mất và tự động truyền lại, ứng dụng tuy không trực tiếp thấy việc mất gói nhưng vẫn cảm nhận được độ trễ do nó gây ra: trước hết chờ timeout, rồi chờ gói được truyền lại được xác nhận.
 
 
 <a id="sidebar_distributed_tcp_udp"></a>
 
-> [!TIP] TCP 与 UDP
+> [!TIP] TCP và UDP
 >
-> 一些对延迟敏感的应用程序（例如视频会议和 IP 语音，即 VoIP）使用 UDP 而非 TCP。这是在可靠性与延迟波动之间做出的权衡：UDP 不进行流量控制，也不重传丢失的数据包，因而避开了网络延迟发生波动的部分原因（不过，它仍会受到交换机排队和调度延迟的影响）。
+> Một số ứng dụng nhạy cảm với độ trễ, như hội nghị truyền hình và thoại qua IP (VoIP), dùng UDP thay vì TCP. Đây là sự đánh đổi giữa độ tin cậy và độ dao động của độ trễ: UDP không kiểm soát luồng và không truyền lại gói tin bị mất, nên tránh được một phần nguyên nhân khiến độ trễ mạng dao động (tuy nhiên nó vẫn chịu ảnh hưởng của việc xếp hàng ở switch và độ trễ lập lịch).
 >
-> 如果数据一旦延迟就不再有价值，UDP 是很好的选择。例如在 VoIP 通话中，等到音频该从扬声器播放时，通常已经来不及重传丢失的数据包。这种情况下，重传毫无意义——应用程序只能用静音填补丢失数据包对应的时间片（听起来就是声音短暂中断），然后继续播放后面的音频。真正的重试发生在人这一层。（“能再说一遍吗？刚才声音断了一下。”）
+> UDP là lựa chọn tốt khi dữ liệu trễ thì không còn giá trị. Chẳng hạn trong cuộc gọi VoIP, khi đến lúc phát đoạn âm thanh ra loa thì thường đã quá muộn để truyền lại gói bị mất. Khi đó, truyền lại là vô nghĩa — ứng dụng chỉ có thể điền khoảng im lặng vào khoảng thời gian của gói bị mất (nghe như âm thanh ngắt quãng một chút) rồi phát tiếp phần sau. Việc "thử lại" thực sự diễn ra ở tầng con người. ("Bạn nói lại được không? Vừa nãy bị ngắt tiếng.")
 
 
-上述因素都会造成网络延迟的波动。当系统接近最大容量时，排队延迟的变化范围尤其大：拥有充足余量的系统可以轻松排空队列，而利用率很高的系统则可能迅速积起长队。
+Mọi yếu tố trên đều góp phần làm độ trễ mạng dao động. Khi hệ thống gần đạt công suất tối đa, biên độ biến thiên của độ trễ xếp hàng đặc biệt lớn: hệ thống còn nhiều dư địa dễ dàng xả hết hàng đợi, còn hệ thống có mức sử dụng cao có thể nhanh chóng dồn thành hàng đợi dài.
 
-在公共云和多租户数据中心中，许多客户共享同一批资源：网络链路和交换机是共享的，甚至每台机器的网络接口和 CPU（使用虚拟机时）也是共享的。处理大量数据时，可能耗尽网络链路的全部容量，使其达到 *饱和*（*saturation*）。你既无法控制，也无法了解其他客户如何使用共享资源；如果附近某个 *吵闹的邻居*（*noisy neighbor*）正在大量消耗资源，网络延迟就可能剧烈波动 [^30] [^31]。
+Trong đám mây công cộng và các trung tâm dữ liệu đa người thuê, nhiều khách hàng dùng chung tài nguyên: đường truyền và switch mạng được dùng chung, thậm chí cả card mạng và CPU của từng máy (khi dùng máy ảo) cũng dùng chung. Khi xử lý lượng dữ liệu lớn, có thể dùng hết dung lượng của đường truyền, khiến nó đạt trạng thái *bão hòa* (*saturation*). Bạn không thể kiểm soát hay biết khách hàng khác dùng tài nguyên chung ra sao, nên nếu ai đó ở gần bạn (một *noisy neighbor*) đang tiêu thụ nhiều tài nguyên, độ trễ mạng có thể dao động dữ dội [^30] [^31].
 
-在这样的环境中，只能通过实验来选择超时时间：长期测量大量机器之间网络往返时间的分布，确定延迟通常会有多大波动。然后结合应用程序自身的特点，在故障检测的延迟与过早超时的风险之间做出适当权衡。
+Trong môi trường như vậy, chỉ có thể chọn timeout bằng thực nghiệm: đo phân phối thời gian round-trip của mạng giữa nhiều máy trong thời gian dài để xác định độ trễ thường dao động bao nhiêu. Sau đó, dựa trên đặc điểm của ứng dụng, xác định sự đánh đổi phù hợp giữa độ trễ phát hiện lỗi và rủi ro timeout sớm.
 
-更好的办法是不用固定配置的超时时间，而让系统持续测量响应时间及其波动（*抖动*，*jitter*），再根据观测到的响应时间分布自动调整超时。Phi 累积故障检测器 [^32] 就采用了这种方法，Akka 和 Cassandra 等系统都在使用它 [^33]。TCP 的重传超时也以类似方式工作 [^5]。
+Tốt hơn nữa là không dùng timeout cấu hình cố định, mà để hệ thống liên tục đo thời gian phản hồi và độ dao động của nó (*jitter*), rồi tự điều chỉnh timeout theo phân phối thời gian phản hồi quan sát được. Phi accrual failure detector [^32] dùng cách này, và được các hệ thống như Akka và Cassandra sử dụng [^33]. Timeout truyền lại của TCP cũng hoạt động theo cách tương tự [^5].
 
-### 同步网络与异步网络 {#sec_distributed_sync_networks}
+### Mạng đồng bộ và mạng bất đồng bộ {#sec_distributed_sync_networks}
 
-如果可以指望网络在某个固定的最长延迟内送达数据包，而且绝不丢包，分布式系统就会简单得多。为什么不能在硬件层面解决这个问题，让网络变得可靠，从而使软件不必再操心呢？
+Nếu có thể trông cậy mạng chuyển gói tin trong một độ trễ tối đa cố định và không bao giờ mất gói, hệ thống phân tán sẽ đơn giản hơn nhiều. Tại sao không giải quyết vấn đề này ở tầng phần cứng, làm cho mạng đáng tin cậy để phần mềm khỏi phải bận tâm?
 
-要回答这个问题，不妨把数据中心网络与传统的固定电话网络（非蜂窝网络，也非 VoIP）比较一下。传统电话网络极其可靠：音频帧延迟和通话中断都很罕见。电话通话需要持续保持较低的端到端延迟，并提供足够带宽来传输语音采样。如果计算机网络也能具备类似的可靠性与可预测性，岂不是很好？
+Để trả lời, hãy so sánh mạng trung tâm dữ liệu với mạng điện thoại cố định truyền thống (không phải di động, cũng không phải VoIP). Mạng điện thoại truyền thống cực kỳ đáng tin cậy: khung âm thanh bị trễ hay cuộc gọi bị rớt rất hiếm. Cuộc gọi cần độ trễ đầu cuối thấp ổn định và đủ băng thông để truyền mẫu giọng nói. Nếu mạng máy tính cũng có độ tin cậy và khả năng dự đoán như vậy thì tốt biết bao?
 
-通过电话网络拨号时，网络会建立一条 *电路*（*circuit*）：从一名通话者到另一名通话者的整条路径上，都会为这次通话分配固定且有保证的带宽。这条电路会一直保留到通话结束 [^34]。例如，ISDN 网络以每秒 4,000 帧的固定速率运行。建立通话时，每一帧都会在两个方向上各分配 16 位空间。因此在整个通话期间，双方都能保证每 250 微秒恰好发送 16 位音频数据 [^35]。
+Khi gọi điện qua mạng điện thoại, mạng thiết lập một *circuit*: trên toàn bộ đường đi từ người gọi này đến người gọi kia, một lượng băng thông cố định và được bảo đảm được cấp riêng cho cuộc gọi. Circuit này được giữ đến khi cuộc gọi kết thúc [^34]. Ví dụ, mạng ISDN chạy ở tốc độ cố định 4.000 khung mỗi giây. Khi thiết lập cuộc gọi, cuộc gọi được cấp 16 bit chỗ trong mỗi khung (ở mỗi chiều). Vì vậy, trong suốt cuộc gọi, mỗi bên được bảo đảm gửi đúng 16 bit dữ liệu âm thanh mỗi 250 micro giây [^35].
 
-这类网络是 *同步的*（*synchronous*）：即使数据要经过多台路由器，也不会排队，因为每一跳都已经为这次通话预留了 16 位的空间。由于无需排队，网络的最大端到端延迟是固定的。我们称之为 *有界延迟*（*bounded delay*）。
+Mạng kiểu này là *đồng bộ* (*synchronous*): dù dữ liệu đi qua nhiều router, nó cũng không phải xếp hàng, vì mỗi chặng đã dành sẵn 16 bit cho cuộc gọi. Vì không cần xếp hàng nên độ trễ đầu cuối tối đa của mạng là cố định. Ta gọi đó là *độ trễ có giới hạn* (*bounded delay*).
 
-#### 我们不能简单地让网络延迟可预测吗？ {#can-we-not-simply-make-network-delays-predictable}
+#### Sao không làm cho độ trễ mạng dự đoán được? {#can-we-not-simply-make-network-delays-predictable}
 
-注意，电话网络中的电路与 TCP 连接截然不同：电路会预留固定数量的带宽，只要电路存在，其他人就无法使用这部分带宽；TCP 连接的数据包则会伺机利用当时可用的任意网络带宽。你可以交给 TCP 一块大小不定的数据（例如电子邮件或网页），它会尽力在最短时间内传输完毕。TCP 连接空闲时不会占用带宽，偶尔发送的保活包除外。
+Lưu ý circuit trong mạng điện thoại rất khác kết nối TCP: circuit dành riêng một lượng băng thông cố định, người khác không dùng được phần đó khi circuit còn tồn tại, còn gói tin của kết nối TCP tận dụng bất cứ băng thông mạng nào đang rảnh. Bạn có thể đưa cho TCP một khối dữ liệu có kích thước bất kỳ (như email hay trang web) và nó sẽ cố truyền xong trong thời gian ngắn nhất. Khi kết nối TCP nhàn rỗi, nó không chiếm băng thông, trừ các gói keepalive thỉnh thoảng gửi.
 
-如果数据中心网络和互联网采用电路交换，那么建立电路时就可以同时确定有保证的最大往返时间。但它们并非如此：以太网和 IP 都是分组交换协议，数据包会排队，因而网络延迟没有上界。这些协议中根本没有“电路”的概念。
+Nếu mạng trung tâm dữ liệu và Internet dùng chuyển mạch kênh, ta có thể xác định một thời gian round-trip tối đa được bảo đảm ngay khi thiết lập circuit. Nhưng chúng không như vậy: Ethernet và IP là các giao thức chuyển mạch gói, gói tin phải xếp hàng nên độ trễ mạng không có cận trên. Trong các giao thức này hoàn toàn không có khái niệm "circuit".
 
-为什么数据中心网络和互联网要使用分组交换？因为它们针对 *突发流量*（*bursty traffic*）做了优化。音频或视频通话在整个通话期间每秒传输的位数相当稳定，很适合使用电路。相比之下，请求网页、发送电子邮件或传输文件并没有特定的带宽要求——我们只希望它们尽快完成。
+Vì sao mạng trung tâm dữ liệu và Internet dùng chuyển mạch gói? Vì chúng được tối ưu cho *lưu lượng đột biến* (*bursty traffic*). Cuộc gọi âm thanh hay video truyền một lượng bit mỗi giây khá ổn định trong suốt cuộc gọi, rất hợp với circuit. Ngược lại, yêu cầu một trang web, gửi email hay truyền tệp không có yêu cầu băng thông cụ thể — ta chỉ muốn chúng hoàn tất càng nhanh càng tốt.
 
-如果要通过电路传输文件，就必须先猜测应当分配多少带宽。猜得太低，传输速度会慢得毫无必要，同时还有网络容量闲置；猜得太高，电路又无法建立，因为网络不能为无法保证带宽分配的电路放行。因此，用电路传输突发数据既浪费网络容量，又使传输无谓地变慢。TCP 则不同，它会根据可用的网络容量动态调整数据传输速率。
+Nếu truyền tệp qua circuit, bạn phải đoán trước cần cấp bao nhiêu băng thông. Đoán thấp thì truyền chậm không cần thiết, lại còn bỏ phí dung lượng mạng. Đoán cao thì không thiết lập được circuit, vì mạng không cho phép tạo circuit khi không bảo đảm được phần băng thông đã cấp. Vì vậy, dùng circuit cho dữ liệu đột biến vừa lãng phí dung lượng mạng vừa làm việc truyền chậm đi vô ích. TCP thì khác: nó điều chỉnh động tốc độ truyền dữ liệu theo dung lượng mạng đang có.
 
-人们也曾尝试构建兼具电路交换与分组交换的混合网络。*异步传输模式*（*Asynchronous Transfer Mode*，ATM）在 20 世纪 80 年代曾与以太网竞争，但除了电话网络的核心交换机外，并未得到广泛采用。InfiniBand 与之有些相似 [^36]：它在链路层实现端到端流量控制，减少了网络排队的必要，不过链路拥塞仍可能带来延迟 [^37]。如果谨慎运用 *服务质量*（*quality of service*，QoS，即数据包的优先级与调度）和 *准入控制*（*admission control*，即对发送方限速），就可以在分组网络上模拟电路交换，或提供统计意义上的有界延迟 [^27] [^34]。低延迟、低丢包率和可伸缩吞吐量（L4S）等新型网络算法，试图从客户端和路由器两端缓解部分排队与拥塞控制问题。Linux 的流量控制器（TC）也允许应用程序为实现 QoS 而重新安排数据包的优先级。
+Cũng đã có những nỗ lực xây dựng mạng lai kết hợp cả chuyển mạch kênh và chuyển mạch gói. *Asynchronous Transfer Mode* (ATM) từng cạnh tranh với Ethernet vào thập niên 1980, nhưng ngoài các switch lõi của mạng điện thoại, nó chưa bao giờ được dùng rộng rãi. InfiniBand có phần tương tự: [^36] nó hiện thực kiểm soát luồng đầu cuối ở tầng liên kết, giảm nhu cầu xếp hàng trong mạng, dù tắc nghẽn trên đường truyền vẫn có thể gây trễ [^37]. Nếu vận dụng cẩn thận *chất lượng dịch vụ* (*quality of service*, QoS, tức độ ưu tiên và lập lịch gói tin) và *kiểm soát tiếp nhận* (*admission control*, tức giới hạn tốc độ của bên gửi), ta có thể mô phỏng chuyển mạch kênh trên mạng chuyển mạch gói, hoặc cung cấp độ trễ có giới hạn về mặt thống kê [^27] [^34]. Các thuật toán mạng mới như Low Latency, Low Loss, and Scalable Throughput (L4S) cố giải quyết một phần vấn đề xếp hàng và kiểm soát tắc nghẽn từ cả phía client lẫn router. Traffic controller (TC) của Linux cũng cho phép ứng dụng sắp xếp lại độ ưu tiên gói tin để đạt QoS.
 
 
 <a id="sidebar_distributed_latency_utilization"></a>
 
-> [!TIP] 延迟与资源利用率
+> [!TIP] Độ trễ và mức sử dụng tài nguyên
 >
-> 更一般地说，可以把延迟的波动看作动态划分资源的结果。
+> Nói chung, có thể xem sự dao động của độ trễ là kết quả của việc phân chia tài nguyên một cách động.
 >
-> 假设两台电话交换机之间有一条线路，最多可以承载 10,000 路并发通话。经这条线路交换的每条电路都会占用一个通话槽位。因此，可以把这条线路看作一项最多由 10,000 名并发用户共享的资源。资源以 *静态* 方式划分：即使现在整条线路上只有你这一通电话，另外 9,999 个槽位全部空闲，你的电路得到的仍然只是那份固定带宽，与线路满载时一模一样。
+> Giả sử có một đường dây giữa hai tổng đài điện thoại, chứa được tối đa 10.000 cuộc gọi đồng thời. Mỗi circuit được chuyển qua đường dây này chiếm một khe cuộc gọi. Vì vậy có thể coi đường dây là một tài nguyên được tối đa 10.000 người dùng đồng thời chia sẻ. Tài nguyên được chia theo cách *tĩnh*: dù lúc này cả đường dây chỉ có mỗi cuộc gọi của bạn, và 9.999 khe còn lại đều trống, circuit của bạn vẫn chỉ nhận phần băng thông cố định đó, y hệt lúc đường dây đầy tải.
 >
-> 相比之下，互联网以 *动态* 方式共享网络带宽。发送方彼此争抢，都想尽快把自己的数据包送上线路；网络交换机则随时决定接下来发送哪个数据包，也就是如何分配带宽。这种方法的缺点是会造成排队，优点则是能最大限度地利用线路。线路的成本是固定的，利用率越高，经由它发送的每个字节就越便宜。
+> Ngược lại, Internet chia sẻ băng thông mạng theo cách *động*. Các bên gửi chen lấn nhau để đưa gói tin của mình lên đường dây nhanh nhất có thể, còn switch mạng quyết định tại mỗi thời điểm gửi gói nào tiếp theo, tức là cách phân bổ băng thông. Cách này có nhược điểm là gây xếp hàng, nhưng ưu điểm là tận dụng tối đa đường dây. Đường dây có chi phí cố định, nên mức sử dụng càng cao thì mỗi byte gửi qua nó càng rẻ.
 >
-> CPU 也有类似的情况：如果多个线程动态共享一个 CPU 核心，那么当另一个线程正在运行时，某个线程有时就必须在操作系统的运行队列中等待，因而可能暂停长短不一的时间 [^38]。不过，与给每个线程静态分配固定数量的 CPU 周期相比，这样做能更充分地利用硬件（参见 [“响应时间保证”](/ch9#sec_distributed_clocks_realtime)）。为了提高硬件利用率，云平台也会在同一台物理机器上运行来自不同客户的多台虚拟机。
+> CPU cũng có tình huống tương tự: nếu nhiều thread chia sẻ động một lõi CPU thì đôi khi một thread phải chờ trong hàng đợi chạy của hệ điều hành trong lúc thread khác đang chạy, nên có thể bị tạm dừng trong những khoảng thời gian dài ngắn khác nhau [^38]. Tuy nhiên, so với việc cấp tĩnh cho mỗi thread một lượng chu kỳ CPU cố định, cách này tận dụng phần cứng tốt hơn (xem ["Bảo đảm thời gian phản hồi"](/ch9#sec_distributed_clocks_realtime)). Để nâng mức sử dụng phần cứng, nền tảng đám mây cũng chạy nhiều máy ảo của các khách hàng khác nhau trên cùng một máy vật lý.
 >
-> 在某些环境中，只要静态划分资源（例如采用专用硬件并分配独占带宽），就能提供延迟保证。但代价是资源利用率降低——换句话说，也就是成本更高。动态划分资源的多租户模式利用率更好，因此更便宜，代价则是延迟会发生波动。
+> Trong một số môi trường, chỉ cần chia tĩnh tài nguyên (ví dụ dùng phần cứng chuyên dụng với băng thông độc quyền) là có thể bảo đảm độ trễ. Nhưng cái giá là mức sử dụng tài nguyên thấp hơn — nói cách khác là chi phí cao hơn. Mô hình đa người thuê chia tài nguyên động có mức sử dụng tốt hơn nên rẻ hơn, đổi lại độ trễ dao động.
 >
-> 网络延迟会发生波动并非自然法则，只是成本与收益权衡的结果。
+> Độ trễ mạng dao động không phải quy luật tự nhiên, chỉ là kết quả của sự đánh đổi giữa chi phí và lợi ích.
 
 
-不过，多租户数据中心、公共云以及经由互联网的通信，目前都没有启用这样的服务质量机制。现有部署技术无法让我们对网络的延迟或可靠性作出任何保证：必须假定网络拥塞、排队和无界延迟都会发生。因此，超时时间没有所谓“正确”的取值，只能通过实验来确定。
+Tuy nhiên, các trung tâm dữ liệu đa người thuê, đám mây công cộng và giao tiếp qua Internet hiện chưa bật các cơ chế chất lượng dịch vụ như vậy. Công nghệ triển khai hiện nay không cho phép ta bảo đảm bất cứ điều gì về độ trễ hay độ tin cậy của mạng: phải giả định tắc nghẽn mạng, xếp hàng và độ trễ không giới hạn đều sẽ xảy ra. Do đó, không có giá trị timeout "đúng", mà phải xác định bằng thực nghiệm.
 
-互联网服务提供商之间的对等互联协议，以及通过边界网关协议（BGP）建立路由的方式，比 IP 本身更像电路交换。在这个层面上，确实可以买到专用带宽。不过，互联网路由工作在网络层面，而不是主机之间的单条连接层面，其时间尺度也长得多。
+Các thỏa thuận peering giữa nhà cung cấp dịch vụ Internet và cách thiết lập định tuyến qua Border Gateway Protocol (BGP) giống chuyển mạch kênh hơn so với chính IP. Ở tầng này, quả thật có thể mua băng thông dành riêng. Tuy nhiên, định tuyến Internet hoạt động ở cấp mạng chứ không phải cấp từng kết nối giữa các host, và trên thang thời gian dài hơn nhiều.
 
+## Đồng hồ không đáng tin cậy {#sec_distributed_clocks}
 
+Đồng hồ và thời gian rất quan trọng. Ứng dụng dựa vào đồng hồ theo đủ kiểu để trả lời những câu hỏi như:
 
-## 不可靠的时钟 {#sec_distributed_clocks}
+1. Yêu cầu này đã timeout chưa?
+2. Phân vị thứ 99 của thời gian phản hồi của dịch vụ này là bao nhiêu?
+3. Trong năm phút qua, trung bình dịch vụ này xử lý bao nhiêu truy vấn mỗi giây?
+4. Người dùng ở lại trang web của chúng ta bao lâu?
+5. Bài viết này được đăng lúc nào?
+6. Email nhắc nhở nên gửi vào ngày nào, giờ nào?
+7. Mục cache này hết hạn khi nào?
+8. Timestamp của thông báo lỗi này trong file log là gì?
 
-时钟和时间都很重要。应用程序会以各种方式依赖时钟，回答下面这些问题：
+Câu hỏi 1–4 đo một *khoảng thời gian* (*duration*), ví dụ khoảng cách từ lúc gửi yêu cầu đến lúc nhận phản hồi,, còn câu hỏi 5–8 mô tả một *thời điểm* (*point in time*), tức là sự kiện xảy ra vào một ngày giờ cụ thể.
 
-1. 这个请求已经超时了吗？
-2. 这项服务响应时间的第 99 百分位数是多少？
-3. 过去五分钟里，这项服务平均每秒处理多少次查询？
-4. 用户在我们的网站上停留了多长时间？
-5. 这篇文章是什么时候发布的？
-6. 提醒邮件应该在哪一天、什么时间发出？
-7. 这个缓存条目什么时候过期？
-8. 日志文件里这条错误消息的时间戳是什么？
+Trong hệ thống phân tán, thời gian là chuyện rắc rối vì giao tiếp không diễn ra tức thời: một thông điệp đi từ máy này sang máy khác qua mạng cần thời gian. Thời điểm nhận thông điệp luôn muộn hơn thời điểm gửi, nhưng vì độ trễ mạng thay đổi nên ta không biết muộn hơn bao nhiêu. Khi có nhiều máy tham gia, sự thật này đôi khi khiến việc xác định thứ tự các sự kiện trở nên khó khăn.
 
-问题 1～4 测量的是 *持续时间*（*duration*；例如从发送请求到收到响应之间的时间间隔），问题 5～8 描述的则是 *时间点*（*point in time*；在某个具体日期和时刻发生的事件）。
+Hơn nữa, mỗi máy trong mạng có đồng hồ riêng, và đó là một thiết bị phần cứng thực thụ, thường là bộ dao động tinh thể thạch anh. Các thiết bị này không thật chính xác, nên mỗi máy có một khái niệm riêng về thời gian, có thể chạy nhanh hơn hoặc chậm hơn đôi chút so với máy khác. Có thể đồng bộ đồng hồ ở một mức độ nhất định: cơ chế phổ biến nhất là Network Time Protocol (NTP), cho phép chỉnh đồng hồ máy tính theo thời gian do một nhóm server báo cáo [^39]. Các server này lại lấy thời gian từ nguồn chính xác hơn, như bộ thu GPS.
 
-在分布式系统中，时间是个棘手的问题，因为通信并非瞬间完成：消息从一台机器经网络传到另一台机器需要时间。收到消息的时刻必然晚于发出消息的时刻，但由于网络延迟会发生变化，我们不知道究竟晚了多少。涉及多台机器时，这一事实有时会让事件的先后顺序难以确定。
+### Đồng hồ đơn điệu và đồng hồ giờ trong ngày {#sec_distributed_monotonic_timeofday}
 
-此外，网络中的每台机器都有自己的时钟，而且它是实实在在的硬件设备，通常是石英晶体振荡器。这些设备并不十分精确，因此每台机器都各有一套时间观念，可能比其他机器走得稍快或稍慢。时钟可以在一定程度上同步：最常用的机制是网络时间协议（NTP），它根据一组服务器报告的时间来校准计算机时钟 [^39]；这些服务器又从 GPS 接收器等更精确的时间源取得时间。
+Máy tính hiện đại có ít nhất hai loại đồng hồ khác nhau: *đồng hồ giờ trong ngày* (*time-of-day clock*) và *đồng hồ đơn điệu* (*monotonic clock*). Dù cả hai đều đo thời gian, chúng phục vụ những mục đích khác nhau nên cần phân biệt.
 
-### 单调时钟与日历时钟 {#sec_distributed_monotonic_timeofday}
+#### Đồng hồ giờ trong ngày {#time-of-day-clocks}
 
-现代计算机至少配有两种不同的时钟：*日历时钟*（*time-of-day clock*）和 *单调时钟*（*monotonic clock*）。它们虽然都用来度量时间，却服务于不同目的，因此必须加以区分。
+Đồng hồ giờ trong ngày làm đúng điều ta trực giác nghĩ đồng hồ phải làm: trả về ngày và giờ hiện tại theo một loại lịch nào đó (còn gọi là *wall-clock time*). Ví dụ, `clock_gettime(CLOCK_REALTIME)` của Linux và `System.currentTimeMillis()` của Java trả về số giây (hoặc mili giây) kể từ *epoch*: ở đây epoch là nửa đêm UTC ngày 1 tháng 1 năm 1970 theo lịch Gregory, không tính giây nhuận. Một số hệ thống dùng mốc tham chiếu khác. (Linux gọi đồng hồ này là đồng hồ *real-time*, nhưng nó chẳng liên quan gì đến hệ điều hành thời gian thực, xem ["Bảo đảm thời gian phản hồi"](/ch9#sec_distributed_clocks_realtime).)
 
-#### 日历时钟 {#time-of-day-clocks}
+Đồng hồ giờ trong ngày thường được đồng bộ với NTP, nên lý tưởng là một timestamp trên máy này biểu diễn cùng thời điểm với timestamp đó trên máy khác. Tuy nhiên, đồng hồ giờ trong ngày cũng có nhiều điểm kỳ quặc, sẽ nói thêm ở phần sau. Đặc biệt, nếu đồng hồ cục bộ chạy nhanh hơn server NTP quá nhiều, nó có thể bị ép đặt lại và trông như nhảy ngược về quá khứ. Những bước nhảy như vậy, cùng những bước nhảy tương tự do giây nhuận gây ra, khiến đồng hồ giờ trong ngày không phù hợp để đo thời gian đã trôi qua [^40].
 
-日历时钟所做的，正是人们直觉上认为时钟应该做的事：按照某种历法返回当前日期和时间（也称为 *墙上时钟时间*，*wall-clock time*）。例如，Linux 的 `clock_gettime(CLOCK_REALTIME)` 和 Java 的 `System.currentTimeMillis()` 返回从 *纪元*（*epoch*）至今经过的秒数（或毫秒数）：这里的纪元是格里高利历中的 1970 年 1 月 1 日 UTC 零时，且不计闰秒。有些系统使用其他日期作为参考点。（Linux 虽然把这个时钟称为 *实时* 时钟，但它与实时操作系统毫无关系，参见 [“响应时间保证”](/ch9#sec_distributed_clocks_realtime)。）
+Đồng hồ giờ trong ngày cũng có thể nhảy khi giờ mùa hè (DST) bắt đầu hoặc kết thúc, nhưng có thể tránh loại bước nhảy này bằng cách luôn dùng múi giờ UTC, vốn không có DST. Trước đây, độ phân giải của đồng hồ giờ trong ngày cũng khá thô, chẳng hạn đồng hồ của các phiên bản Windows cũ mỗi lần nhảy tới 10 mili giây [^41]. Trên các hệ thống mới hơn, đây không còn là vấn đề lớn.
 
-日历时钟通常会与 NTP 同步，因此理想情况下，一台机器上的某个时间戳与另一台机器上的同一时间戳表示同一时刻。不过，日历时钟也有各种怪异之处，下一节将进一步说明。尤其是当本地时钟比 NTP 服务器快得太多时，它可能会被强制重置，看起来就像突然跳回了过去。这样的跳变，以及闰秒造成的类似跳变，使日历时钟不适合测量已经过去了多长时间 [^40]。
+#### Đồng hồ đơn điệu {#monotonic-clocks}
 
-夏令时（DST）开始或结束时，日历时钟也可能跳变；只要始终采用没有夏令时的 UTC 时区，就能避开这类跳变。历史上，日历时钟的分辨率也相当粗糙，例如旧版 Windows 系统的时钟每次会向前跳 10 毫秒 [^41]。在较新的系统上，这已经不是什么大问题。
+Đồng hồ đơn điệu phù hợp để đo khoảng thời gian (khoảng cách giữa hai thời điểm), chẳng hạn timeout hay thời gian phản hồi của dịch vụ. `clock_gettime(CLOCK_MONOTONIC)`, `clock_gettime(CLOCK_BOOTTIME)` [^42] của Linux và `System.nanoTime()` của Java đều là đồng hồ đơn điệu. Gọi là "đơn điệu" vì nó bảo đảm chỉ chạy tiến (còn đồng hồ giờ trong ngày có thể đột ngột nhảy ngược về quá khứ).
 
-#### 单调时钟 {#monotonic-clocks}
+Bạn có thể đọc đồng hồ đơn điệu một lần, làm vài việc, rồi vài giây sau đọc lại. *Hiệu* của hai giá trị cho biết thời gian đã trôi qua — nó giống đồng hồ bấm giờ hơn là đồng hồ treo tường. Tuy nhiên, giá trị *tuyệt đối* của đồng hồ đơn điệu không có ý nghĩa gì: nó có thể là số nano giây kể từ lúc máy khởi động, hoặc tính từ một mốc tùy ý nào đó. Đặc biệt, không thể so sánh giá trị đồng hồ đơn điệu của hai máy khác nhau vì chúng không biểu diễn cùng một thứ.
 
-单调时钟适合测量持续时间（时间间隔），例如超时时间或服务响应时间。Linux 的 `clock_gettime(CLOCK_MONOTONIC)`、`clock_gettime(CLOCK_BOOTTIME)` [^42] 和 Java 的 `System.nanoTime()` 都属于单调时钟。之所以叫“单调”，是因为它保证只会向前走（日历时钟却可能突然跳回过去）。
+Trên server có nhiều socket CPU, mỗi CPU có thể có bộ đếm thời gian riêng và chưa chắc đồng bộ với các CPU khác [^43]. Hệ điều hành bù trừ sự chênh lệch này và cố làm cho thread ứng dụng thấy đồng hồ tăng đơn điệu, kể cả khi thread được lập lịch qua lại giữa các CPU. Tuy vậy, nên dè dặt với bảo đảm tính đơn điệu này [^44].
 
-你可以先读取一次单调时钟，做些事情，稍后再读一次。两次读数之 *差* 就是其间经过的时间——它更像秒表，而不是挂钟。不过，单调时钟的 *绝对* 读数没有任何意义：它可能表示计算机启动至今的纳秒数，也可能采用其他任意起点。尤其不能比较两台不同计算机的单调时钟读数，因为它们表示的并不是同一回事。
+Nếu NTP phát hiện đồng hồ thạch anh cục bộ chạy nhanh hơn hoặc chậm hơn server NTP, nó có thể điều chỉnh tốc độ đồng hồ đơn điệu tiến lên, việc này gọi là *slewing* (hiệu chỉnh dần) đồng hồ. Mặc định, NTP được phép tăng hoặc giảm tốc độ đồng hồ tối đa 0,05%, nhưng không thể làm đồng hồ đơn điệu nhảy tiến hay lùi đột ngột. Đồng hồ đơn điệu thường có độ phân giải tốt: trên hầu hết hệ thống, nó đo được khoảng thời gian cỡ micro giây hoặc nhỏ hơn.
 
-在有多个 CPU 插槽的服务器上，每颗 CPU 都可能有自己的计时器，而且未必与其他 CPU 同步 [^43]。操作系统会补偿其中的差异，尽力让应用程序线程看到单调递增的时钟，即使线程在不同 CPU 之间调度也是如此。不过，对这样的单调性保证最好还是有所保留 [^44]。
+Trong hệ thống phân tán, dùng đồng hồ đơn điệu để đo thời gian trôi qua (ví dụ timeout) thường không sao, vì nó không đòi hỏi đồng hồ của các node phải đồng bộ với nhau, và sai số nhỏ trong phép đo cũng không gây ảnh hưởng lớn.
 
-如果 NTP 发现计算机的本地石英钟比 NTP 服务器走得更快或更慢，可以调节单调时钟向前推进的速率，这叫作对时钟进行 *渐进校准*（*slewing*）。默认情况下，NTP 最多可以把时钟速率加快或减慢 0.05%，但不能让单调时钟突然向前或向后跳变。单调时钟通常有很好的分辨率：在大多数系统上，它能测量微秒级甚至更短的时间间隔。
+### Đồng bộ đồng hồ và độ chính xác {#sec_distributed_clock_accuracy}
 
-在分布式系统中，用单调时钟测量经过的时间（例如超时）通常没有问题，因为这不要求不同节点的时钟彼此同步，而且测量中的轻微误差也不会造成太大影响。
+Đồng hồ đơn điệu không cần đồng bộ, nhưng đồng hồ giờ trong ngày chỉ hữu ích khi được hiệu chỉnh theo server NTP hoặc nguồn thời gian bên ngoài khác. Tiếc là cách làm cho đồng hồ chạy đúng giờ kém tin cậy và kém chính xác hơn nhiều so với tưởng tượng — cả đồng hồ phần cứng lẫn NTP đều có thể thất thường. Dưới đây là vài ví dụ:
 
-### 时钟同步和准确性 {#sec_distributed_clock_accuracy}
+* Đồng hồ thạch anh trong máy tính không thật chính xác: nó có *độ trôi* (*drift*), tức là chạy nhanh hơn hoặc chậm hơn so với tốc độ đúng, và độ trôi này thay đổi theo nhiệt độ của máy. Google giả định đồng hồ server của họ trôi tối đa 200 ppm (hai trăm phần triệu) [^45]. Tức là đồng hồ đồng bộ lại với server mỗi 30 giây sẽ trôi 6 mili giây, còn đồng hồ chỉ đồng bộ mỗi ngày một lần sẽ trôi 17 giây. Dù mọi thứ khác đều ổn, độ trôi của đồng hồ vẫn giới hạn độ chính xác tốt nhất có thể đạt được.
+* Nếu đồng hồ máy tính chênh với server NTP quá nhiều, nó có thể từ chối đồng bộ, hoặc đồng hồ cục bộ bị ép đặt lại [^39]. Ứng dụng quan sát thời gian trước và sau khi đặt lại có thể thấy thời gian lùi về sau hoặc nhảy vọt về phía trước.
+* Nếu tường lửa vô tình chặn liên lạc giữa node và server NTP, lỗi cấu hình này có thể không ai phát hiện trong thời gian dài. Trong lúc đó, độ trôi có thể tích tụ thành độ lệch lớn giữa đồng hồ của các node. Có bằng chứng giai thoại cho thấy chuyện này thật sự đã xảy ra.
+* Độ chính xác của đồng bộ NTP không thể tốt hơn độ trễ mạng, nên độ chính xác bị hạn chế trên mạng tắc nghẽn có độ trễ gói tin dao động. Một thí nghiệm cho thấy sai số tối thiểu khi đồng bộ qua Internet là 35 mili giây [^46], và khi độ trễ mạng thỉnh thoảng tăng vọt, sai số đạt khoảng một giây. Tùy cấu hình, độ trễ mạng quá lớn thậm chí có thể khiến client NTP bỏ hẳn việc đồng bộ.
+* Một số server NTP sai hoặc cấu hình sai, báo cáo thời gian lệch hàng giờ [^47] [^48]. Client NTP truy vấn nhiều server và loại bỏ giá trị ngoại lai để giảm nhẹ các lỗi này. Dù vậy, đặt tính đúng đắn của hệ thống vào thời gian do một người lạ trên Internet báo cho bạn vẫn khiến người ta có phần bất an.
+* Giây nhuận làm một phút dài 59 hoặc 61 giây, phá vỡ các giả định về thời gian của những hệ thống không được thiết kế với giây nhuận [^49]. Giây nhuận đã làm sập nhiều hệ thống lớn [^40] [^50], cho thấy giả định sai về đồng hồ dễ lọt vào hệ thống một cách âm thầm đến mức nào. Cách tốt nhất để xử lý giây nhuận có lẽ là bắt server NTP "nói dối": dàn đều việc điều chỉnh giây nhuận ra cả ngày, gọi là *smearing* [^51] [^52], tuy trong thực tế hành vi của các server NTP không nhất quán [^53]. May là từ năm 2035 sẽ không còn dùng giây nhuận nữa, và vấn đề này sẽ biến mất.
+* Trong máy ảo, đồng hồ phần cứng cũng được ảo hóa, gây thêm thách thức cho ứng dụng cần đo thời gian chính xác [^54]. Khi nhiều máy ảo dùng chung lõi CPU, một máy ảo chạy thì các máy ảo khác có thể bị tạm dừng hàng chục mili giây. Từ góc nhìn ứng dụng, khoảng dừng này biểu hiện như đồng hồ đột ngột nhảy tiến [^29]. Nếu máy ảo bị dừng vài giây, đồng hồ của nó sau đó có thể chậm vài giây so với thời gian thực, nhưng NTP vẫn có thể báo đồng hồ gần như đồng bộ hoàn toàn [^55].
+* Nếu phần mềm chạy trên thiết bị mà bạn không kiểm soát hoàn toàn (như thiết bị di động hay thiết bị nhúng), đồng hồ phần cứng của thiết bị có thể hoàn toàn không đáng tin. Một số người dùng cố tình đặt đồng hồ phần cứng sai ngày giờ, chẳng hạn để gian lận trong game [^56]. Do đó, đồng hồ có thể bị đặt về quá khứ hoặc tương lai vô lý.
 
-单调时钟不需要同步，但日历时钟只有根据 NTP 服务器或其他外部时间源进行校准才有用。遗憾的是，让时钟显示正确时间的手段远没有想象中那么可靠和准确——硬件时钟与 NTP 都可能反复无常。下面只是其中几个例子：
+Nếu đủ coi trọng độ chính xác của đồng hồ và sẵn sàng đầu tư nhiều tài nguyên, hoàn toàn có thể đạt độ chính xác rất cao. Chẳng hạn, quy định MiFID II của châu Âu dành cho các tổ chức tài chính yêu cầu mọi quỹ giao dịch tần suất cao giữ đồng hồ sai lệch với UTC trong vòng 100 micro giây, để phục vụ việc điều tra các bất thường thị trường như "flash crash" và giúp phát hiện thao túng thị trường [^57].
 
-* 计算机里的石英钟并不十分精确，它会发生 *漂移*（*drift*，走得比应有速度更快或更慢），而漂移程度又会随机器温度变化。Google 假定其服务器的时钟漂移最高可达 200 ppm（百万分之二百）[^45]。这相当于每隔 30 秒与服务器重新同步一次的时钟会漂移 6 毫秒，而每天才同步一次的时钟会漂移 17 秒。即使其他一切都正常，时钟漂移也会限制所能达到的最佳精度。
-* 如果计算机时钟与 NTP 服务器相差太大，它可能拒绝同步，也可能强制重置本地时钟 [^39]。在重置前后观察时间的应用程序，可能会看到时间向后倒退，或突然向前跳跃。
-* 如果防火墙意外阻断了节点与 NTP 服务器的通信，这项错误配置可能很长时间都无人察觉；在此期间，漂移不断累积，不同节点的时钟最终可能相差甚远。轶事证据表明，实践中确实发生过这种情况。
-* NTP 同步的准确性不可能优于网络延迟。因此，在数据包延迟波动不定的拥塞网络上，它的准确性必然有限。一项实验表明，经由互联网同步所能达到的最小误差为 35 毫秒 [^46]，而网络延迟偶尔出现尖峰时，误差会达到一秒左右。具体取决于配置，过大的网络延迟甚至可能让 NTP 客户端彻底放弃同步。
-* 有些 NTP 服务器本身不正确或配置有误，报告的时间能相差数小时 [^47] [^48]。NTP 客户端会查询多台服务器并忽略离群值，以减轻这类错误的影响。即便如此，把系统的正确性押在某个互联网陌生人报给你的时间上，多少还是令人不安。
-* 闰秒会让一分钟变成 59 秒或 61 秒，从而打乱那些设计时未考虑闰秒的系统对时序所作的假设 [^49]。闰秒已经导致许多大型系统崩溃 [^40] [^50]，足见关于时钟的错误假设有多么容易悄然混入系统。处理闰秒的最佳办法，或许是让 NTP 服务器“撒谎”：把闰秒调整分摊到一整天内逐渐完成，这称为 *平滑处理*（*smearing*）[^51] [^52]；不过实践中各 NTP 服务器的实际行为并不一致 [^53]。好在从 2035 年起将不再使用闰秒，这个问题也会随之消失。
-* 在虚拟机中，硬件时钟也是虚拟化的，这给需要精确计时的应用程序带来了额外挑战 [^54]。多个虚拟机共享 CPU 核心时，一台虚拟机运行，其他虚拟机就可能暂停数十毫秒。从应用程序的视角看，这种暂停表现为时钟突然向前跳跃 [^29]。如果虚拟机暂停了几秒，其时钟随后可能比实际时间慢几秒，但 NTP 仍可能报告时钟几乎完全同步 [^55]。
-* 如果软件运行在你无法完全控制的设备上（例如移动设备或嵌入式设备），那么设备的硬件时钟可能根本不值得信任。有些用户会故意把硬件时钟设置成错误的日期和时间，例如借此在游戏中作弊 [^56]。因此，时钟可能被设到离谱的过去或未来。
+Mức chính xác này đạt được nhờ phần cứng chuyên dụng (bộ thu GPS và/hoặc đồng hồ nguyên tử), Precision Time Protocol (PTP), cùng việc triển khai và giám sát cẩn thận [^58] [^59]. Tuy nhiên, chỉ dựa vào GPS cũng có rủi ro, vì tín hiệu GPS rất dễ bị gây nhiễu. Ở một số nơi (chẳng hạn gần các cơ sở quân sự) việc này xảy ra thường xuyên [^60]. Một số nhà cung cấp đám mây đã bắt đầu cung cấp đồng bộ đồng hồ độ chính xác cao cho máy ảo [^61]. Dù vậy, đồng bộ đồng hồ vẫn cần hết sức cẩn thận. Nếu daemon NTP cấu hình sai, hoặc tường lửa chặn lưu lượng NTP, sai số đồng hồ do độ trôi sẽ nhanh chóng trở nên lớn.
 
-只要足够重视时钟精度，并愿意投入大量资源，的确可以做到非常精确。例如，欧洲针对金融机构的 MiFID II 法规要求所有高频交易基金把时钟与 UTC 的误差控制在 100 微秒以内，以便排查“闪崩”等市场异常，并帮助发现市场操纵 [^57]。
+### Phụ thuộc vào đồng hồ đồng bộ {#sec_distributed_clocks_relying}
 
-借助专用硬件（GPS 接收器和/或原子钟）、精确时间协议（PTP），再辅以审慎的部署与监控，就能达到这样的精度 [^58] [^59]。不过，只依赖 GPS 也有风险，因为 GPS 信号很容易受到干扰；某些地方（例如军事设施附近）甚至经常发生这种情况 [^60]。一些云服务商已经开始为虚拟机提供高精度时钟同步 [^61]。即便如此，时钟同步仍需格外小心。如果 NTP 守护进程配置有误，或防火墙阻断了 NTP 流量，漂移造成的时钟误差很快就会变得很大。
+Vấn đề của đồng hồ là nó trông đơn giản, dễ dùng, nhưng lại đầy cạm bẫy đến bất ngờ: một ngày không nhất thiết có đúng 86.400 giây, đồng hồ giờ trong ngày có thể chạy ngược, và thời gian trên node này có thể chênh rất xa so với node kia.
 
-### 对同步时钟的依赖 {#sec_distributed_clocks_relying}
+Trước đó trong chương này ta đã bàn về việc mạng mất gói và gói tin bị trễ tùy ý. Dù mạng phần lớn thời gian chạy tốt, khi thiết kế phần mềm vẫn phải giả định mạng thỉnh thoảng sẽ hỏng và xử lý các lỗi đó cho ổn thỏa. Đồng hồ cũng vậy: phần lớn thời gian chúng chạy tốt, nhưng phần mềm vững chắc phải sẵn sàng đối phó với đồng hồ sai.
 
-时钟的问题在于，它看似简单易用，陷阱却多得惊人：一天未必恰好有 86,400 秒，日历时钟可能倒着走，一个节点所认为的时间也可能与另一个节点相差很大。
+Một phần vấn đề là đồng hồ sai rất dễ không ai nhận ra. Nếu CPU của máy bị lỗi hoặc mạng cấu hình sai, nhiều khả năng nó sẽ hoàn toàn không chạy được, nên vấn đề nhanh chóng bị phát hiện và sửa. Ngược lại, nếu đồng hồ thạch anh bị lỗi hoặc client NTP cấu hình sai, thì dù đồng hồ ngày càng lệch xa thực tế, hầu hết mọi thứ vẫn trông như đang chạy bình thường. Nếu một đoạn phần mềm dựa vào đồng hồ đồng bộ chính xác, kết quả nhiều khả năng là mất dữ liệu âm thầm và tinh vi, chứ không phải một vụ sập ầm ĩ [^62] [^63].
 
-本章前面讨论过网络丢包和任意延迟数据包的问题。尽管网络在绝大多数时候表现良好，设计软件时仍必须假定网络偶尔会发生故障，并妥善处理这些故障。时钟也是如此：它们大多数时候都走得好好的，但健壮的软件必须做好应对错误时钟的准备。
+Vì vậy, nếu dùng phần mềm đòi hỏi đồng hồ đồng bộ, bạn phải giám sát cẩn thận độ lệch đồng hồ giữa tất cả các máy. Node nào có đồng hồ lệch quá xa các node khác nên bị tuyên bố đã chết và loại khỏi cluster. Giám sát như vậy bảo đảm phát hiện được đồng hồ hỏng trước khi nó gây quá nhiều thiệt hại.
 
-部分问题在于，错误的时钟很容易无人察觉。如果机器的 CPU 有缺陷，或网络配置有误，它多半会彻底无法工作，因此问题很快就会暴露并得到修复。反之，如果石英钟有缺陷，或 NTP 客户端配置有误，那么即使时钟逐渐偏离现实越来越远，大多数事情看上去仍然运行正常。如果某段软件依赖精确同步的时钟，最终结果更可能是隐蔽而细微的数据丢失，而不是一场惊天动地的崩溃 [^62] [^63]。
+#### Timestamp để sắp xếp sự kiện {#sec_distributed_lww}
 
-因此，如果使用的软件要求时钟同步，就必须仔细监控所有机器之间的时钟偏差。凡是时钟与其他节点偏离太远的节点，都应当被宣告死亡并移出集群。这样的监控可以确保在故障时钟造成太大破坏以前及时发现它。
+Hãy xét một tình huống rất dễ khiến người ta muốn dựa vào đồng hồ nhưng lại rất nguy hiểm: sắp xếp thứ tự các sự kiện trên nhiều node [^64]. Ví dụ, nếu hai client cùng ghi vào một cơ sở dữ liệu phân tán, ai đến trước? Lần ghi nào mới hơn?
 
-#### 用于事件排序的时间戳 {#sec_distributed_lww}
+{{< xref fig="9-3" page="/ch9" anchor="fig_distributed_timestamps" >}}Hình 9-3{{< /xref >}} minh họa một cách dùng nguy hiểm đồng hồ giờ trong ngày trong cơ sở dữ liệu dùng sao chép đa leader (*multi-leader replication*) (ví dụ này tương tự {{< xref fig="6-8" page="/ch6" anchor="fig_replication_causality" >}}Hình 6-8{{< /xref >}}). Client A ghi *x* = 1 trên node 1, lần ghi này được truyền sang node 3, client B tăng *x* trên node 3 (lúc này *x* = 2), và cuối cùng cả hai lần ghi đều được truyền sang node 2.
 
-下面来看一种很容易让人想依赖时钟、却十分危险的情形：为多个节点上的事件排序 [^64]。例如，两个客户端都向分布式数据库写入时，谁先到达？哪次写入更新？
+{{< fig num="9-3" id="fig_distributed_timestamps" src="/fig/ddia_0903.png" caption="Lần ghi của client B xảy ra sau lần ghi của client A theo quan hệ nhân quả, nhưng lại có timestamp sớm hơn." class="ddia-figure ddia-figure--wide" width="2880" height="1325" />}}
 
-{{< xref fig="9-3" page="/ch9" anchor="fig_distributed_timestamps" >}}图 9-3{{< /xref >}} 展示了在采用多主复制的数据库中，日历时钟的一种危险用法（这个例子与 {{< xref fig="6-8" page="/ch6" anchor="fig_replication_causality" >}}图 6-8{{< /xref >}} 类似）。客户端 A 在节点 1 上写入 *x* = 1；这次写入复制到节点 3；客户端 B 在节点 3 上将 *x* 递增（此时 *x* = 2）；最后，两次写入都复制到节点 2。
 
-{{< fig num="9-3" id="fig_distributed_timestamps" src="/fig/ddia_0903.png" caption="客户端 B 的写入在因果关系上晚于客户端 A 的写入，但 B 的写入具有更早的时间戳。" class="ddia-figure ddia-figure--wide" width="2880" height="1325" />}}
+Trong {{< xref fig="9-3" page="/ch9" anchor="fig_distributed_timestamps" >}}Hình 9-3{{< /xref >}}, khi một lần ghi được truyền sang các node khác, nó được gắn timestamp theo đồng hồ giờ trong ngày của node nơi lần ghi khởi nguồn. Trong ví dụ này, đồng bộ đồng hồ rất tốt: độ lệch giữa node 1 và node 3 dưới 3 mili giây, mức mà trong thực tế có lẽ khó đạt được.
 
+Thao tác tăng được xây dựng trên lần ghi *x* = 1 trước đó, nên ta tự nhiên nghĩ lần ghi *x* = 2 phải có timestamp lớn hơn. Tiếc là {{< xref fig="9-3" page="/ch9" anchor="fig_distributed_timestamps" >}}Hình 9-3{{< /xref >}} không như vậy: lần ghi *x* = 1 có timestamp 42,004 giây, còn lần ghi *x* = 2 lại có timestamp 42,003 giây.
 
-在 {{< xref fig="9-3" page="/ch9" anchor="fig_distributed_timestamps" >}}图 9-3{{< /xref >}} 中，写入复制到其他节点时，会按照写入起源节点的日历时钟附上时间戳。这个例子中的时钟同步已经非常好：节点 1 与节点 3 的偏差不到 3 毫秒，实践中恐怕很难达到这么好的水平。
+Như đã bàn ở ["Last write wins (loại bỏ các lần ghi đồng thời)"](/ch6#sec_replication_lww), một cách giải quyết xung đột giữa các giá trị được ghi đồng thời trên nhiều node khác nhau là *last write wins* (LWW): với mỗi khóa, chỉ giữ lần ghi có timestamp lớn nhất và loại bỏ mọi lần ghi có timestamp nhỏ hơn. Trong ví dụ ở {{< xref fig="9-3" page="/ch9" anchor="fig_distributed_timestamps" >}}Hình 9-3{{< /xref >}}, khi node 2 nhận hai sự kiện này, nó sẽ kết luận sai rằng *x* = 1 là giá trị mới hơn và loại bỏ lần ghi *x* = 2, nên thao tác tăng bị mất.
 
-递增操作建立在先前写入的 *x* = 1 之上，因此我们自然会认为 *x* = 2 这次写入应该具有更大的时间戳。遗憾的是，{{< xref fig="9-3" page="/ch9" anchor="fig_distributed_timestamps" >}}图 9-3{{< /xref >}} 中并非如此：写入 *x* = 1 的时间戳是 42.004 秒，写入 *x* = 2 的时间戳却是 42.003 秒。
+Để tránh vấn đề này, có thể bảo đảm rằng mỗi khi ghi đè một giá trị, timestamp của giá trị mới luôn cao hơn giá trị bị ghi đè, kể cả khi timestamp đó đã vượt trước đồng hồ cục bộ của bên ghi. Nhưng cách này phải trả giá bằng một lần đọc thêm để tìm timestamp lớn nhất hiện tại. Các hệ thống như Cassandra và ScyllaDB muốn ghi vào mọi bản sao chỉ trong một vòng round-trip, nên chúng dùng thẳng timestamp sinh từ đồng hồ của client, kết hợp chiến lược last write wins [^62]. Cách làm này có một số vấn đề nghiêm trọng:
 
-正如 [“最后写入者胜（丢弃并发写入）”](/ch6#sec_replication_lww) 所讨论的，解决不同节点并发写入值之间冲突的一种办法是 *最后写入者胜*（LWW）：对于同一个键，只保留时间戳最大的写入，丢弃所有时间戳更早的写入。在 {{< xref fig="9-3" page="/ch9" anchor="fig_distributed_timestamps" >}}图 9-3{{< /xref >}} 的例子中，节点 2 收到这两个事件后，会错误地断定 *x* = 1 才是更新的值，并丢弃对 *x* = 2 的写入，于是递增操作便丢失了。
+* Dữ liệu ghi vào cơ sở dữ liệu có thể biến mất một cách khó hiểu: node có đồng hồ chậm chỉ có thể ghi đè giá trị mà node có đồng hồ nhanh đã ghi trước đó sau khi khoảng thời gian tương ứng với độ lệch đồng hồ giữa hai node trôi qua [^63] [^65]. Điều này có thể âm thầm loại bỏ một lượng dữ liệu tùy ý mà không báo lỗi nào cho ứng dụng.
+* LWW không phân biệt được các lần ghi tuần tự xảy ra liên tiếp trong thời gian ngắn (trong {{< xref fig="9-3" page="/ch9" anchor="fig_distributed_timestamps" >}}Hình 9-3{{< /xref >}}, thao tác tăng của client B rõ ràng xảy ra *sau* lần ghi của client A) với các lần ghi thật sự đồng thời (không bên ghi nào biết về lần ghi của bên kia). Để tránh vi phạm quan hệ nhân quả, cần thêm cơ chế theo dõi quan hệ nhân quả như version vector (xem ["Phát hiện ghi đồng thời"](/ch6#sec_replication_concurrent)).
+* Hai node có thể độc lập sinh ra các lần ghi có cùng timestamp, nhất là khi độ phân giải đồng hồ chỉ là mili giây. Giải quyết xung đột kiểu này cần thêm một giá trị phân định (đơn giản là chọn một số ngẫu nhiên lớn), nhưng cách này cũng có thể vi phạm quan hệ nhân quả [^62].
 
-要避免这个问题，可以确保每当覆盖一个值时，新值的时间戳一定高于被覆盖值，即使这个时间戳已经超前于写入者的本地时钟。不过，这样就要付出额外读取的代价，先找出当前最大的时间戳。Cassandra 和 ScyllaDB 等系统希望在一次往返中写入所有副本，因此它们直接使用客户端时钟生成的时间戳，并采用最后写入者胜策略 [^62]。这种做法存在一些严重问题：
+Do đó, dù giữ lại giá trị "mới nhất" và loại bỏ các giá trị khác nghe có vẻ là cách giải quyết xung đột hấp dẫn, ta phải nhận ra rằng định nghĩa của "mới" phụ thuộc vào đồng hồ giờ trong ngày cục bộ, mà đồng hồ này rất có thể không chính xác. Ngay cả khi đồng hồ được đồng bộ NTP chặt chẽ, vẫn có thể xảy ra chuyện gói tin được gửi lúc timestamp 100 mili giây (theo đồng hồ bên gửi) nhưng đến nơi lúc timestamp 99 mili giây (theo đồng hồ bên nhận) — trông như gói tin đến trước khi được gửi, điều này tất nhiên là không thể.
 
-* 数据库写入可能莫名其妙地消失：时钟落后的节点必须等到两节点的时钟偏差所对应的时间过去，才能覆盖时钟较快的节点先前写入的值 [^63] [^65]。这样可能在不向应用程序报告任何错误的情况下，悄无声息地丢弃任意数量的数据。
-* LWW 无法区分短时间内接连发生的顺序写入（在 {{< xref fig="9-3" page="/ch9" anchor="fig_distributed_timestamps" >}}图 9-3{{< /xref >}} 中，客户端 B 的递增操作显然发生在客户端 A 的写入 *之后*）与真正的并发写入（两个写入者都不知道对方的写入）。为了避免违反因果关系，还需要版本向量等额外的因果关系追踪机制（参见 [“检测并发写入”](/ch6#sec_replication_concurrent)）。
-* 两个节点可能各自独立生成具有相同时间戳的写入，特别是时钟分辨率只有毫秒时。解决这类冲突还需要一个额外的决胜值（简单地取一个很大的随机数即可），但这种做法同样可能违反因果关系 [^62]。
+Có thể làm đồng bộ NTP chính xác đến mức tránh hẳn kiểu sắp xếp sai thứ tự này không? Có lẽ không. Ngoài các nguồn sai số khác như độ trôi của đồng hồ thạch anh, độ chính xác đồng bộ của NTP bản thân đã bị giới hạn bởi thời gian round-trip của mạng. Muốn bảo đảm đúng thứ tự, sai số đồng hồ phải nhỏ hơn đáng kể so với độ trễ mạng, mà điều đó không thể thực hiện được.
 
-因此，尽管保留最“新”的值并丢弃其他值，看上去是很诱人的冲突解决办法，但必须意识到，“新”的定义取决于本地日历时钟，而它很可能并不准确。即使时钟经过严密的 NTP 同步，也可能出现这样的情况：数据包在时间戳 100 毫秒时发出（按发送方的时钟），却在时间戳 99 毫秒时到达（按接收方的时钟）——看起来仿佛数据包还没发出就已经到达，这当然不可能。
+Cái gọi là *đồng hồ logic* (*logical clock*) [^66], dựa trên bộ đếm tăng dần thay vì tinh thể thạch anh dao động, là lựa chọn an toàn hơn để sắp xếp sự kiện (xem ["Phát hiện ghi đồng thời"](/ch6#sec_replication_concurrent)). Đồng hồ logic không đo giờ trong ngày hay số giây đã trôi qua, mà chỉ ghi lại thứ tự tương đối giữa các sự kiện (sự kiện này xảy ra trước hay sau sự kiện kia). Ngược lại, đồng hồ giờ trong ngày và đồng hồ đơn điệu đo thời gian thực tế trôi qua, nên còn gọi là *đồng hồ vật lý* (*physical clock*). Ta sẽ bàn chi tiết hơn về đồng hồ logic ở ["ID generator và logical clock"](/ch10#sec_consistency_logical).
 
-能否把 NTP 同步做得足够精确，从而彻底避免这类错误排序？恐怕不能。除了石英钟漂移等其他误差源以外，NTP 的同步精度本身就受网络往返时间限制。若要保证顺序正确，时钟误差必须显著小于网络延迟，而这是不可能做到的。
+#### Giá trị đọc đồng hồ kèm khoảng tin cậy {#clock-readings-with-a-confidence-interval}
 
-所谓的 *逻辑时钟*（*logical clock*）[^66] 以递增计数器为基础，而不是以振荡的石英晶体为基础，因此是为事件排序时更安全的选择（参见 [“检测并发写入”](/ch6#sec_replication_concurrent)）。逻辑时钟既不度量一天中的时刻，也不度量经过了多少秒，只记录事件之间的相对顺序（一个事件发生在另一个事件之前还是之后）。与之相对，日历时钟和单调时钟度量真实流逝的时间，因此也称为 *物理时钟*（*physical clock*）。我们将在 [“ID 生成器和逻辑时钟”](/ch10#sec_consistency_logical) 中更详细地讨论逻辑时钟。
+Đồng hồ giờ trong ngày của máy có thể cho giá trị đọc với độ phân giải micro giây hoặc thậm chí nano giây, nhưng đo chi tiết đến vậy không có nghĩa là giá trị thật sự chính xác đến mức đó. Thực tế, nhiều khả năng nó không chính xác như vậy. Như đã nói, ngay cả khi đồng bộ mỗi phút một lần với server NTP trong mạng cục bộ, đồng hồ thạch anh không chính xác cũng dễ dàng trôi vài mili giây. Với server NTP trên Internet công cộng, độ chính xác tốt nhất có lẽ chỉ cỡ vài chục mili giây, và khi mạng tắc nghẽn, sai số dễ vọt lên hơn 100 mili giây.
 
-#### 带置信区间的时钟读数 {#clock-readings-with-a-confidence-interval}
+Vì vậy, không nên hiểu một giá trị đọc đồng hồ là một thời điểm chính xác, mà nên xem nó là một khoảng thời gian nằm trong một *khoảng tin cậy* (*confidence interval*). Chẳng hạn, hệ thống có thể chắc chắn 95% rằng thời điểm hiện tại nằm trong khoảng từ giây thứ 10,3 đến giây thứ 10,5 của phút này, nhưng không thể biết chính xác hơn [^67]. Nếu chỉ xác định được thời gian với sai số ±100 mili giây, thì những chữ số micro giây trong timestamp về cơ bản vô nghĩa.
 
-机器的日历时钟也许能以微秒甚至纳秒为分辨率提供读数，但测量得如此精细，并不表示读数真的精确到了这个程度。事实上，它大概率没有这么准。前面说过，即使每分钟都与局域网中的 NTP 服务器同步一次，不精确的石英钟也很容易漂移数毫秒。若使用公共互联网上的 NTP 服务器，最理想的精度大概也只有数十毫秒；遇到网络拥塞时，误差很容易飙升到 100 毫秒以上。
+Biên của độ bất định có thể tính từ nguồn thời gian. Nếu máy nối trực tiếp với bộ thu GPS hoặc đồng hồ nguyên tử, khoảng sai số kỳ vọng do chính thiết bị quyết định, và với GPS còn phụ thuộc chất lượng tín hiệu vệ tinh. Nếu lấy thời gian từ server, độ bất định xấp xỉ bằng: độ trôi kỳ vọng của đồng hồ thạch anh kể từ lần đồng bộ cuối với server, cộng với độ bất định của chính server NTP, cộng với thời gian round-trip mạng đến server — đây là phép xấp xỉ bậc một, và giả định server đáng tin.
 
-因此，不应把一次时钟读数理解为一个精确的时间点，它更像是落在某个置信区间（*confidence interval*）内的一段时间范围。例如，系统也许有 95% 的把握认为当前时刻位于这一分钟的第 10.3 秒至第 10.5 秒之间，但无法知道得更精确 [^67]。如果时间只能确定到 ±100 毫秒，那么时间戳中精确到微秒的那些数字基本毫无意义。
+Tiếc là hầu hết hệ thống không để lộ độ bất định này. Ví dụ, khi gọi `clock_gettime()`, giá trị trả về không cho biết sai số kỳ vọng của timestamp, nên bạn không biết khoảng tin cậy của nó là năm mili giây hay năm năm.
 
-不确定性的边界可以根据时间源来计算。如果计算机直接连接着 GPS 接收器或原子钟，预期误差范围取决于设备本身；对 GPS 而言，还取决于卫星信号的质量。如果从服务器获取时间，不确定性大致等于：自上次与服务器同步以来石英钟的预期漂移，加上 NTP 服务器自身的不确定性，再加上与服务器之间的网络往返时间——这是第一步近似，并且假定服务器值得信任。
+Cũng có ngoại lệ: API *TrueTime* của Google Spanner [^45] và ClockBound của Amazon đều báo cáo tường minh khoảng tin cậy của đồng hồ cục bộ. Khi hỏi thời gian hiện tại, bạn nhận hai giá trị: `[earliest, latest]`, lần lượt là timestamp *sớm nhất có thể* và *muộn nhất có thể*. Dựa trên tính toán độ bất định, đồng hồ biết chắc rằng thời gian thực tế hiện tại nằm trong khoảng này. Độ rộng của khoảng phụ thuộc vào nhiều yếu tố, trong đó có việc đồng hồ thạch anh cục bộ đã lâu bao nhiêu kể từ lần đồng bộ với nguồn thời gian chính xác hơn.
 
-遗憾的是，大多数系统都不会暴露这种不确定性。例如，调用 `clock_gettime()` 时，返回值并不会告诉你时间戳的预期误差，因此你无从得知它的置信区间究竟是五毫秒，还是五年。
+#### Đồng hồ đồng bộ cho snapshot toàn cục {#sec_distributed_spanner}
 
-不过也有例外：Google Spanner 的 *TrueTime* API [^45] 和 Amazon 的 ClockBound 都会明确报告本地时钟的置信区间。查询当前时间时，得到的是两个值：`[earliest, latest]`，分别表示 *最早可能* 与 *最晚可能* 的时间戳。根据对不确定性的计算，时钟能够断定真实的当前时间位于这个区间内。区间的宽度取决于多种因素，其中包括本地石英钟距离上次与更精确的时间源同步已经过去多久。
+Ở ["Snapshot isolation và repeatable read"](/ch8#sec_transactions_snapshot_isolation), ta đã bàn về *kiểm soát đồng thời đa phiên bản* (MVCC). Với cơ sở dữ liệu cần hỗ trợ cả giao dịch đọc-ghi ngắn, nhanh lẫn giao dịch chỉ đọc lớn, chạy lâu (như sao lưu hay phân tích), MVCC là tính năng rất hữu ích. Nó cho phép giao dịch chỉ đọc thấy trạng thái nhất quán của cơ sở dữ liệu tại một thời điểm cụ thể, tức là một *snapshot*, mà không phải khóa hay cản trở các giao dịch đọc-ghi.
 
-#### 用于全局快照的同步时钟 {#sec_distributed_spanner}
+Nói chung, MVCC cần ID giao dịch tăng đơn điệu. Nếu một lần ghi xảy ra sau snapshot (tức ID giao dịch của lần ghi lớn hơn ID giao dịch của snapshot), giao dịch snapshot sẽ không thấy lần ghi đó. Trên cơ sở dữ liệu một node, một bộ đếm đơn giản là đủ để sinh ID giao dịch.
 
-在 [“快照隔离与可重复读”](/ch8#sec_transactions_snapshot_isolation) 中，我们讨论了 *多版本并发控制*（MVCC）。对于既要支持短小快速的读写事务，又要支持大型、长时间运行的只读事务（例如备份或分析）的数据库来说，MVCC 是一项非常有用的功能。它让只读事务能够看到数据库在某个特定时间点的一致状态，也就是一个 *快照*，同时又不必锁住或干扰读写事务。
+Tuy nhiên, khi cơ sở dữ liệu phân tán trên nhiều máy, thậm chí trải qua nhiều trung tâm dữ liệu, việc sinh ID giao dịch tăng đơn điệu toàn cục (trên mọi shard) trở nên khó vì cần phối hợp. ID giao dịch còn phải phản ánh quan hệ nhân quả: nếu giao dịch B đọc hoặc ghi đè giá trị mà giao dịch A ghi trước đó, ID của B phải lớn hơn A, nếu không snapshot sẽ không nhất quán. Với lượng lớn giao dịch ngắn, nhanh, việc sinh ID giao dịch trong hệ thống phân tán sẽ thành nút thắt cổ chai khó chịu nổi. (Ta sẽ bàn về các ID generator như vậy ở ["ID generator và logical clock"](/ch10#sec_consistency_logical).)
 
-一般来说，MVCC 需要单调递增的事务 ID。如果某次写入发生在快照之后（也就是说，写入的事务 ID 大于快照的事务 ID），那么快照事务就看不到这次写入。在单节点数据库上，用一个简单的计数器就足以生成事务 ID。
+Có thể dùng thẳng timestamp từ đồng hồ giờ trong ngày đã đồng bộ làm ID giao dịch không? Nếu đồng bộ đồng hồ làm đủ tốt, timestamp thật sự có thuộc tính cần thiết: giao dịch càng muộn thì timestamp càng lớn. Dĩ nhiên vấn đề vẫn là độ bất định về độ chính xác của đồng hồ.
 
-可是，当数据库分布在许多机器上，甚至横跨多个数据中心时，生成全局单调递增的事务 ID（覆盖所有分片）就很困难，因为这需要协调。事务 ID 还必须反映因果关系：如果事务 B 读取或覆盖了事务 A 先前写入的值，B 的事务 ID 就必须大于 A，否则快照将不一致。面对大量短小快速的事务，在分布式系统中生成事务 ID 会成为难以承受的瓶颈。（我们将在 [“ID 生成器和逻辑时钟”](/ch10#sec_consistency_logical) 中讨论这类 ID 生成器。）
+Spanner hiện thực snapshot isolation xuyên trung tâm dữ liệu theo cách này [^68] [^69]. Nó dùng khoảng tin cậy của đồng hồ do API TrueTime báo cáo, dựa trên quan sát sau: giả sử có hai khoảng tin cậy, mỗi khoảng gồm timestamp sớm nhất và muộn nhất có thể (*A* = [*A*<sub>earliest</sub>, *A*<sub>latest</sub>], *B* = [*B*<sub>earliest</sub>, *B*<sub>latest</sub>]), và hai khoảng này không chồng lên nhau (tức *A*<sub>earliest</sub> < *A*<sub>latest</sub> < *B*<sub>earliest</sub> < *B*<sub>latest</sub>) thì B chắc chắn xảy ra sau A, không còn nghi ngờ gì. Chỉ khi hai khoảng chồng lên nhau ta mới không chắc thứ tự của A và B.
 
-能不能直接把同步日历时钟产生的时间戳当作事务 ID？如果时钟同步能做得足够好，时间戳的确具备所需属性：越晚的事务，时间戳越大。当然，问题依旧在于时钟精度的不确定性。
+Để bảo đảm timestamp giao dịch phản ánh quan hệ nhân quả, Spanner cố ý chờ một khoảng thời gian bằng độ dài khoảng tin cậy trước khi commit giao dịch đọc-ghi. Nhờ vậy, mọi giao dịch có thể đọc dữ liệu này sẽ xảy ra đủ muộn để khoảng tin cậy của chúng không còn chồng lên nhau. Để rút ngắn thời gian chờ, Spanner cần giữ độ bất định của đồng hồ càng nhỏ càng tốt. Vì vậy, Google triển khai bộ thu GPS hoặc đồng hồ nguyên tử ở mỗi trung tâm dữ liệu, giữ sai số đồng bộ đồng hồ trong khoảng 7 mili giây [^45].
 
-Spanner 正是以这种方式实现跨数据中心的快照隔离 [^68] [^69]。它利用 TrueTime API 报告的时钟置信区间，依据的是下面这个观察：假设有两个置信区间，每个区间都由最早和最晚的可能时间戳组成（*A* = [*A最早*, *A最晚*]，*B* = [*B最早*, *B最晚*]），如果两个区间不重叠（即 *A最早* < *A最晚* < *B最早* < *B最晚*），那么 B 必定发生在 A 之后，不存在任何疑问。只有当两个区间发生重叠时，我们才无法确定 A 与 B 的先后顺序。
+Nói chính xác, Spanner không nhất thiết phải dùng đồng hồ nguyên tử và bộ thu GPS: điều thực sự quan trọng là có khoảng tin cậy, còn nguồn thời gian chính xác chỉ giúp thu hẹp khoảng đó. Các hệ thống khác cũng bắt đầu dùng cách tương tự. Ví dụ, YugabyteDB khi chạy trên AWS có thể tận dụng ClockBound [^70], và một số hệ thống khác cũng bắt đầu dựa vào đồng bộ đồng hồ ở nhiều mức độ [^71] [^72].
 
-为了确保事务时间戳能够反映因果关系，Spanner 会在提交读写事务之前，刻意等待相当于置信区间长度的一段时间。这样一来，任何可能读到该数据的事务都会发生在足够晚的时刻，使它们的置信区间不再重叠。为了尽量缩短等待，Spanner 需要把时钟不确定性控制得尽可能小；为此，Google 在每个数据中心都部署了 GPS 接收器或原子钟，从而把时钟同步误差控制在大约 7 毫秒以内 [^45]。
+### Tạm dừng tiến trình {#sec_distributed_clocks_pauses}
 
-严格来说，Spanner 并非一定要使用原子钟和 GPS 接收器：真正重要的是获得置信区间，精确的时间源只是帮助缩小这个区间。其他系统也开始采用类似方法。例如，YugabyteDB 在 AWS 上运行时可以利用 ClockBound [^70]，还有若干系统也开始在不同程度上依赖时钟同步 [^71] [^72]。
+Xét thêm một ví dụ về việc dùng đồng hồ nguy hiểm trong hệ thống phân tán. Giả sử mỗi shard của một cơ sở dữ liệu chỉ có một leader, và chỉ leader được nhận lần ghi. Làm sao một node biết mình vẫn là leader (chưa bị node khác tuyên bố đã chết) để an toàn nhận lần ghi?
 
-### 进程暂停 {#sec_distributed_clocks_pauses}
+Một cách là leader lấy từ các node khác một *lease* (hợp đồng thuê), tương tự khóa có timeout [^73]. Tại mỗi thời điểm chỉ một node được giữ lease. Do đó, khi một node có được lease, nó biết mình là leader cho đến khi lease hết hạn. Để giữ vai trò leader, node phải định kỳ gia hạn lease trước khi hết hạn. Nếu node hỏng, nó ngừng gia hạn, nên khi lease hết hạn, node khác có thể tiếp quản.
 
-再来看一个在分布式系统中危险使用时钟的例子。假设某个数据库的每个分片都只有一个领导者，而且只有领导者可以接受写入。一个节点怎么知道自己仍是领导者（没有被其他节点宣告死亡），因而可以安全地接受写入呢？
-
-一种办法是由领导者向其他节点取得一份 *租约*（*lease*），它类似于带有超时的锁 [^73]。任何时刻只能有一个节点持有租约。因此，节点拿到租约后，就知道自己在租约到期以前的一段时间内仍是领导者。为保持领导者身份，节点必须在租约到期前定期续租。如果节点失效，就会停止续租；租约到期后，另一个节点便可接管。
-
-可以想象，请求处理循环大致如下：
+Có thể hình dung vòng lặp xử lý yêu cầu trông đại khái như sau:
 
 ```js
 while (true) {
     request = getIncomingRequest();
 
-    // 确保租约至少还剩 10 秒
+    // Bảo đảm lease còn ít nhất 10 giây
     if (lease.expiryTimeMillis - System.currentTimeMillis() < 10000) {
         lease = lease.renew();
     }
@@ -365,354 +361,355 @@ while (true) {
 }
 ```
 
-这段代码有什么问题？首先，它依赖同步时钟：租约到期时间由另一台机器设置（例如以当前时间加 30 秒来计算），却要与本地系统时钟比较。如果两台时钟的偏差超过几秒，这段代码的行为就会变得古怪。
+Đoạn mã này có vấn đề gì? Thứ nhất, nó dựa vào đồng hồ đồng bộ: thời điểm hết hạn của lease do một máy khác đặt (ví dụ tính bằng thời gian hiện tại cộng 30 giây), nhưng lại được so sánh với đồng hồ hệ thống cục bộ. Nếu hai đồng hồ chênh nhau quá vài giây, đoạn mã sẽ chạy kỳ quặc.
 
-其次，即使把协议改成只使用本地单调时钟，仍然存在另一个问题：代码假定读取时间（`System.currentTimeMillis()`）与处理请求（`process(request)`）之间只会经过极短时间。通常这段代码确实运行得很快，预留 10 秒足以确保租约不会在请求处理到一半时过期。
+Thứ hai, ngay cả khi sửa giao thức để chỉ dùng đồng hồ đơn điệu cục bộ, vẫn còn một vấn đề khác: mã giả định rằng giữa lúc đọc thời gian (`System.currentTimeMillis()`) và lúc xử lý yêu cầu (`process(request)`) chỉ trôi qua rất ít thời gian. Thường thì đoạn mã này quả thật chạy rất nhanh, nên chừa 10 giây là đủ bảo đảm lease không hết hạn giữa chừng khi đang xử lý yêu cầu.
 
-可是，如果程序执行时意外暂停了呢？例如，假设线程执行到 `lease.isValid()` 附近时停了 15 秒，随后才恢复。在处理请求时，租约很可能早已过期，另一个节点也已接任领导者。然而，没有任何东西会告诉这个线程它刚才停了那么久；直到循环进入下一轮，它才会发现租约已经过期——而在此之前，它可能已经处理了请求，做出了不安全的操作。
+Nhưng nếu chương trình bất ngờ bị tạm dừng khi đang chạy thì sao? Chẳng hạn, giả sử thread dừng 15 giây ở gần dòng `lease.isValid()` rồi mới chạy tiếp. Khi đó, lúc xử lý yêu cầu, lease rất có thể đã hết hạn từ lâu và node khác đã thành leader. Tuy nhiên, không có gì báo cho thread biết nó vừa dừng lâu như vậy, nên chỉ đến vòng lặp tiếp theo nó mới nhận ra lease đã hết hạn — và đến lúc đó nó có thể đã làm điều không an toàn khi xử lý yêu cầu.
 
-认为线程可能暂停这么久，是否合理？很遗憾，完全合理。造成长时间暂停的原因多种多样：
+Có hợp lý khi nghĩ thread có thể bị dừng lâu như vậy không? Đáng tiếc là hoàn toàn hợp lý. Có nhiều nguyên nhân gây ra khoảng dừng dài:
 
-* 多个线程争用锁、队列等共享资源时，线程可能把大量时间花在等待上。换用 CPU 核心更多的机器甚至可能让这类问题进一步恶化，而且争用问题往往很难诊断 [^74]。
-* 许多编程语言运行时（例如 Java 虚拟机）都带有 *垃圾回收器*（GC），偶尔需要停止所有正在运行的线程。过去，这类 *STW GC 暂停* 有时会让程序停上几分钟 [^75]！现代 GC 算法已经大大缓解了这个问题，但 GC 暂停仍可能相当明显（参见 [“限制垃圾回收的影响”](/ch9#sec_distributed_gc_impact)）。
-* 在虚拟化环境中，虚拟机可以被 *挂起*（*suspend*，暂停所有进程并把内存内容保存到磁盘），随后再 *恢复*（*resume*，还原内存内容并从原处继续执行）。这种暂停可能发生在进程执行的任何时刻，持续时间也没有上限。这个功能有时用于把虚拟机从一台宿主机 *实时迁移*（*live migration*）到另一台宿主机而无需重启；在这种情况下，暂停多久取决于进程写入内存的速率 [^76]。
-* 在笔记本电脑和手机等终端用户设备上，执行也可能随时挂起并恢复，例如用户合上笔记本电脑屏幕时。
-* 当操作系统切换到另一个线程，或者虚拟机监控器切换到另一台虚拟机时，当前线程可能停在代码中的任意位置。对虚拟机而言，被其他虚拟机占用的 CPU 时间称为 *窃取时间*（*steal time*）。如果机器负载很高——也就是有很长的线程队列在等待运行——暂停的线程可能要过一阵子才能再次获得运行机会。
-* 如果应用程序执行同步磁盘访问，线程可能暂停下来，等待缓慢的磁盘 I/O 操作完成 [^77]。在许多语言中，即使代码没有明确读写文件，磁盘访问也可能出人意料地发生。例如，Java 类加载器会在类第一次使用时才加载类文件，而这可能出现在程序执行的任何时刻。I/O 暂停与 GC 暂停甚至可能相互叠加 [^78]。如果所谓的磁盘其实是网络文件系统或网络块设备（例如 Amazon EBS），I/O 延迟还会受到网络延迟波动的影响 [^31]。
-* 如果操作系统允许 *换页到磁盘*（*swapping to disk*，也称 *分页*，*paging*），一次简单的内存访问也可能触发缺页错误，必须从磁盘把某个页面载入内存。在这项缓慢的 I/O 操作完成以前，线程会一直暂停。如果内存压力很大，还可能需要先把另一个页面换出到磁盘。极端情况下，操作系统会把大部分时间耗在内存页面的换入换出上，几乎不做实际工作，这叫作 *抖动*（*thrashing*）。为了避免这种情况，服务器通常会禁用分页——与其冒着发生抖动的风险，不如终止一个进程来释放内存。
-* 向 Unix 进程发送 `SIGSTOP` 信号也会令其暂停，例如在 shell 中按 Ctrl-Z。这个信号会立即停止给进程分配 CPU 周期，直到 `SIGCONT` 令它恢复；随后，它会从先前停下的位置继续运行。即使你的环境通常不用 `SIGSTOP`，运维人员也可能不小心发出这个信号。
+* Khi nhiều thread tranh chấp tài nguyên chung như khóa, hàng đợi, thread có thể mất rất nhiều thời gian để chờ. Chuyển sang máy có nhiều lõi CPU hơn thậm chí có thể làm vấn đề này tệ hơn, và vấn đề tranh chấp thường rất khó chẩn đoán [^74].
+* Nhiều runtime của ngôn ngữ lập trình (như Java Virtual Machine) có *bộ thu gom rác* (GC, *garbage collection*), thỉnh thoảng cần dừng mọi thread đang chạy. Trước đây, những *khoảng dừng GC stop-the-world* như vậy đôi khi khiến chương trình đứng hàng phút [^75]! Các thuật toán GC hiện đại đã giảm nhẹ vấn đề này rất nhiều, nhưng khoảng dừng GC vẫn có thể khá rõ rệt (xem ["Hạn chế tác động của garbage collection"](/ch9#sec_distributed_gc_impact)).
+* Trong môi trường ảo hóa, máy ảo có thể bị *tạm dừng* (*suspend*): dừng mọi tiến trình và lưu nội dung bộ nhớ ra đĩa, rồi sau đó *tiếp tục* (*resume*): khôi phục nội dung bộ nhớ và chạy tiếp từ chỗ đã dừng. Khoảng dừng này có thể xảy ra bất cứ lúc nào trong quá trình thực thi và kéo dài bao lâu cũng được. Tính năng này đôi khi dùng cho *live migration*: chuyển máy ảo từ host này sang host khác mà không cần khởi động lại, và khi đó thời gian dừng phụ thuộc tốc độ tiến trình ghi vào bộ nhớ [^76].
+* Trên thiết bị người dùng cuối như laptop và điện thoại, quá trình thực thi cũng có thể bị tạm dừng và tiếp tục bất cứ lúc nào, chẳng hạn khi người dùng gập màn hình laptop.
+* Khi hệ điều hành chuyển sang thread khác, hoặc hypervisor chuyển sang máy ảo khác, thread hiện tại có thể dừng ở vị trí bất kỳ trong mã. Với máy ảo, thời gian CPU bị máy ảo khác chiếm gọi là *steal time*. Nếu máy tải nặng — tức là có hàng đợi thread dài đang chờ chạy — thread bị dừng có thể phải một lúc sau mới được chạy lại.
+* Nếu ứng dụng truy cập đĩa đồng bộ, thread có thể bị dừng để chờ thao tác I/O đĩa chậm hoàn tất [^77]. Trong nhiều ngôn ngữ, truy cập đĩa có thể xảy ra bất ngờ ngay cả khi mã không đọc ghi file tường minh. Ví dụ, class loader của Java chỉ nạp file class khi class được dùng lần đầu, và việc này có thể xảy ra tại bất kỳ thời điểm nào của chương trình. Khoảng dừng I/O và khoảng dừng GC thậm chí có thể cộng dồn lên nhau [^78]. Nếu "đĩa" thực chất là hệ thống file mạng hay block device qua mạng (như Amazon EBS), độ trễ I/O còn chịu ảnh hưởng của độ dao động độ trễ mạng [^31].
+* Nếu hệ điều hành cho phép *hoán đổi ra đĩa* (*swapping to disk*) hay còn gọi là *phân trang* (*paging*), một lần truy cập bộ nhớ đơn giản cũng có thể gây page fault, buộc phải nạp một trang từ đĩa vào bộ nhớ. Thread bị dừng cho đến khi thao tác I/O chậm này hoàn tất. Nếu áp lực bộ nhớ cao, có thể còn phải hoán đổi một trang khác ra đĩa trước. Trong trường hợp cực đoan, hệ điều hành dành phần lớn thời gian để hoán đổi trang vào ra mà gần như không làm việc gì thật sự, hiện tượng này gọi là *thrashing*. Để tránh vấn đề này, server thường tắt phân trang (nếu bạn thà kill một tiến trình để giải phóng bộ nhớ còn hơn mạo hiểm bị thrashing).
+* Gửi tín hiệu `SIGSTOP` cho một tiến trình Unix cũng làm nó dừng, ví dụ khi bấm Ctrl-Z trong shell. Tín hiệu này lập tức ngừng cấp chu kỳ CPU cho tiến trình cho đến khi `SIGCONT` cho nó chạy lại, và lúc đó nó tiếp tục chạy từ vị trí đã dừng. Ngay cả khi môi trường của bạn thường không dùng `SIGSTOP`, người vận hành vẫn có thể vô tình gửi tín hiệu này.
 
-上述任何事件都可能在任意位置 *抢占*（*preempt*）正在运行的线程，过一段时间再让它恢复，而线程对此毫无察觉。这个问题类似于保证单机多线程代码的线程安全：不能对时序作任何假定，因为上下文切换与并行执行随时都可能发生。
+Bất kỳ sự kiện nào ở trên cũng có thể *preempt* (chiếm quyền) một thread đang chạy tại vị trí bất kỳ rồi cho nó chạy lại sau một lúc, mà thread không hề hay biết. Vấn đề này tương tự việc bảo đảm an toàn thread trong mã đa thread trên một máy: không thể giả định gì về thời gian, vì chuyển ngữ cảnh và thực thi song song có thể xảy ra bất cứ lúc nào.
 
-在单台机器上编写多线程代码时，我们有不少成熟工具来保证线程安全：互斥锁、信号量、原子计数器、无锁数据结构、阻塞队列等等。遗憾的是，这些工具不能直接套用到分布式系统，因为分布式系统没有共享内存，只有经由不可靠网络传递的消息。
+Khi viết mã đa thread trên một máy, ta có nhiều công cụ quen thuộc để bảo đảm an toàn thread: mutex, semaphore, bộ đếm nguyên tử, cấu trúc dữ liệu lock-free, hàng đợi chặn, v.v. Tiếc là các công cụ này không áp dụng thẳng được cho hệ thống phân tán, vì hệ thống phân tán không có bộ nhớ chung, chỉ có thông điệp truyền qua mạng không đáng tin cậy.
 
-分布式系统中的节点必须假定：自己的执行可能在任意时刻暂停很长时间，哪怕正处于函数执行途中。暂停期间，外部世界仍在继续运转，甚至可能因为这个节点迟迟没有响应而宣告它死亡。最终节点恢复运行时，甚至意识不到自己曾经“睡着”，直到稍后再次读取时钟。
+Node trong hệ thống phân tán phải giả định rằng quá trình thực thi của nó có thể bị dừng lâu bất cứ lúc nào, kể cả khi đang chạy giữa chừng một hàm. Trong khoảng dừng, thế giới bên ngoài vẫn tiếp tục chạy, thậm chí có thể tuyên bố node đã chết vì nó mãi không phản hồi. Cuối cùng khi node chạy lại, nó thậm chí không nhận ra mình đã "ngủ", cho đến khi đọc đồng hồ lần nữa sau đó.
 
-#### 响应时间保证 {#sec_distributed_clocks_realtime}
+#### Bảo đảm thời gian phản hồi {#sec_distributed_clocks_realtime}
 
-如上所述，在许多编程语言与操作系统中，线程和进程都可能暂停任意长的时间。不过，只要投入足够努力，这些暂停的原因 *确实可以* 消除。
+Như đã nói, trong nhiều ngôn ngữ lập trình và hệ điều hành, thread và tiến trình có thể bị dừng lâu tùy ý. Tuy nhiên, nếu bỏ đủ công sức thì các nguyên nhân gây dừng này *thật sự có thể* bị loại bỏ.
 
-有些软件运行在这样的环境中：如果不能在规定时间内响应，就可能造成严重损害。控制飞机、火箭、机器人、汽车及其他实体设备的计算机，必须快速而且可预测地响应传感器输入。在这些系统中，软件必须赶在明确规定的 *截止时间*（*deadline*）之前响应；错过截止时间，就可能导致整个系统失效。这样的系统称为 *硬实时*（*hard real-time*）系统。
-
-
-> [!NOTE]
-> 在嵌入式系统中，*实时* 是指系统经过精心设计与测试，能够在任何情况下满足规定的时序保证。这与 Web 领域对 *实时* 一词较为宽泛的用法形成对比：后者通常只是指服务器向客户端推送数据或进行流处理，并没有严格的响应时间约束（参见 [第 12 章](/ch12#ch_stream)）。
-
-
-例如，汽车的车载传感器检测到碰撞正在发生时，你绝不会希望安全气囊因为控制系统恰好遭遇 GC 暂停而延迟弹出。
-
-要在系统中提供实时保证，需要软件栈的每一层共同支持：需要 *实时操作系统*（RTOS），保证在规定的时间间隔内为进程分配 CPU 时间；库函数必须说明最坏情况下的执行时间；动态内存分配可能要受到限制，甚至完全禁止（虽然存在实时垃圾回收器，应用程序仍必须确保不会给 GC 安排太多工作）；此外还要进行海量测试与测量，验证系统确实满足保证。
-
-这些要求不仅带来大量额外工作，也严重限制了可用的编程语言、库和工具，因为大多数语言和工具都不提供实时保证。正因如此，实时系统开发极其昂贵，最常用于安全攸关的嵌入式设备。而且，“实时”并不等于“高性能”——事实上，实时系统的吞吐量可能更低，因为及时响应必须优先于一切（另见 [“延迟与资源利用率”](/ch9#sidebar_distributed_latency_utilization)）。
-
-对于大多数服务器端数据处理系统，实时保证既不经济，也不合适。因此，这些系统只能承受非实时环境带来的进程暂停与时钟不稳定。
-
-#### 限制垃圾回收的影响 {#sec_distributed_gc_impact}
-
-垃圾回收曾是造成进程暂停的最大原因之一 [^79]。好在 GC 算法已经有了长足进步：如今，经过适当调优的回收器通常只会暂停几毫秒。Java 运行时提供并发标记清除（CMS）、垃圾优先（G1）、Z 垃圾回收器（ZGC）、Epsilon 和 Shenandoah 等回收器，分别针对高频创建对象、大型堆等不同内存使用特征进行优化。相比之下，Go 提供的是一种更简单、尝试自我优化的并发标记清除垃圾回收器。
-
-如果必须彻底避免 GC 暂停，可以选择完全没有垃圾回收器的语言。例如，Swift 使用自动引用计数来判断何时能够释放内存；Rust 和 Mojo 则通过类型系统追踪对象的生命周期，让编译器判断内存需要保留多久。
-
-也可以继续使用带垃圾回收的语言，同时减轻暂停造成的影响。一种做法是把 GC 暂停看作节点短暂的计划内停机：某个节点进行垃圾回收时，由其他节点处理客户端请求。如果运行时能够提前告知应用程序节点即将进行 GC 暂停，应用程序就可以停止向该节点发送新请求，等待它处理完尚未完成的请求，然后趁没有请求进行时执行 GC。这种技巧能向客户端隐藏 GC 暂停，并降低响应时间的高百分位数 [^80] [^81]。
-
-这种思路还有一个变体：只让垃圾回收器处理容易快速回收的短命对象，并定期重启进程，赶在长期存活对象积累到需要执行一次完整 GC 之前 [^79] [^82]。每次可以只重启一个节点，并在计划重启前先把流量从该节点迁走，就像滚动升级一样（参见 [第 5 章](/ch5#ch_encoding)）。
-
-这些措施无法彻底杜绝垃圾回收暂停，却能切实减轻其对应用程序的影响。
-
-
-
-## 知识、真相和谎言 {#sec_distributed_truth}
-
-到目前为止，本章已经考察了分布式系统与单机程序的不同之处：系统没有共享内存，只能通过延迟不定的不可靠网络来传递消息，还可能遭遇部分失效、不可靠的时钟和进程暂停。
-
-如果还不熟悉分布式系统，这些问题带来的后果会让人极度迷失方向。网络中的一个节点不可能 *确切知道* 其他节点的任何事情，只能根据收到（或没有收到）的消息作出猜测。一个节点只有与另一个节点交换消息，才能得知对方处于什么状态，例如存储了哪些数据、是否正常运行等等。如果远程节点没有响应，就无从得知它的状态，因为网络问题与节点自身的问题无法可靠地区分。
-
-关于这类系统的讨论已经近乎哲学：在系统中，我们究竟知道什么为真、什么为假？如果感知和测量的机制都不可靠，我们又能在多大程度上确信自己的认知 [^83]？软件系统是否应当服从我们认为物理世界必然遵循的法则，例如因果律？
-
-好在我们不必一路追问到生命的意义。在分布式系统中，可以明确写出对系统行为所作的假设（即 *系统模型*，*system model*），再把实际系统设计成符合这些假设。我们还可以证明某个算法在特定系统模型中能够正确运行。这意味着，即使底层系统模型只提供极少保证，也仍然可以实现可靠的行为。
-
-不过，要让软件在不可靠的系统模型中表现良好，绝非轻而易举。本章余下部分将进一步探讨分布式系统中的知识与真相，帮助我们思考可以作出哪些假设，以及希望提供哪些保证。在 [第 10 章](/ch10#ch_consistency) 中，我们将继续考察一些分布式算法：它们在特定假设下提供特定保证。
-
-### 多数派原则 {#sec_distributed_majority}
-
-设想一个存在非对称故障的网络：某个节点可以收到发给它的所有消息，但它发出的消息都会丢失或延迟 [^22]。这个节点明明工作得完全正常，也在接收其他节点的请求，可其他节点就是听不见它的回应。等到超时后，其他节点由于一直收不到回复，便宣告它已经死亡。接下来的场面如同噩梦：这个半失联的节点被拖向墓地，一路挣扎高喊“我还没死！”——可惜谁也听不见它的呼喊，送葬队伍仍以坚忍不拔的决心继续前进。
-
-在一个没那么噩梦般的场景中，半失联的节点也许会发现自己发出的消息得不到其他节点的确认，于是意识到网络必定出了故障。然而，其他节点仍会错误地宣告它死亡，而它对此无能为力。
-
-第三种场景是，假设某个节点暂停执行一分钟。在此期间，它既不处理请求，也不发送响应。其他节点一边等待、一边重试，终于失去耐心，宣告它死亡并把它抬上灵车。最终暂停结束，节点的线程若无其事地继续执行。其他节点惊讶地看到，那个本应死去的节点突然精神抖擞地从棺材里探出头来，兴高采烈地与旁人聊天。刚恢复时，这个节点甚至不知道整整一分钟已经过去，也不知道自己已经被宣告死亡——在它看来，距离上次和其他节点交谈仿佛只过了一瞬间。
-
-这些故事告诉我们，节点未必能相信自己对处境的判断。分布式系统不能只依赖某一个节点，因为节点随时可能失效，使系统陷入僵局而无法恢复。因此，许多分布式算法依赖 *法定人数*（*quorum*），也就是让多个节点投票（参见 [“读写仲裁”](/ch6#sec_replication_quorum_condition)）：一项决策必须获得若干节点的最低票数，借此减少对任何单个节点的依赖。
-
-宣告节点死亡的决定也是如此。如果达到法定人数的节点宣告另一个节点已经死亡，那么即使它觉得自己还活得好好的，也必须被视为死亡。单个节点必须服从法定人数作出的决定并下台。
-
-最常见的法定人数，是超过节点总数一半的绝对多数，当然也可以采用其他形式。多数法定人数让系统能在少数节点发生故障时继续工作：三个节点可以容忍一个故障节点，五个节点则可以容忍两个。与此同时，它仍然是安全的，因为系统中只能形成一个多数派，不可能同时出现两个作出冲突决定的多数派。我们将在 [第 10 章](/ch10#ch_consistency) 讨论 *共识算法* 时，更详细地介绍法定人数的用法。
-
-### 分布式锁和租约 {#sec_distributed_lock_fencing}
-
-分布式应用程序中的锁与租约很容易被误用，也是程序缺陷的常见来源 [^84]。下面来看一种具体的出错方式。
-
-在 [“进程暂停”](/ch9#sec_distributed_clocks_pauses) 中，我们看到租约是一种会超时的锁：如果原持有者停止响应（可能是因为它崩溃了、暂停太久，或与网络断开），租约就可以交给新的持有者。当系统要求某种东西只能有一个时，就可以使用租约。例如：
-
-* 只允许一个节点担任数据库分片的领导者，以避免脑裂（参见 [“处理节点故障”](/ch6#sec_replication_failover)）。
-* 只允许一个事务或客户端更新特定资源或对象，以免并发写入将其损坏。
-* 一项大型处理作业中的每个输入文件只应由一个节点处理，避免多个节点重复执行同一份工作而白白浪费计算资源。
-
-值得仔细想一想：如果多个节点同时相信自己持有租约——也许是进程暂停造成的——会发生什么？对第三个例子而言，后果不过是浪费一些计算资源，并不严重；但在前两个例子中，数据可能丢失或损坏，严重得多。
-
-例如，{{< xref fig="9-4" page="/ch9" anchor="fig_distributed_lease_pause" >}}图 9-4{{< /xref >}} 展示了锁实现错误导致的数据损坏。（这并非纯粹的理论问题：HBase 曾经就有这个缺陷 [^85] [^86]。）假设你想确保某个存储服务里的文件一次只能由一个客户端访问，因为多个客户端同时写入会损坏文件。于是，你要求客户端在访问文件之前，先向锁服务取得租约。这类锁服务通常用共识算法来实现，我们将在 [第 10 章](/ch10#ch_consistency) 中进一步讨论。
-
-{{< fig num="9-4" id="fig_distributed_lease_pause" src="/fig/ddia_0904.png" caption="分布式锁的错误实现：租约已经过期，客户端 1 却认为它依然有效，因而损坏了存储中的文件。" class="ddia-figure ddia-figure--wide" width="2658" height="975" />}}
-
-
-问题正是 [“进程暂停”](/ch9#sec_distributed_clocks_pauses) 所讨论的情形：持有租约的客户端如果暂停太久，租约就会过期。另一个客户端此时可以取得同一文件的租约，并开始写入。等暂停的客户端恢复后，它误以为自己的租约依然有效，也继续写入文件。于是便出现了脑裂：两个客户端的写入彼此冲突，最终损坏文件。
-
-{{< xref fig="9-5" page="/ch9" anchor="fig_distributed_lease_delay" >}}图 9-5{{< /xref >}} 展示了另一个后果类似的问题。这个例子里没有进程暂停，只有客户端 1 崩溃。就在崩溃前，客户端 1 向存储服务发出了一项写请求，但请求在网络中延迟了很久。（回想 [“实践中的网络故障”](/ch9#sec_distributed_network_faults)，数据包有时会延迟一分钟以上。）等写请求抵达存储服务时，租约早已超时，客户端 2 已经取得租约并发出了自己的写入。结果便是类似 {{< xref fig="9-4" page="/ch9" anchor="fig_distributed_lease_pause" >}}图 9-4{{< /xref >}} 的数据损坏。
-
-{{< fig num="9-5" id="fig_distributed_lease_delay" src="/fig/ddia_0905.png" caption="原租约持有者发出的消息可能延迟很久，直到另一个节点接管租约后才抵达。" class="ddia-figure ddia-figure--wide" width="2658" height="975" />}}
-
-
-#### 用栅栏机制隔离僵尸与延迟请求 {#sec_distributed_fencing_tokens}
-
-*僵尸*（*zombie*）一词有时用来形容这样的原租约持有者：它还不知道自己已经失去租约，仍把自己当作当前持有者行事。既然无法彻底杜绝僵尸，就必须确保它们不能以脑裂的形式造成任何破坏。这称为用 *栅栏机制*（*fencing*）隔离僵尸。
-
-有些系统试图通过关停僵尸来隔离它，例如断开它的网络连接 [^9]、通过云服务商的管理界面关闭虚拟机，甚至直接切断机器电源 [^87]。这种做法称为 STONITH，即“击毙另一个节点”。遗憾的是，它有几个问题：无法防范 {{< xref fig="9-5" page="/ch9" anchor="fig_distributed_lease_delay" >}}图 9-5{{< /xref >}} 所示的超长网络延迟；所有节点可能彼此关停 [^19]；而等到僵尸被发现并关闭时，也许早已为时过晚，数据已经损坏。
-
-{{< xref fig="9-6" page="/ch9" anchor="fig_distributed_fencing" >}}图 9-6{{< /xref >}} 展示了一种更健壮的栅栏机制，既能防范僵尸，也能防范延迟请求。
-
-{{< fig num="9-6" id="fig_distributed_fencing" src="/fig/ddia_0906.png" caption="只允许写入按照递增的栅栏令牌顺序执行，从而保证存储访问安全。" class="ddia-figure ddia-figure--wide" width="2658" height="975" />}}
-
-
-假设锁服务每次授予锁或租约时，还会返回一个 *栅栏令牌*（*fencing token*）。这是一个每次授予锁都会增大的数字，例如由锁服务负责递增。随后可以要求客户端每次向存储服务发送写请求时，都必须带上自己当前的栅栏令牌。
+Một số phần mềm chạy trong môi trường mà không phản hồi kịp thời có thể gây thiệt hại nghiêm trọng. Máy tính điều khiển máy bay, tên lửa, robot, ô tô và các thiết bị vật lý khác phải phản hồi nhanh và có thể dự đoán trước đối với dữ liệu cảm biến. Trong các hệ thống này, phần mềm phải phản hồi trước một *hạn chót* (*deadline*) được quy định rõ, và lỡ hạn chót có thể khiến toàn hệ thống hỏng. Những hệ thống như vậy gọi là hệ thống *thời gian thực cứng* (*hard real-time*).
 
 
 > [!NOTE]
-> 栅栏令牌还有几种别称。在 Google 的锁服务 Chubby 中，它叫作 *序列器*（*sequencer*）[^88]；在 Kafka 中则叫作 *纪元编号*（*epoch number*）。在我们将在 [第 10 章](/ch10#ch_consistency) 讨论的共识算法中，Paxos 的 *投票编号*（*ballot number*）或 Raft 的 *任期编号*（*term number*）也发挥着类似作用。
+> Trong hệ thống nhúng, *real-time* nghĩa là hệ thống được thiết kế và kiểm thử cẩn thận để đáp ứng các bảo đảm về thời gian đã quy định trong mọi tình huống. Điều này khác với cách dùng từ *real-time* lỏng lẻo hơn trong lĩnh vực web, thường chỉ việc server đẩy dữ liệu cho client hoặc xử lý luồng mà không có ràng buộc nghiêm ngặt về thời gian phản hồi (xem [Chương 12](/ch12#ch_stream)).
 
 
-在 {{< xref fig="9-6" page="/ch9" anchor="fig_distributed_fencing" >}}图 9-6{{< /xref >}} 中，客户端 1 取得租约及令牌 33，随后却长时间暂停，导致租约过期。客户端 2 接着取得租约及令牌 34（令牌值始终递增），并向存储服务发送带令牌 34 的写请求。稍后，客户端 1 恢复执行，也向存储服务发送写请求，其中带着自己的令牌 33。然而，存储服务记得自己已经处理过令牌值更高（34）的写入，因此会拒绝令牌 33 的请求。刚取得租约的客户端必须立刻向存储服务执行一次写入；一旦这次写入完成，所有僵尸都会被隔离在外。
+Chẳng hạn, khi cảm biến trên xe phát hiện va chạm đang xảy ra, bạn chắc chắn không muốn túi khí bung chậm vì hệ thống điều khiển vừa lúc gặp khoảng dừng GC.
 
-如果使用 ZooKeeper 作为锁服务，可以把事务 ID `zxid` 或节点版本 `cversion` 用作栅栏令牌 [^85]。在 etcd 中，修订号与租约 ID 共同发挥类似作用 [^89]。Hazelcast 的 FencedLock API 则会显式生成栅栏令牌 [^90]。
+Để cung cấp bảo đảm thời gian thực trong một hệ thống, mọi tầng của ngăn xếp phần mềm đều phải hỗ trợ. Cần một *hệ điều hành thời gian thực* (RTOS) cho phép lập lịch tiến trình với bảo đảm được cấp thời gian CPU trong những khoảng đã quy định. Các hàm thư viện phải ghi rõ thời gian thực thi trong trường hợp xấu nhất. Việc cấp phát bộ nhớ động có thể bị hạn chế hoặc cấm hoàn toàn (tuy có garbage collector thời gian thực, ứng dụng vẫn phải bảo đảm không giao cho GC quá nhiều việc). Ngoài ra còn phải kiểm thử và đo đạc rất nhiều để xác nhận hệ thống thật sự đáp ứng các bảo đảm.
 
-这种机制要求存储服务能够检查写入所携带的令牌是否已经过时。另一种办法是让服务支持类似原子比较并设置（CAS）的写入：只有从当前客户端上次读取对象以后，没有其他客户端写过该对象，写入才会成功。对象存储服务就支持这类检查：Amazon S3 称之为 *条件写入*（*conditional write*），Azure Blob Storage 称之为 *条件标头*（*conditional header*），Google Cloud Storage 则称之为 *请求前置条件*（*request precondition*）。
+Những yêu cầu này không chỉ kéo theo nhiều công việc phụ trội mà còn hạn chế nghiêm trọng ngôn ngữ lập trình, thư viện và công cụ có thể dùng, vì phần lớn ngôn ngữ và công cụ không cung cấp bảo đảm thời gian thực. Chính vì vậy, phát triển hệ thống thời gian thực cực kỳ tốn kém và thường dùng nhất cho các thiết bị nhúng liên quan đến an toàn. Hơn nữa, "thời gian thực" không đồng nghĩa với "hiệu năng cao" — thực tế, hệ thống thời gian thực có thể có thông lượng thấp hơn, vì phản hồi kịp thời phải được ưu tiên trên hết (xem thêm ["Độ trễ và mức sử dụng tài nguyên"](/ch9#sidebar_distributed_latency_utilization)).
 
-#### 多副本隔离 {#fencing-with-multiple-replicas}
+Với đa số hệ thống xử lý dữ liệu phía server, bảo đảm thời gian thực vừa không kinh tế vừa không phù hợp. Vì vậy các hệ thống này đành chịu khoảng dừng tiến trình và đồng hồ không ổn định của môi trường phi thời gian thực.
 
-如果客户端只需写入一个支持这类条件写入的存储服务，那么锁服务多少有些多余 [^91] [^92]，因为完全可以直接依托该存储服务来分配租约 [^93]。不过，有了栅栏令牌以后，也可以把它用于多个服务或副本，确保原租约持有者在所有这些服务上都被隔离。
+#### Hạn chế tác động của garbage collection {#sec_distributed_gc_impact}
 
-例如，假设存储服务是一个采用最后写入者胜来解决冲突的无主复制键值存储（参见 [“无主复制”](/ch6#sec_replication_leaderless)）。在这样的系统中，客户端直接向每个副本发送写入，各副本根据客户端分配的时间戳，自行决定是否接受写入。
+Garbage collection từng là một trong những nguyên nhân lớn nhất gây ra khoảng dừng tiến trình [^79]. May là các thuật toán GC đã tiến bộ đáng kể: ngày nay, bộ thu gom được tinh chỉnh phù hợp thường chỉ dừng vài mili giây. Runtime Java cung cấp các bộ thu gom như Concurrent Mark Sweep (CMS), Garbage-First (G1), Z Garbage Collector (ZGC), Epsilon và Shenandoah, mỗi loại tối ưu cho đặc điểm sử dụng bộ nhớ khác nhau như tạo đối tượng với tần suất cao hay heap lớn. Ngược lại, Go cung cấp một bộ thu gom mark-sweep đồng thời đơn giản hơn, cố gắng tự tối ưu.
 
-如 {{< xref fig="9-7" page="/ch9" anchor="fig_distributed_fencing_leaderless" >}}图 9-7{{< /xref >}} 所示，可以把写入者的栅栏令牌放在时间戳最高有效的若干位或数字中。这样就能确保，新租约持有者生成的任何时间戳，都大于原租约持有者生成的所有时间戳，即使原持有者的写入实际发生得更晚。
+Nếu cần tránh hoàn toàn khoảng dừng GC, có thể chọn ngôn ngữ hoàn toàn không có garbage collector. Chẳng hạn, Swift dùng đếm tham chiếu tự động để biết khi nào giải phóng được bộ nhớ, còn Rust và Mojo theo dõi vòng đời đối tượng qua hệ thống kiểu, để trình biên dịch quyết định cần giữ bộ nhớ bao lâu.
 
-{{< fig num="9-7" id="fig_distributed_fencing_leaderless" src="/fig/ddia_0907.png" caption="使用栅栏令牌保护对无主复制数据库的写入。" class="ddia-figure ddia-figure--wide" width="2658" height="1466" />}}
+Cũng có thể tiếp tục dùng ngôn ngữ có garbage collection nhưng giảm nhẹ tác động của khoảng dừng. Một cách là coi khoảng dừng GC như thời gian ngừng hoạt động có kế hoạch ngắn của node: khi một node đang thu gom rác, các node khác xử lý yêu cầu của client. Nếu runtime báo trước cho ứng dụng rằng node sắp có khoảng dừng GC, ứng dụng có thể ngừng gửi yêu cầu mới cho node đó, chờ nó xử lý xong các yêu cầu đang dở, rồi chạy GC lúc không có yêu cầu nào. Mẹo này giấu khoảng dừng GC khỏi client và giảm các phân vị cao của thời gian phản hồi [^80] [^81].
+
+Có một biến thể của ý tưởng này: chỉ để bộ thu gom xử lý các đối tượng sống ngắn dễ thu hồi nhanh, và khởi động lại tiến trình định kỳ, trước khi các đối tượng sống lâu kịp tích lũy đến mức cần chạy một lần GC đầy đủ [^79] [^82]. Có thể mỗi lần chỉ khởi động lại một node, và chuyển lưu lượng khỏi node đó trước lần khởi động lại đã lên kế hoạch, giống như rolling upgrade (xem [Chương 5](/ch5#ch_encoding)).
+
+Các biện pháp này không loại bỏ hoàn toàn khoảng dừng garbage collection, nhưng có thể giảm đáng kể tác động của chúng lên ứng dụng.
 
 
-在 {{< xref fig="9-7" page="/ch9" anchor="fig_distributed_fencing_leaderless" >}}图 9-7{{< /xref >}} 中，客户端 2 的栅栏令牌为 34，因此它生成的所有以 34… 开头的时间戳，都大于客户端 1 生成的任何以 33… 开头的时间戳。客户端 2 成功写入达到法定人数的一组副本，但无法连接副本 3。因此，僵尸客户端 1 稍后尝试写入时，这次写入虽然会被副本 1 和 2 忽略，却可能在副本 3 上成功。这不成问题，因为后续的仲裁读会优先选择客户端 2 那个时间戳更大的写入，而读修复或反熵过程最终会覆盖客户端 1 写入的值。
 
-从这些例子可以看出，假定任何时刻只有一个节点持有租约并不安全。所幸，只要稍加留意，就可以借助栅栏令牌防止僵尸与延迟请求造成任何破坏。
+## Tri thức, sự thật và lời nói dối {#sec_distributed_truth}
 
-### 拜占庭故障 {#sec_distributed_byzantine}
+Đến đây, chương này đã xem xét những điểm khác nhau giữa hệ thống phân tán và chương trình trên một máy: hệ thống không có bộ nhớ chung, chỉ truyền thông điệp qua mạng không đáng tin cậy với độ trễ không cố định, và còn có thể gặp hỏng hóc từng phần, đồng hồ không đáng tin cậy và tiến trình bị tạm dừng.
 
-栅栏令牌能够发现并阻止 *无意间* 出错的节点，例如尚未发现租约已经过期的节点。但如果节点蓄意破坏系统保证，只需发送带有伪造栅栏令牌的消息，就能轻易绕过这种防护。
+Nếu chưa quen với hệ thống phân tán, hệ quả của những vấn đề này khiến người ta cực kỳ mất phương hướng. Một node trong mạng không thể *biết chắc* bất cứ điều gì về các node khác, mà chỉ có thể đoán dựa trên những thông điệp nhận được (hoặc không nhận được). Một node chỉ biết node kia đang ở trạng thái nào — đã lưu dữ liệu gì, có đang chạy bình thường không — khi trao đổi thông điệp với nó. Nếu node ở xa không phản hồi thì không có cách nào biết trạng thái của nó, vì không thể phân biệt đáng tin cậy giữa sự cố mạng và sự cố của chính node.
 
-本书假定节点虽然不可靠，却是诚实的：它们可能因为故障而响应缓慢或永不响应，也可能因为 GC 暂停或网络延迟而持有过时状态；但我们假定，只要节点 *确实* 作出响应，它说的就是“真话”——至少据它自己所知，它是在遵守协议规则。
+Cuộc thảo luận về những hệ thống này gần như mang tính triết học: ta thực sự biết điều gì là đúng, điều gì là sai trong hệ thống? Nếu cơ chế cảm nhận và đo lường đều không đáng tin cậy, ta có thể tin vào hiểu biết của mình đến mức nào [^83]? Hệ thống phần mềm có nên tuân theo những quy luật mà ta cho rằng thế giới vật lý nhất thiết phải tuân theo, như nhân quả?
 
-如果节点有可能“撒谎”，也就是发出任意错误或损坏的响应，分布式系统问题就会困难得多。例如，一个节点可能在同一轮选举中投出多张互相矛盾的票。这种行为叫作 *拜占庭故障*（*Byzantine fault*），而在这种互不信任的环境中达成共识的问题，则称为 *拜占庭将军问题*（*Byzantine Generals Problem*）[^94]。
+May là ta không cần truy vấn đến tận ý nghĩa của cuộc sống. Trong hệ thống phân tán, ta có thể viết rõ các giả định về hành vi của hệ thống (gọi là *mô hình hệ thống*, *system model*), rồi thiết kế hệ thống thực tế sao cho thỏa các giả định đó. Ta cũng có thể chứng minh một thuật toán chạy đúng trong một mô hình hệ thống cụ thể. Nghĩa là ta vẫn có thể hiện thực hành vi đáng tin cậy ngay cả khi mô hình hệ thống bên dưới chỉ cung cấp rất ít bảo đảm.
 
-> [!TIP] 拜占庭将军问题
+Tuy nhiên, làm cho phần mềm chạy tốt trong mô hình hệ thống không đáng tin cậy hoàn toàn không dễ. Phần còn lại của chương sẽ đi sâu hơn vào tri thức và sự thật trong hệ thống phân tán, giúp ta suy nghĩ về những giả định có thể đưa ra và những bảo đảm ta muốn cung cấp. Ở [Chương 10](/ch10#ch_consistency), ta sẽ tiếp tục xem xét một số thuật toán phân tán: chúng cung cấp những bảo đảm cụ thể dưới những giả định cụ thể.
+
+### Nguyên tắc đa số {#sec_distributed_majority}
+
+Hãy hình dung một mạng có lỗi bất đối xứng: một node nhận được mọi thông điệp gửi cho nó, nhưng mọi thông điệp nó gửi đi đều bị mất hoặc bị trễ [^22]. Node này chạy hoàn toàn bình thường và vẫn nhận yêu cầu từ các node khác, nhưng các node khác không nghe được phản hồi của nó. Sau khi hết timeout, vì mãi không nhận được hồi đáp, các node khác tuyên bố nó đã chết. Cảnh tượng sau đó như một cơn ác mộng: node nửa mất liên lạc bị lôi ra nghĩa địa, vừa vùng vẫy vừa kêu "Tôi chưa chết!" — nhưng chẳng ai nghe thấy tiếng kêu, và đoàn đưa tang vẫn kiên quyết tiến bước.
+
+Trong một kịch bản đỡ ác mộng hơn, node nửa mất liên lạc có thể nhận ra các thông điệp nó gửi không được node khác xác nhận, và hiểu rằng mạng hẳn đã có sự cố. Tuy vậy, các node khác vẫn tuyên bố sai rằng nó đã chết, và nó chẳng làm gì được.
+
+Kịch bản thứ ba: giả sử một node bị tạm dừng một phút. Trong thời gian đó, nó không xử lý yêu cầu cũng không gửi phản hồi. Các node khác vừa chờ vừa thử lại, cuối cùng hết kiên nhẫn, tuyên bố nó đã chết và khiêng nó lên xe tang. Rồi khoảng dừng kết thúc, thread của node tiếp tục chạy như không có chuyện gì xảy ra. Các node khác kinh ngạc thấy node lẽ ra đã chết bỗng nhô đầu ra khỏi quan tài, khỏe mạnh và vui vẻ trò chuyện với mọi người. Lúc mới hồi phục, node này thậm chí không biết cả một phút đã trôi qua, cũng không biết mình đã bị tuyên bố chết — với nó, lần trò chuyện cuối với các node khác dường như chỉ mới vừa xảy ra.
+
+Những câu chuyện này cho thấy node không nhất thiết có thể tin vào phán đoán của chính mình về tình hình. Hệ thống phân tán không thể chỉ dựa vào một node duy nhất, vì node có thể hỏng bất cứ lúc nào và đẩy hệ thống vào bế tắc không phục hồi được. Vì vậy, nhiều thuật toán phân tán dựa vào *quorum* — cho nhiều node bỏ phiếu (xem ["Đọc và ghi quorum"](/ch6#sec_replication_quorum_condition)): một quyết định phải nhận được số phiếu tối thiểu từ một số node, nhờ đó giảm sự phụ thuộc vào bất kỳ node đơn lẻ nào.
+
+Quyết định tuyên bố một node đã chết cũng vậy. Nếu quorum các node tuyên bố một node khác đã chết thì nó phải được coi là đã chết, dù nó tự thấy mình vẫn sống khỏe. Node đơn lẻ phải tuân theo quyết định của quorum và rút lui.
+
+Quorum phổ biến nhất là đa số tuyệt đối, tức hơn một nửa tổng số node, dù cũng có thể dùng các dạng khác. Quorum đa số cho phép hệ thống tiếp tục chạy khi một số ít node hỏng: ba node chịu được một node hỏng, năm node chịu được hai. Đồng thời nó vẫn an toàn, vì trong hệ thống chỉ có thể hình thành một đa số, không thể có hai đa số cùng đưa ra quyết định mâu thuẫn. Ta sẽ bàn chi tiết hơn về cách dùng quorum khi nói về *thuật toán đồng thuận* ở [Chương 10](/ch10#ch_consistency).
+
+### Khóa phân tán và lease {#sec_distributed_lock_fencing}
+
+Khóa và lease trong ứng dụng phân tán rất dễ bị dùng sai, và là nguồn lỗi chương trình thường gặp [^84]. Hãy xem một cách cụ thể mà chúng có thể sai.
+
+Ở ["Tạm dừng tiến trình"](/ch9#sec_distributed_clocks_pauses), ta đã thấy lease là một loại khóa có timeout: nếu người giữ ban đầu ngừng phản hồi (có thể vì sập, bị dừng quá lâu hoặc mất kết nối mạng), lease có thể được giao cho người giữ mới. Khi hệ thống yêu cầu chỉ có một thứ duy nhất, ta có thể dùng lease. Ví dụ:
+
+* Chỉ cho một node làm leader của một shard cơ sở dữ liệu, để tránh split brain (xem ["Xử lý sự cố node"](/ch6#sec_replication_failover)).
+* Chỉ cho một giao dịch hoặc client cập nhật một tài nguyên hay đối tượng cụ thể, để ghi đồng thời không làm nó hỏng.
+* Mỗi file đầu vào của một job xử lý lớn chỉ nên do một node xử lý, tránh nhiều node làm trùng một việc và lãng phí tài nguyên tính toán.
+
+Cần suy nghĩ kỹ: nếu nhiều node cùng tin rằng mình đang giữ lease — có thể do tiến trình bị tạm dừng — thì chuyện gì xảy ra? Với ví dụ thứ ba, hậu quả chỉ là lãng phí chút tài nguyên tính toán, không nghiêm trọng. Nhưng ở hai ví dụ đầu, dữ liệu có thể bị mất hoặc hỏng, nghiêm trọng hơn nhiều.
+
+Chẳng hạn, {{< xref fig="9-4" page="/ch9" anchor="fig_distributed_lease_pause" >}}Hình 9-4{{< /xref >}} cho thấy dữ liệu bị hỏng do hiện thực khóa sai. (Đây không chỉ là vấn đề lý thuyết: HBase từng có lỗi này [^85] [^86].) Giả sử bạn muốn bảo đảm file trong một dịch vụ lưu trữ mỗi lúc chỉ được một client truy cập, vì nhiều client ghi cùng lúc sẽ làm hỏng file. Bạn thử hiện thực điều này bằng cách yêu cầu client phải lấy lease từ dịch vụ khóa trước khi truy cập file. Dịch vụ khóa kiểu này thường hiện thực bằng thuật toán đồng thuận, ta sẽ bàn thêm ở [Chương 10](/ch10#ch_consistency).
+
+{{< fig num="9-4" id="fig_distributed_lease_pause" src="/fig/ddia_0904.png" caption="Hiện thực sai khóa phân tán: lease đã hết hạn nhưng client 1 vẫn tin rằng nó còn hiệu lực, và làm hỏng file trong kho lưu trữ." class="ddia-figure ddia-figure--wide" width="2658" height="975" />}}
+
+
+Vấn đề chính là tình huống đã bàn ở ["Tạm dừng tiến trình"](/ch9#sec_distributed_clocks_pauses): nếu client giữ lease bị dừng quá lâu, lease sẽ hết hạn. Lúc này client khác có thể lấy lease cho cùng file và bắt đầu ghi. Khi client bị dừng hồi phục, nó lầm tưởng lease của mình vẫn còn hiệu lực và cũng tiếp tục ghi vào file. Kết quả là split brain: lần ghi của hai client xung đột với nhau và cuối cùng làm hỏng file.
+
+{{< xref fig="9-5" page="/ch9" anchor="fig_distributed_lease_delay" >}}Hình 9-5{{< /xref >}} cho thấy một vấn đề khác có hậu quả tương tự. Trong ví dụ này không có tiến trình nào bị dừng, chỉ có client 1 bị sập. Ngay trước khi sập, client 1 gửi yêu cầu ghi đến dịch vụ lưu trữ, nhưng yêu cầu bị trễ rất lâu trong mạng. (Hãy nhớ lại ["Lỗi mạng trong thực tế"](/ch9#sec_distributed_network_faults): gói tin đôi khi bị trễ hơn một phút.) Khi yêu cầu ghi đến dịch vụ lưu trữ, lease đã timeout từ lâu, client 2 đã lấy lease và đã gửi lần ghi của mình. Kết quả là dữ liệu bị hỏng tương tự {{< xref fig="9-4" page="/ch9" anchor="fig_distributed_lease_pause" >}}Hình 9-4{{< /xref >}}.
+
+{{< fig num="9-5" id="fig_distributed_lease_delay" src="/fig/ddia_0905.png" caption="Thông điệp do người giữ lease cũ gửi có thể bị trễ rất lâu, đến tận khi node khác đã tiếp quản lease mới tới nơi." class="ddia-figure ddia-figure--wide" width="2658" height="975" />}}
+
+
+#### Dùng fencing để chặn zombie và yêu cầu bị trễ {#sec_distributed_fencing_tokens}
+
+Từ *zombie* đôi khi dùng để chỉ người giữ lease cũ chưa biết mình đã mất lease và vẫn hành xử như người giữ hiện tại. Vì không thể loại bỏ hoàn toàn zombie, ta phải bảo đảm chúng không thể gây hại dưới dạng split brain. Việc này gọi là dùng *fencing* để chặn zombie.
+
+Một số hệ thống cố chặn zombie bằng cách tắt nó, ví dụ ngắt kết nối mạng của nó [^9], tắt máy ảo qua giao diện quản lý của nhà cung cấp đám mây, hoặc thậm chí cắt nguồn điện của máy [^87]. Cách này gọi là STONITH, viết tắt của "Shoot The Other Node In The Head" (bắn vào đầu node kia). Tiếc là nó có mấy vấn đề: không chống được độ trễ mạng rất dài như ở {{< xref fig="9-5" page="/ch9" anchor="fig_distributed_lease_delay" >}}Hình 9-5{{< /xref >}}, tất cả các node có thể tắt lẫn nhau [^19], và khi zombie được phát hiện rồi tắt thì có lẽ đã quá muộn, dữ liệu đã hỏng.
+
+{{< xref fig="9-6" page="/ch9" anchor="fig_distributed_fencing" >}}Hình 9-6{{< /xref >}} cho thấy một cơ chế fencing vững chắc hơn, chống được cả zombie lẫn yêu cầu bị trễ.
+
+{{< fig num="9-6" id="fig_distributed_fencing" src="/fig/ddia_0906.png" caption="Chỉ cho phép thực hiện lần ghi theo thứ tự fencing token tăng dần để bảo đảm truy cập kho lưu trữ an toàn." class="ddia-figure ddia-figure--wide" width="2658" height="975" />}}
+
+
+Giả sử mỗi lần cấp khóa hay lease, dịch vụ khóa còn trả về một *fencing token*. Đó là một con số tăng lên sau mỗi lần cấp khóa, ví dụ do dịch vụ khóa tự tăng. Sau đó có thể yêu cầu client mỗi lần gửi yêu cầu ghi đến dịch vụ lưu trữ đều phải kèm fencing token hiện tại của mình.
+
+
+> [!NOTE]
+> Fencing token còn có vài tên gọi khác. Trong Chubby, dịch vụ khóa của Google, nó gọi là *sequencer* [^88], còn trong Kafka, nó gọi là *số epoch* (*epoch number*). Trong các thuật toán đồng thuận mà ta sẽ bàn ở [Chương 10](/ch10#ch_consistency), *số ballot* (*ballot number*) của Paxos hay *số term* (*term number*) của Raft cũng đóng vai trò tương tự.
+
+
+Trong {{< xref fig="9-6" page="/ch9" anchor="fig_distributed_fencing" >}}Hình 9-6{{< /xref >}}, client 1 lấy lease cùng token 33, rồi bị dừng rất lâu khiến lease hết hạn. Client 2 sau đó lấy lease cùng token 34 (token luôn tăng), và gửi yêu cầu ghi kèm token 34 đến dịch vụ lưu trữ. Sau đó client 1 chạy lại, cũng gửi yêu cầu ghi đến dịch vụ lưu trữ, mang token 33 của nó. Tuy nhiên, dịch vụ lưu trữ nhớ rằng nó đã xử lý lần ghi có token cao hơn (34), nên từ chối yêu cầu với token 33. Client vừa lấy lease phải thực hiện ngay một lần ghi vào dịch vụ lưu trữ, và khi lần ghi này hoàn tất, mọi zombie đều bị chặn ở ngoài.
+
+Nếu dùng ZooKeeper làm dịch vụ khóa, có thể dùng ID giao dịch `zxid` hoặc phiên bản node `cversion` làm fencing token [^85]. Trong etcd, số revision cùng ID lease đóng vai trò tương tự [^89]. API FencedLock của Hazelcast thì sinh fencing token một cách tường minh [^90].
+
+Cơ chế này đòi hỏi dịch vụ lưu trữ có thể kiểm tra token đi kèm lần ghi có bị lỗi thời hay không. Một cách khác là để dịch vụ hỗ trợ lần ghi kiểu compare-and-set (CAS) nguyên tử: lần ghi chỉ thành công nếu từ lần client hiện tại đọc đối tượng lần cuối, chưa có client nào khác ghi vào đối tượng đó. Dịch vụ lưu trữ đối tượng hỗ trợ kiểu kiểm tra này: Amazon S3 gọi là *ghi có điều kiện* (*conditional write*), Azure Blob Storage gọi là *header có điều kiện* (*conditional header*), còn Google Cloud Storage gọi là *điều kiện tiên quyết của yêu cầu* (*request precondition*).
+
+#### Fencing với nhiều bản sao {#fencing-with-multiple-replicas}
+
+Nếu client chỉ cần ghi vào một dịch vụ lưu trữ hỗ trợ ghi có điều kiện như vậy, dịch vụ khóa phần nào thừa [^91] [^92], vì hoàn toàn có thể dựa thẳng vào dịch vụ lưu trữ đó để cấp lease [^93]. Tuy nhiên, khi đã có fencing token, ta cũng có thể dùng nó cho nhiều dịch vụ hoặc nhiều bản sao, bảo đảm người giữ lease cũ bị chặn trên tất cả các dịch vụ đó.
+
+Chẳng hạn, giả sử dịch vụ lưu trữ là một kho khóa-giá trị dùng sao chép không leader (*leaderless replication*) và dùng last write wins để giải quyết xung đột (xem ["Sao chép không leader (*leaderless replication*)"](/ch6#sec_replication_leaderless)). Trong hệ thống như vậy, client gửi lần ghi trực tiếp đến từng bản sao, và mỗi bản sao tự quyết định có nhận lần ghi hay không dựa trên timestamp do client gán.
+
+Như {{< xref fig="9-7" page="/ch9" anchor="fig_distributed_fencing_leaderless" >}}Hình 9-7{{< /xref >}} cho thấy, có thể đặt fencing token của bên ghi vào các bit hoặc chữ số có trọng số cao nhất của timestamp. Như vậy, mọi timestamp do người giữ lease mới sinh ra đều lớn hơn mọi timestamp do người giữ lease cũ sinh ra, dù lần ghi của người giữ cũ thực tế diễn ra muộn hơn.
+
+{{< fig num="9-7" id="fig_distributed_fencing_leaderless" src="/fig/ddia_0907.png" caption="Dùng fencing token để bảo vệ lần ghi vào cơ sở dữ liệu dùng sao chép không leader (*leaderless replication*)." class="ddia-figure ddia-figure--wide" width="2658" height="1466" />}}
+
+
+Trong {{< xref fig="9-7" page="/ch9" anchor="fig_distributed_fencing_leaderless" >}}Hình 9-7{{< /xref >}}, fencing token của client 2 là 34, nên mọi timestamp nó sinh ra bắt đầu bằng 34… đều lớn hơn bất kỳ timestamp nào bắt đầu bằng 33… do client 1 sinh ra. Client 2 ghi thành công vào một tập bản sao đạt quorum nhưng không kết nối được bản sao 3. Vì vậy, khi client zombie 1 sau đó thử ghi, lần ghi này tuy bị bản sao 1 và 2 bỏ qua, nhưng vẫn có thể thành công trên bản sao 3. Điều này không sao, vì các lần đọc quorum sau đó sẽ ưu tiên lần ghi của client 2 có timestamp lớn hơn, còn read repair hoặc quy trình anti-entropy cuối cùng sẽ ghi đè giá trị do client 1 ghi.
+
+Từ các ví dụ này có thể thấy, giả định rằng tại mỗi thời điểm chỉ có một node giữ lease là không an toàn. May là chỉ cần chú ý một chút, ta có thể dùng fencing token để ngăn zombie và yêu cầu bị trễ gây hại.
+
+### Lỗi Byzantine {#sec_distributed_byzantine}
+
+Fencing token có thể phát hiện và chặn node *vô tình* mắc lỗi, chẳng hạn node chưa biết lease của mình đã hết hạn. Nhưng nếu node cố ý phá vỡ các bảo đảm của hệ thống, nó có thể dễ dàng vượt qua lớp bảo vệ này bằng cách gửi thông điệp kèm fencing token giả.
+
+Cuốn sách này giả định node tuy không đáng tin cậy nhưng trung thực: chúng có thể phản hồi chậm hoặc không bao giờ phản hồi vì lỗi, có thể giữ trạng thái lỗi thời do GC tạm dừng hay độ trễ mạng, nhưng ta giả định rằng khi node *có* phản hồi thì nó nói "sự thật" — ít nhất theo hiểu biết của nó, nó đang tuân theo quy tắc của giao thức.
+
+Nếu node có khả năng "nói dối", tức gửi phản hồi sai hoặc hỏng tùy ý, bài toán hệ thống phân tán sẽ khó hơn nhiều. Chẳng hạn, một node có thể bỏ nhiều phiếu mâu thuẫn nhau trong cùng một vòng bầu cử. Hành vi này gọi là *lỗi Byzantine* (*Byzantine fault*), còn bài toán đạt đồng thuận trong môi trường không ai tin ai như vậy gọi là *bài toán các vị tướng Byzantine* (*Byzantine Generals Problem*) [^94].
+
+> [!TIP] Bài toán các vị tướng Byzantine
 >
-> 拜占庭将军问题是所谓 *两将军问题*（*Two Generals Problem*）[^95] 的推广。两将军问题设想，两名军队将领必须就作战计划达成一致，但他们驻扎在不同地点，只能派信使互通消息，而信使有时会迟到或失踪（就像网络数据包一样）。我们将在 [第 10 章](/ch10#ch_consistency) 中讨论这个 *共识*（*consensus*）问题。
+> Bài toán các vị tướng Byzantine là sự tổng quát hóa của *bài toán hai vị tướng* (*Two Generals Problem*) [^95]. Bài toán hai vị tướng hình dung hai tướng lĩnh phải thống nhất kế hoạch tác chiến nhưng đóng quân ở hai nơi khác nhau, chỉ có thể liên lạc bằng cách cử người đưa tin, mà người đưa tin đôi khi đến muộn hoặc mất tích (như gói tin mạng). Ta sẽ bàn bài toán *đồng thuận* (*consensus*) này ở [Chương 10](/ch10#ch_consistency).
 >
-> 在拜占庭版本的问题中，需要达成一致的将军有 *n* 名，但其中混入了若干叛徒。大多数将军都忠诚可靠，会发送真实消息；叛徒却可能发送虚假消息，企图欺骗并迷惑其他人。而谁是叛徒，事先无从得知。
+> Trong phiên bản Byzantine của bài toán, có *n* vị tướng cần thống nhất, nhưng trong số đó lẫn một số kẻ phản bội. Phần lớn các tướng trung thành và gửi thông điệp thật, còn kẻ phản bội có thể gửi thông điệp giả để lừa dối và gây rối những người khác. Ai là kẻ phản bội thì không thể biết trước.
 >
-> 拜占庭原是古希腊的一座城市，后来成为君士坦丁堡，所在地就是今天土耳其的伊斯坦布尔。没有任何历史证据表明，拜占庭的将军比其他地方的将军更爱阴谋诡计。这个名称其实来自 *拜占庭式* 一词在政治语境中的含义：*过度复杂、官僚而诡诈*；这种用法远在计算机出现以前便已存在 [^96]。Lamport 想选择一个不会冒犯读者的国籍，而别人劝他最好不要把问题叫作 *阿尔巴尼亚将军问题* [^97]。
+> Byzantium vốn là một thành phố Hy Lạp cổ, sau này thành Constantinople, nay là Istanbul của Thổ Nhĩ Kỳ. Không có bằng chứng lịch sử nào cho thấy tướng lĩnh Byzantium thích mưu mô hơn tướng lĩnh nơi khác. Cái tên thực ra bắt nguồn từ nghĩa của từ *Byzantine* trong ngữ cảnh chính trị: *phức tạp quá mức, quan liêu và xảo quyệt*. Cách dùng này có từ rất lâu trước khi có máy tính [^96]. Lamport muốn chọn một quốc tịch không làm mếch lòng độc giả, và người ta khuyên ông đừng gọi bài toán là *bài toán các vị tướng Albania* [^97].
 
 
-如果某些节点发生故障、不遵守协议，或有恶意攻击者干扰网络时，系统仍能继续正确运行，就称这个系统具有 *拜占庭容错*（*Byzantine fault tolerance*，BFT）能力。这类问题在某些特定情形下确实很重要。例如：
+Một hệ thống được gọi là có khả năng *chịu lỗi Byzantine* (*Byzantine fault tolerance*, BFT) nếu nó vẫn chạy đúng ngay cả khi một số node gặp lỗi, không tuân theo giao thức, hoặc có kẻ tấn công độc hại can thiệp vào mạng. Loại vấn đề này thực sự quan trọng trong một số tình huống đặc thù. Ví dụ:
 
-* 在航空航天环境中，辐射可能破坏计算机内存或 CPU 寄存器里的数据，使节点以任意且不可预测的方式回应其他节点。系统失效的代价极其高昂——例如飞机坠毁导致机上人员全部遇难，或火箭撞上国际空间站——因此飞行控制系统必须能够容忍拜占庭故障 [^98] [^99]。
-* 在有多方参与的系统中，部分参与者可能企图欺骗或诈骗其他人。此时，节点不能轻信另一个节点发来的消息，因为消息可能带有恶意。比特币等加密货币及其他区块链，就可以看作一种无需依赖中央权威，让彼此不信任的各方就某笔交易是否发生达成一致的方式 [^100]。
+* Trong môi trường hàng không vũ trụ, bức xạ có thể làm hỏng dữ liệu trong bộ nhớ hoặc thanh ghi CPU, khiến node phản hồi các node khác theo cách tùy ý và không thể đoán trước. Hệ thống hỏng sẽ có cái giá cực kỳ đắt — ví dụ máy bay rơi khiến mọi người trên khoang thiệt mạng, hoặc tên lửa đâm vào Trạm vũ trụ quốc tế — nên hệ thống điều khiển bay phải chịu được lỗi Byzantine [^98] [^99].
+* Trong hệ thống có nhiều bên tham gia, một số bên có thể cố lừa dối hoặc gian lận những bên khác. Khi đó node không thể tin ngay thông điệp từ node khác, vì thông điệp có thể có ác ý. Tiền mã hóa như Bitcoin và các blockchain khác có thể xem là một cách để các bên không tin nhau đồng thuận về việc một giao dịch có xảy ra hay không mà không cần dựa vào cơ quan trung tâm [^100].
 
-不过，对本书讨论的系统而言，通常可以放心假定不存在拜占庭故障。数据中心里的所有节点都受你的组织控制，因而有望值得信任；辐射水平也足够低，内存损坏并非主要问题——尽管人们已经在考虑把数据中心送入轨道 [^101]。多租户系统中的租户彼此并不信任，但系统依靠防火墙、虚拟化和访问控制策略把租户相互隔离，而不是使用拜占庭容错。让系统实现拜占庭容错的协议代价很高 [^102]，而具有容错能力的嵌入式系统又依赖硬件层面的支持 [^98]。对大多数服务器端数据系统来说，部署拜占庭容错方案的成本高得并不现实。
+Tuy nhiên, với các hệ thống được bàn trong cuốn sách này, thường có thể yên tâm giả định không có lỗi Byzantine. Mọi node trong trung tâm dữ liệu đều do tổ chức của bạn kiểm soát nên hy vọng đáng tin, và mức bức xạ đủ thấp để hỏng bộ nhớ không phải vấn đề chính — dù người ta đã bắt đầu tính chuyện đưa trung tâm dữ liệu lên quỹ đạo [^101]. Các tenant trong hệ thống đa người thuê không tin nhau, nhưng hệ thống dựa vào tường lửa, ảo hóa và chính sách kiểm soát truy cập để cô lập tenant với nhau, chứ không dùng chịu lỗi Byzantine. Giao thức giúp hệ thống chịu lỗi Byzantine có chi phí cao [^102], còn hệ thống nhúng có khả năng chịu lỗi lại dựa vào hỗ trợ ở tầng phần cứng [^98]. Với đa số hệ thống dữ liệu phía server, chi phí triển khai giải pháp chịu lỗi Byzantine cao đến mức không thực tế.
 
-Web 应用程序的确必须预料到，Web 浏览器等由最终用户控制的客户端可能作出任意乃至恶意的行为。这也正是输入验证、数据清理和输出转义如此重要的原因，例如它们可以防止 SQL 注入与跨站脚本攻击。不过，我们通常不会为此使用拜占庭容错协议，只需让服务器充当权威，决定哪些客户端行为可以接受、哪些不可以。在没有这种中央权威的点对点网络中，拜占庭容错才更为重要 [^103] [^104]。
+Ứng dụng web quả thật phải lường trước rằng client do người dùng cuối kiểm soát, như trình duyệt web, có thể hành xử tùy ý, thậm chí độc hại. Đó là lý do kiểm tra đầu vào, làm sạch dữ liệu và escape đầu ra quan trọng đến vậy, chẳng hạn để chống SQL injection và cross-site scripting. Tuy nhiên, thường ta không dùng giao thức chịu lỗi Byzantine cho việc này, mà chỉ cần để server đóng vai thẩm quyền quyết định hành vi nào của client được chấp nhận, hành vi nào không. Trong mạng ngang hàng không có thẩm quyền trung tâm như vậy, chịu lỗi Byzantine mới quan trọng hơn [^103] [^104].
 
-软件缺陷也可以看作拜占庭故障，但如果所有节点部署的都是同一套软件，拜占庭容错算法也救不了你。大多数拜占庭容错算法要求超过三分之二的节点正常运行（例如四个节点中最多只能有一个发生故障）。若想用这种办法防范软件缺陷，就得准备同一软件的四种独立实现，并寄希望于缺陷只出现在其中一种实现里。
+Lỗi phần mềm cũng có thể coi là lỗi Byzantine, nhưng nếu mọi node triển khai cùng một phần mềm thì thuật toán chịu lỗi Byzantine cũng không cứu được bạn. Hầu hết thuật toán chịu lỗi Byzantine yêu cầu hơn hai phần ba số node chạy bình thường (ví dụ trong bốn node chỉ được có tối đa một node lỗi). Muốn dùng cách này để chống lỗi phần mềm, bạn phải có bốn bản hiện thực độc lập của cùng một phần mềm và cầu mong lỗi chỉ xuất hiện ở một bản.
 
-同理，如果某种协议能保护我们免受漏洞、安全失陷和恶意攻击，当然很有吸引力。遗憾的是，这同样不现实：在大多数系统中，攻击者既然能够攻陷一个节点，多半也能攻陷所有节点，因为它们很可能运行相同的软件。因此，身份认证、访问控制、加密和防火墙等传统机制，仍然是抵御攻击者的主要手段。
+Tương tự, nếu có giao thức bảo vệ ta khỏi lỗ hổng, xâm phạm an ninh và tấn công độc hại thì tất nhiên rất hấp dẫn. Tiếc là điều này cũng không thực tế: trong đa số hệ thống, kẻ tấn công đã xâm nhập được một node thì nhiều khả năng cũng xâm nhập được mọi node, vì các node nhiều khả năng đang chạy cùng một phần mềm. Vì vậy các cơ chế truyền thống như xác thực, kiểm soát truy cập, mã hóa và tường lửa vẫn là phương tiện chính để chống kẻ tấn công.
 
 <a id="sec_distributed_weak_lying"></a>
 
-#### 弱形式的谎言 {#weak-forms-of-lying}
+#### Các dạng nói dối yếu {#weak-forms-of-lying}
 
-虽然我们通常假定节点是诚实的，但仍值得在软件中加入一些机制，防范较弱形式的“撒谎”，例如硬件问题、软件缺陷或配置错误产生的无效消息。这些机制算不上完整的拜占庭容错，因为它们挡不住意志坚定的攻击者；但作为提高可靠性的手段，它们既简单又务实。例如：
+Dù thường giả định node trung thực, vẫn nên đưa vào phần mềm một số cơ chế chống các dạng "nói dối" yếu hơn, chẳng hạn thông điệp không hợp lệ do vấn đề phần cứng, lỗi phần mềm hoặc cấu hình sai. Các cơ chế này chưa phải chịu lỗi Byzantine đầy đủ, vì không chặn được kẻ tấn công quyết tâm, nhưng chúng vẫn là những bước đơn giản và thực dụng để tăng độ tin cậy. Ví dụ:
 
-* 硬件问题，或操作系统、驱动程序、路由器等组件中的缺陷，确实可能损坏网络数据包。TCP 与 UDP 内置的校验和通常能够发现损坏的数据包，但偶尔也会漏检 [^105] [^106] [^107]。一般只需一些简单措施就足以防范这类损坏，例如在应用层协议中加入校验和。TLS 加密连接也能抵御数据损坏。
-* 可公开访问的应用程序必须仔细清理所有用户输入，例如检查数值是否落在合理范围内，并限制字符串长度，防止攻击者通过分配巨量内存来造成拒绝服务。防火墙后的内部服务也许可以放宽输入检查，但协议解析器仍然最好保留基本校验 [^105]。
-* NTP 客户端可以配置多个服务器地址。同步时，客户端会联系所有服务器，估算各自的误差，并检查大多数服务器是否就某个时间范围达成一致。只要大部分服务器正常，配置有误、报告错误时间的 NTP 服务器就会被识别为离群值，并排除在同步过程之外 [^39]。与只依赖一台服务器相比，使用多台服务器能让 NTP 更加健壮。
+* Vấn đề phần cứng, hoặc lỗi trong hệ điều hành, driver, router và các thành phần khác, thật sự có thể làm hỏng gói tin mạng. Checksum tích hợp sẵn trong TCP và UDP thường phát hiện được gói tin hỏng, nhưng thỉnh thoảng cũng bỏ sót [^105] [^106] [^107]. Thường chỉ cần vài biện pháp đơn giản là đủ chống loại hỏng này, chẳng hạn thêm checksum vào giao thức tầng ứng dụng. Kết nối mã hóa TLS cũng chống được dữ liệu hỏng.
+* Ứng dụng truy cập công khai phải làm sạch cẩn thận mọi đầu vào của người dùng, ví dụ kiểm tra giá trị số nằm trong khoảng hợp lý và giới hạn độ dài chuỗi để kẻ tấn công không thể cấp phát lượng bộ nhớ khổng lồ gây từ chối dịch vụ. Dịch vụ nội bộ sau tường lửa có thể nới lỏng kiểm tra đầu vào, nhưng parser của giao thức vẫn nên giữ các kiểm tra cơ bản [^105].
+* Client NTP có thể cấu hình nhiều địa chỉ server. Khi đồng bộ, client liên hệ mọi server, ước lượng sai số của từng server và kiểm tra xem đa số server có thống nhất về một khoảng thời gian không. Chỉ cần phần lớn server bình thường, server NTP cấu hình sai báo thời gian sai sẽ bị nhận diện là giá trị ngoại lai và bị loại khỏi quá trình đồng bộ [^39]. Dùng nhiều server giúp NTP vững chắc hơn so với chỉ dựa vào một server.
 
-### 系统模型与现实 {#sec_distributed_system_model}
+### Mô hình hệ thống và thực tế {#sec_distributed_system_model}
 
-人们已经设计了许多算法来解决分布式系统问题。例如，我们将在 [第 10 章](/ch10#ch_consistency) 中考察共识问题的解决方案。要真正有用，这些算法必须能够容忍本章讨论的分布式系统中的各种故障。
+Người ta đã thiết kế nhiều thuật toán để giải quyết các vấn đề của hệ thống phân tán. Ví dụ, ta sẽ xem xét các giải pháp cho bài toán đồng thuận ở [Chương 10](/ch10#ch_consistency). Để thật sự hữu ích, các thuật toán này phải chịu được các loại lỗi của hệ thống phân tán đã bàn trong chương này.
 
-算法的编写方式不应过度依赖其运行环境中具体的硬件与软件配置。这又要求我们以某种方式，把系统中预期会发生的故障类型形式化。为此，我们定义 *系统模型*（*system model*）：它是一种抽象，用来说明算法可以作出哪些假设。
+Cách viết thuật toán không nên phụ thuộc quá nhiều vào cấu hình phần cứng và phần mềm cụ thể của môi trường chạy. Điều này đòi hỏi ta phải bằng cách nào đó hình thức hóa các loại lỗi dự kiến xảy ra trong hệ thống. Vì vậy ta định nghĩa *mô hình hệ thống* (*system model*): một sự trừu tượng hóa mô tả những giả định mà thuật toán được phép đưa ra.
 
-关于时序假设，通常使用以下三种系统模型：
+Về giả định thời gian, thường dùng ba mô hình hệ thống sau:
 
-同步模型（synchronous model）
-: 同步模型假定网络延迟、进程暂停和时钟误差都有上界。这并不表示时钟完全同步，也不表示网络延迟为零；它只是意味着，我们知道网络延迟、暂停和时钟漂移永远不会超过某个固定上限 [^108]。对大多数实际系统而言，同步模型并不现实，因为正如本章所讨论的，无界延迟和暂停确实可能发生。
+*mô hình đồng bộ* (*synchronous model*)
+: Mô hình đồng bộ giả định độ trễ mạng, khoảng dừng tiến trình và sai số đồng hồ đều có cận trên. Điều này không có nghĩa đồng hồ hoàn toàn đồng bộ, cũng không có nghĩa độ trễ mạng bằng không. Nó chỉ có nghĩa là ta biết độ trễ mạng, khoảng dừng và độ trôi đồng hồ sẽ không bao giờ vượt quá một giới hạn cố định [^108]. Với đa số hệ thống thực tế, mô hình đồng bộ không thực tế, vì như chương này đã bàn, độ trễ và khoảng dừng không giới hạn là có thật.
 
-部分同步模型（partially synchronous model）
-: 部分同步是指系统在 *大多数时候* 都像同步系统一样运行，但偶尔会突破网络延迟、进程暂停和时钟漂移的界限 [^108]。对许多系统来说，这是一个现实的模型：绝大多数时候，网络与进程表现得相当规矩，否则我们什么事情也做不成；但我们也必须正视这样一个事实——任何时序假设都有可能偶尔失效。发生这种情况时，网络延迟、进程暂停和时钟误差都可能变得任意之大。
+*mô hình đồng bộ một phần* (*partially synchronous model*)
+: Đồng bộ một phần nghĩa là hệ thống *phần lớn thời gian* chạy như hệ thống đồng bộ, nhưng thỉnh thoảng vượt quá cận của độ trễ mạng, khoảng dừng tiến trình và độ trôi đồng hồ [^108]. Với nhiều hệ thống, đây là mô hình thực tế: phần lớn thời gian mạng và tiến trình hành xử khá quy củ, nếu không ta chẳng làm được việc gì, nhưng ta cũng phải đối mặt với thực tế là mọi giả định về thời gian đều có lúc thất bại. Khi đó, độ trễ mạng, khoảng dừng tiến trình và sai số đồng hồ có thể lớn tùy ý.
 
-异步模型（asynchronous model）
-: 在这种模型中，算法不能作出任何时序假设——事实上，它甚至没有时钟可用（因而也不能使用超时）。有些算法可以针对异步模型来设计，但这种模型限制极大。
+*mô hình bất đồng bộ* (*asynchronous model*)
+: Trong mô hình này, thuật toán không được đưa ra bất kỳ giả định thời gian nào — thực tế nó thậm chí không có đồng hồ để dùng (nên cũng không dùng được timeout). Một số thuật toán có thể thiết kế cho mô hình bất đồng bộ, nhưng mô hình này hạn chế rất nhiều.
 
-除了时序问题，还必须考虑节点失效。常见的节点系统模型包括：
+Ngoài vấn đề thời gian, còn phải xét đến sự cố node. Các mô hình hệ thống node thường gặp gồm:
 
-崩溃停止故障（crash-stop fault）
-: 在 *崩溃停止*（*crash-stop*，或 *故障停止*，*fail-stop*）模型中，算法可以假定节点只有一种失效方式：崩溃 [^109]。节点可能在任意时刻突然停止响应，此后便永远消失，再也不会回来。
+Lỗi crash-stop (*crash-stop fault*)
+: Trong mô hình *crash-stop* (hay *fail-stop*), thuật toán có thể giả định node chỉ hỏng theo một cách: sập [^109]. Node có thể đột ngột ngừng phản hồi bất cứ lúc nào, sau đó biến mất vĩnh viễn, không bao giờ quay lại.
 
-崩溃恢复故障（crash-recovery fault）
-: 我们假定节点可能在任意时刻崩溃，也可能在一段未知时间后重新开始响应。在崩溃恢复模型中，节点拥有能在崩溃后保留数据的稳定存储（即非易失性磁盘存储），但内存中的状态会丢失。
+Lỗi crash-recovery (*crash-recovery fault*)
+: Ta giả định node có thể sập bất cứ lúc nào và có thể bắt đầu phản hồi lại sau một khoảng thời gian không xác định. Trong mô hình crash-recovery, node có bộ lưu trữ ổn định (tức lưu trữ đĩa không mất dữ liệu khi mất điện) giữ được dữ liệu sau khi sập, nhưng trạng thái trong bộ nhớ bị mất.
 
-性能下降和功能不全
-: 除了崩溃与重启，节点还可能变慢：它们也许仍能响应健康检查，却慢得无法完成任何实际工作。例如，千兆网络接口可能因为驱动程序缺陷，吞吐量突然跌到 1 Kb/s [^110]；面临内存压力的进程可能把大部分时间花在垃圾回收上 [^111]；磨损的 SSD 可能表现得极不稳定；高温、连接器松动、机械振动、电源问题、固件缺陷等也会影响硬件 [^112]。这类情形称为 *跛行节点*（*limping node*）、*灰色失效*（*gray failure*）或 *慢失效*（*fail-slow*）[^113]，甚至可能比彻底失效的节点更难处理。还有一种相关问题：进程不再执行原本应做的某些工作，其他功能却仍在继续，例如后台线程崩溃或死锁时 [^114]。
+Suy giảm hiệu năng và chức năng không đầy đủ
+: Ngoài sập và khởi động lại, node còn có thể chậm: chúng vẫn có thể trả lời health check nhưng chậm đến mức không làm được việc thực sự nào. Ví dụ, card mạng gigabit có thể đột ngột tụt thông lượng xuống 1 Kb/s do lỗi driver [^110], tiến trình chịu áp lực bộ nhớ có thể dành phần lớn thời gian cho garbage collection [^111], SSD bị mòn có thể hoạt động cực kỳ thất thường, còn phần cứng có thể bị ảnh hưởng bởi nhiệt độ cao, đầu nối lỏng, rung cơ học, vấn đề nguồn điện, lỗi firmware và nhiều yếu tố khác [^112]. Những tình huống này gọi là *limping node*, *gray failure* hay *fail-slow* [^113], thậm chí có thể khó xử lý hơn node hỏng hẳn. Còn một vấn đề liên quan: tiến trình không còn thực hiện một số việc lẽ ra phải làm, trong khi các chức năng khác vẫn chạy, chẳng hạn khi thread nền bị sập hoặc deadlock [^114].
 
-拜占庭（任意）故障
-: 节点可能做出任何行为，包括像上一节所述那样欺骗其他节点。
+Lỗi Byzantine (tùy ý)
+: Node có thể làm bất cứ điều gì, kể cả lừa dối các node khác như đã mô tả ở phần trước.
 
-对现实系统建模时，带崩溃恢复故障的部分同步模型通常最有用。它允许出现无界网络延迟、进程暂停和慢节点。那么，分布式算法该如何应对这种模型呢？
+Khi mô hình hóa hệ thống thực tế, mô hình đồng bộ một phần kèm lỗi crash-recovery thường hữu ích nhất. Nó cho phép độ trễ mạng không giới hạn, khoảng dừng tiến trình và node chậm. Vậy thuật toán phân tán đối phó với mô hình này thế nào?
 
-#### 定义算法的正确性 {#defining-the-correctness-of-an-algorithm}
+#### Định nghĩa tính đúng đắn của thuật toán {#defining-the-correctness-of-an-algorithm}
 
-要定义一个算法怎样才算 *正确*，可以描述它必须具备哪些 *属性*。例如，排序算法的输出具有这样一项属性：对输出列表中的任意两个不同元素，位于左侧的元素都小于位于右侧的元素。这不过是用形式化语言定义一份列表何谓“有序”。
+Để định nghĩa một thuật toán thế nào là *đúng*, có thể mô tả các *thuộc tính* nó phải có. Ví dụ, kết quả của thuật toán sắp xếp có thuộc tính sau: với hai phần tử khác nhau bất kỳ trong danh sách kết quả, phần tử bên trái nhỏ hơn phần tử bên phải. Đây chỉ là cách định nghĩa hình thức thế nào là danh sách "đã sắp xếp".
 
-同理，我们也可以列出分布式算法应具备的属性，以此定义它怎样才算正确。例如，如果算法要为锁生成栅栏令牌（参见 [“用栅栏机制隔离僵尸与延迟请求”](/ch9#sec_distributed_fencing_tokens)），我们可能要求它满足以下属性：
+Tương tự, ta có thể liệt kê các thuộc tính mà thuật toán phân tán cần có để định nghĩa thế nào là đúng. Ví dụ, nếu thuật toán sinh fencing token cho một khóa (xem ["Dùng fencing để chặn zombie và yêu cầu bị trễ"](/ch9#sec_distributed_fencing_tokens)), ta có thể yêu cầu nó thỏa các thuộc tính sau:
 
-唯一性
-: 任意两个栅栏令牌请求都不能返回相同的值。
+Tính duy nhất
+: Không có hai yêu cầu fencing token nào trả về cùng một giá trị.
 
-单调序列
-: 如果请求 *x* 返回令牌 *t*<sub>*x*</sub>，请求 *y* 返回令牌 *t*<sub>*y*</sub>，而且 *x* 在 *y* 开始以前已经完成，那么 *t*<sub>*x*</sub> < *t*<sub>*y*</sub>。
+Dãy đơn điệu
+: Nếu yêu cầu *x* trả về token *t*<sub>*x*</sub>, yêu cầu *y* trả về token *t*<sub>*y*</sub>, và *x* đã hoàn tất trước khi *y* bắt đầu, thì *t*<sub>*x*</sub> < *t*<sub>*y*</sub>.
 
-可用性
-: 请求栅栏令牌且没有崩溃的节点，最终会收到响应。
+Tính sẵn sàng
+: Node yêu cầu fencing token và không sập thì cuối cùng sẽ nhận được phản hồi.
 
-如果算法在某个系统模型允许发生的所有情形下，始终满足这些属性，就可以说它在该系统模型中是正确的。然而，如果所有节点都崩溃，或所有网络延迟都突然变成无限长，那么任何算法都不可能完成工作。面对一个允许系统彻底失效的模型，我们怎样才能仍然给出有用的保证呢？
+Thuật toán được coi là đúng trong một mô hình hệ thống nếu nó luôn thỏa các thuộc tính này trong mọi tình huống mà mô hình hệ thống cho phép xảy ra. Tuy nhiên, nếu mọi node đều sập, hoặc mọi độ trễ mạng đột nhiên trở nên vô hạn, thì không thuật toán nào làm được việc. Với một mô hình cho phép hệ thống hỏng hoàn toàn, làm sao ta vẫn có thể đưa ra bảo đảm hữu ích?
 
-#### 安全性与活性 {#sec_distributed_safety_liveness}
+#### Safety và liveness {#sec_distributed_safety_liveness}
 
-为了说清这个问题，有必要区分两类不同的属性：*安全性*（*safety*）与 *活性*（*liveness*）。在刚才的例子中，*唯一性* 和 *单调序列* 属于安全属性，*可用性* 则属于活性属性。
+Để làm rõ vấn đề này, cần phân biệt hai loại thuộc tính: *safety* và *liveness*. Trong ví dụ vừa rồi, *tính duy nhất* và *dãy đơn điệu* là thuộc tính safety, còn *tính sẵn sàng* là thuộc tính liveness.
 
-两者究竟有何区别？一个明显线索是，活性属性的定义中往往含有“最终”二字。（没错，你已经猜到了：*最终一致性* 就是一项活性属性 [^115]。）
+Hai loại này khác nhau ở đâu? Một manh mối rõ ràng là định nghĩa của thuộc tính liveness thường chứa từ "cuối cùng". (Đúng vậy, bạn đoán đúng rồi: *nhất quán cuối cùng* (*eventual consistency*) là một thuộc tính liveness [^115].)
 
-安全性常被非正式地定义为 *坏事不会发生*，活性则是 *好事最终会发生*。不过，最好不要过度解读这种通俗说法，因为“好”与“坏”属于价值判断，并不太适合用来描述算法。安全性与活性的严格定义要精确得多 [^116]：
+Safety thường được định nghĩa không chính thức là *điều xấu không xảy ra*, còn liveness là *điều tốt cuối cùng sẽ xảy ra*. Tuy nhiên, không nên hiểu cách nói bình dân này quá sâu, vì "tốt" và "xấu" là phán đoán giá trị, không thật hợp để mô tả thuật toán. Định nghĩa chặt chẽ của safety và liveness chính xác hơn nhiều: [^116]
 
-* 如果安全属性遭到违反，我们可以指出它在哪一个具体时刻被破坏。例如，唯一性遭到破坏时，可以找到返回重复栅栏令牌的那次具体操作。安全属性一旦被违反，就无法撤销——损害已经造成。
-* 活性属性正好相反：它在某个时刻可能尚未成立（例如节点已经发出请求，却还没收到响应），但未来始终还有满足它的希望（也就是最终收到响应）。
+* Nếu thuộc tính safety bị vi phạm, ta có thể chỉ ra thời điểm cụ thể nó bị phá vỡ. Ví dụ, nếu tính duy nhất bị vi phạm, ta có thể tìm ra thao tác cụ thể đã trả về fencing token trùng lặp. Một khi thuộc tính safety đã bị vi phạm thì không thể hoàn tác — thiệt hại đã xảy ra.
+* Thuộc tính liveness thì ngược lại: tại một thời điểm nào đó nó có thể chưa đúng (ví dụ node đã gửi yêu cầu nhưng chưa nhận được phản hồi), nhưng trong tương lai vẫn luôn còn hy vọng nó được thỏa (tức là cuối cùng nhận được phản hồi).
 
-区分安全属性与活性属性的一个好处，是能帮助我们应对棘手的系统模型。对分布式算法，通常要求安全属性在系统模型允许的所有情形下都 *始终* 成立 [^108]。也就是说，即使所有节点崩溃，或整个网络失效，算法仍必须保证绝不返回错误结果，因而安全属性依旧得到满足。
+Lợi ích của việc phân biệt thuộc tính safety và liveness là giúp ta xử lý các mô hình hệ thống khó. Với thuật toán phân tán, thường yêu cầu thuộc tính safety *luôn* đúng trong mọi tình huống mà mô hình hệ thống cho phép [^108]. Nghĩa là dù mọi node sập, hay cả mạng hỏng, thuật toán vẫn phải bảo đảm không bao giờ trả về kết quả sai, và do đó thuộc tính safety vẫn được thỏa.
 
-而对活性属性，我们可以附加条件。例如，可以规定只有在多数节点尚未崩溃、且网络最终能从中断中恢复时，请求才必须得到响应。部分同步模型的定义要求系统最终回到同步状态——也就是说，任何一次网络中断都只能持续有限时间，随后会得到修复。
+Còn với thuộc tính liveness, ta có thể đặt điều kiện. Ví dụ, có thể quy định chỉ khi đa số node chưa sập và mạng cuối cùng phục hồi sau gián đoạn thì yêu cầu mới phải nhận được phản hồi. Định nghĩa của mô hình đồng bộ một phần yêu cầu hệ thống cuối cùng quay về trạng thái đồng bộ — nghĩa là mọi gián đoạn mạng chỉ kéo dài trong thời gian hữu hạn rồi được khắc phục.
 
-#### 将系统模型映射到现实世界 {#mapping-system-models-to-the-real-world}
+#### Ánh xạ mô hình hệ thống vào thế giới thực {#mapping-system-models-to-the-real-world}
 
-安全属性、活性属性和系统模型，对推理分布式算法的正确性非常有用。但当算法真正落地实现时，现实世界混乱的一面又会回来找麻烦；这时便清楚地看到，系统模型只是对现实的简化抽象。
+Thuộc tính safety, thuộc tính liveness và mô hình hệ thống rất hữu ích khi suy luận về tính đúng đắn của thuật toán phân tán. Nhưng khi hiện thực thuật toán trong thực tế, mặt lộn xộn của thế giới thực lại quay lại gây rắc rối, và lúc đó ta thấy rõ mô hình hệ thống chỉ là sự trừu tượng hóa đơn giản của thực tế.
 
-例如，崩溃恢复模型中的算法通常假定稳定存储里的数据能挺过崩溃。但如果磁盘数据损坏了，或因硬件错误、配置错误而被清空，会发生什么 [^117]？如果服务器存在固件缺陷，重启时明明硬盘连接无误，却无法识别它们，又会怎样 [^118]？
+Ví dụ, thuật toán trong mô hình crash-recovery thường giả định dữ liệu trong bộ lưu trữ ổn định sống sót qua lần sập. Nhưng nếu dữ liệu đĩa bị hỏng, hoặc bị xóa do lỗi phần cứng hay cấu hình sai thì sao [^117]? Nếu server có lỗi firmware, khi khởi động lại không nhận ra ổ cứng dù ổ cứng đã được nối đúng thì sao [^118]?
 
-法定人数算法（参见 [“读写仲裁”](/ch6#sec_replication_quorum_condition)）依赖节点记住自己声称已经存储的数据。如果节点会患上“失忆症”，忘掉先前保存的数据，就会破坏法定人数条件，进而破坏算法的正确性。或许还需要定义一种新系统模型：假定稳定存储在崩溃后通常得以保留，但偶尔也会丢失。可这样的模型又会变得更加难以推理。
+Các thuật toán quorum (xem ["Đọc và ghi quorum"](/ch6#sec_replication_quorum_condition)) dựa vào việc node nhớ dữ liệu mà nó tuyên bố đã lưu. Nếu node mắc "chứng mất trí nhớ", quên dữ liệu đã lưu trước đó, điều kiện quorum bị phá vỡ, kéo theo tính đúng đắn của thuật toán cũng bị phá vỡ. Có lẽ cần định nghĩa mô hình hệ thống mới: giả định bộ lưu trữ ổn định thường vẫn còn sau khi sập nhưng đôi khi cũng bị mất. Nhưng mô hình như vậy lại càng khó suy luận.
 
-算法的理论描述可以直接声明，假定某些事情绝不会发生——在非拜占庭系统中，我们确实必须对哪些故障可能发生、哪些不可能发生作出假设。然而，真实实现也许仍要包含代码，处理那些理论上“不可能”发生的事情；哪怕处理方式归结为 `printf("Sucks to be you")` 和 `exit(666)`，也就是把残局留给人类运维人员收拾 [^119]。（这正是计算机科学与软件工程之间的一项区别。）
+Mô tả lý thuyết của thuật toán có thể tuyên bố thẳng là giả định một số chuyện không bao giờ xảy ra — trong hệ thống không Byzantine, ta thật sự phải đưa ra giả định về loại lỗi nào có thể xảy ra, loại nào không. Tuy nhiên, bản hiện thực thực tế vẫn có thể phải có mã xử lý những chuyện "không thể" xảy ra về lý thuyết, dù cách xử lý chỉ gói gọn trong `printf("Sucks to be you")` và `exit(666)`, tức là để người vận hành dọn dẹp tàn cuộc [^119]. (Đây chính là một điểm khác nhau giữa khoa học máy tính và kỹ nghệ phần mềm.)
 
-这并不是说理论化、抽象化的系统模型毫无价值——恰恰相反。它们极其有助于把真实系统的复杂性提炼成一组可管理、可推理的故障，使我们能够理解问题，并尝试用系统化的方法加以解决。
+Điều này không có nghĩa mô hình hệ thống lý thuyết, trừu tượng là vô giá trị — hoàn toàn ngược lại. Chúng cực kỳ hữu ích để chắt lọc sự phức tạp của hệ thống thực thành một tập lỗi có thể quản lý và suy luận được, giúp ta hiểu vấn đề và cố giải quyết nó một cách có hệ thống.
 
-### 形式化方法和随机测试 {#sec_distributed_formal}
+### Phương pháp hình thức và kiểm thử ngẫu nhiên {#sec_distributed_formal}
 
-怎样知道一个算法确实满足所需属性？并发、部分失效与网络延迟会产生海量潜在状态。我们需要保证这些属性在每一种可能状态下都成立，还要确保没有遗漏任何边界情况。
+Làm sao biết một thuật toán thật sự thỏa các thuộc tính cần thiết? Tính đồng thời, hỏng hóc từng phần và độ trễ mạng tạo ra số trạng thái tiềm tàng khổng lồ. Ta cần bảo đảm các thuộc tính này đúng ở mọi trạng thái có thể, và không bỏ sót trường hợp biên nào.
 
-一种办法是对算法进行形式化验证（*formal verification*）：用数学语言描述算法，再运用证明技术，证明它在系统模型允许的所有情形下都满足所需属性。证明算法正确，并不表示它在真实系统中的 *实现* 必然始终行为正确。不过，这是非常好的一步，因为理论分析能够发现算法中的隐患；这些问题在真实系统中可能潜伏很久，直到某些异常情况打破了你的假设（例如时序假设）才突然发作。
+Một cách là *xác minh hình thức* (*formal verification*) thuật toán: mô tả thuật toán bằng ngôn ngữ toán học rồi dùng kỹ thuật chứng minh để chứng minh nó thỏa các thuộc tính cần thiết trong mọi tình huống mà mô hình hệ thống cho phép. Chứng minh một thuật toán đúng không có nghĩa là *bản hiện thực* của nó trong hệ thống thực chắc chắn luôn chạy đúng. Dù vậy, đây là một bước đầu tiên rất tốt, vì phân tích lý thuyết có thể phát hiện những vấn đề của thuật toán vốn có thể nằm im rất lâu trong hệ thống thực cho đến khi một tình huống bất thường phá vỡ giả định của bạn (ví dụ giả định về thời gian) và chúng bùng phát.
 
-把理论分析与经验性测试结合起来，验证实现的行为是否符合预期，是一种稳妥做法。基于属性的测试（*property-based testing*）、模糊测试（*fuzz testing*）和确定性模拟测试（*deterministic simulation testing*，DST）等技术都利用随机化，在各种不同情形下测试系统。Amazon Web Services 等公司已经成功地把这些技术组合运用于许多产品 [^120] [^121]。
+Kết hợp phân tích lý thuyết với kiểm thử thực nghiệm để xác minh hành vi của bản hiện thực có đúng như kỳ vọng là cách làm vững vàng. Các kỹ thuật như *kiểm thử dựa trên thuộc tính* (*property-based testing*), *fuzz testing* và *kiểm thử mô phỏng tất định* (*deterministic simulation testing*, DST) đều dùng ngẫu nhiên hóa để kiểm thử hệ thống trong nhiều tình huống khác nhau. Các công ty như Amazon Web Services đã kết hợp thành công những kỹ thuật này trong nhiều sản phẩm [^120] [^121].
 
-#### 模型检查与规范语言 {#model-checking-and-specification-languages}
+#### Model checking và ngôn ngữ đặc tả {#model-checking-and-specification-languages}
 
-*模型检查器*（*model checker*）是帮助验证算法或系统行为是否符合预期的工具。算法规范要用 TLA+、Gallina 或 FizzBee 等专门设计的语言来编写。借助这类语言，我们可以专注于算法行为，不必纠缠于代码实现细节。模型检查器随后会系统地尝试各种可能发生的情况，利用模型来验证不变量是否在算法的所有状态中都成立。
+*Model checker* là công cụ giúp xác minh hành vi của thuật toán hay hệ thống có đúng kỳ vọng không. Đặc tả thuật toán phải viết bằng ngôn ngữ chuyên dụng như TLA+, Gallina hay FizzBee. Nhờ các ngôn ngữ này, ta có thể tập trung vào hành vi của thuật toán mà không bị sa vào chi tiết hiện thực. Model checker sau đó thử một cách có hệ thống các tình huống có thể xảy ra, dùng mô hình để xác minh các bất biến có đúng ở mọi trạng thái của thuật toán không.
 
-严格来说，模型检查无法证明算法的不变量在每一种可能状态下都成立，因为大多数现实算法的状态空间是无限的。要真正验证所有状态，需要给出形式化证明；这虽然可行，但通常比运行模型检查器困难得多。因此，使用模型检查器时，通常要把算法模型缩减成一个可以完全验证的近似版本，或是给执行设置某种上限（例如限制最多可以发送多少条消息）。这样一来，只会在更长执行过程中出现的缺陷就无法被发现。
+Nói chính xác, model checking không chứng minh được bất biến của thuật toán đúng ở mọi trạng thái có thể, vì không gian trạng thái của đa số thuật toán thực tế là vô hạn. Muốn xác minh mọi trạng thái thật sự, cần chứng minh hình thức, việc này khả thi nhưng thường khó hơn nhiều so với chạy model checker. Vì vậy, khi dùng model checker, thường phải thu nhỏ mô hình thuật toán thành một phiên bản xấp xỉ có thể xác minh trọn vẹn, hoặc đặt một giới hạn nào đó cho quá trình thực thi (như giới hạn số thông điệp tối đa được gửi). Như vậy, những lỗi chỉ xuất hiện trong các lần thực thi dài hơn sẽ không bị phát hiện.
 
-即便如此，模型检查器仍然在易用性与发现隐蔽缺陷的能力之间取得了很好的平衡。CockroachDB、TiDB、Kafka 和许多其他分布式系统，都使用模型规范来发现并修复缺陷 [^122] [^123] [^124]。例如，研究人员借助 TLA+ 证明，视图戳复制（VR）的文字描述存在歧义，可能导致数据丢失 [^125]。
+Dù vậy, model checker vẫn đạt được sự cân bằng tốt giữa độ dễ dùng và khả năng tìm ra lỗi tinh vi. CockroachDB, TiDB, Kafka và nhiều hệ thống phân tán khác đều dùng đặc tả mô hình để tìm và sửa lỗi [^122] [^123] [^124]. Chẳng hạn, các nhà nghiên cứu đã dùng TLA+ để chỉ ra khả năng mất dữ liệu ở Viewstamped Replication (VR) do mô tả bằng lời của thuật toán có chỗ mơ hồ [^125].
 
-按照设计，模型检查器运行的并非实际代码，而是一个只描述协议核心思想的简化模型。这样更容易系统地探索状态空间，但也带来规范与实现逐渐偏离的风险 [^126]。可以检查模型与真实实现的行为是否等价，不过这需要在真实实现中插桩 [^127]。
+Theo thiết kế, model checker không chạy mã thực mà chạy một mô hình đơn giản hóa chỉ mô tả ý tưởng cốt lõi của giao thức. Điều này giúp khám phá không gian trạng thái một cách có hệ thống dễ hơn, nhưng cũng kéo theo rủi ro đặc tả và bản hiện thực dần lệch nhau [^126]. Có thể kiểm tra hành vi của mô hình và bản hiện thực thực tế có tương đương không, nhưng việc này đòi hỏi gắn thêm công cụ đo vào bản hiện thực thực tế [^127].
 
-#### 故障注入 {#sec_fault_injection}
+#### Chèn lỗi {#sec_fault_injection}
 
-许多缺陷只有在机器或网络发生失效时才会触发。*故障注入*（*fault injection*）是一种有效（有时也相当吓人）的技术，用来验证系统实现遇到问题时是否仍会按预期工作。思路很简单：向正在运行的系统环境注入故障，再观察系统如何反应。注入的故障可以是网络失效、机器崩溃、磁盘损坏、进程暂停——凡是你能想到的计算机出错方式都可以尝试。
+Nhiều lỗi chỉ phát sinh khi máy hoặc mạng gặp sự cố. *Chèn lỗi* (*fault injection*) là một kỹ thuật hiệu quả (đôi khi khá đáng sợ) để xác minh bản hiện thực hệ thống có chạy đúng kỳ vọng khi gặp sự cố không. Ý tưởng rất đơn giản: đưa lỗi vào môi trường của hệ thống đang chạy, rồi quan sát hệ thống phản ứng thế nào. Lỗi chèn vào có thể là sự cố mạng, máy sập, đĩa hỏng, tiến trình bị dừng — mọi cách máy tính có thể hỏng mà bạn nghĩ ra được đều có thể thử.
 
-故障注入测试通常在与系统实际生产环境十分相似的环境中运行；有些团队甚至直接在生产环境中注入故障。Netflix 通过 Chaos Monkey 工具推广了这种做法 [^128]。在生产环境中注入故障通常称为 *混沌工程*（*chaos engineering*），我们在 [“可靠性与容错”](/ch2#sec_introduction_reliability) 中已经讨论过。
+Kiểm thử chèn lỗi thường chạy trong môi trường rất giống môi trường sản xuất thật của hệ thống. Một số nhóm thậm chí chèn lỗi thẳng vào môi trường sản xuất. Netflix đã phổ biến cách làm này qua công cụ Chaos Monkey [^128]. Chèn lỗi trong môi trường sản xuất thường gọi là *chaos engineering*, ta đã bàn ở ["Độ tin cậy và khả năng chịu lỗi"](/ch2#sec_introduction_reliability).
 
-运行故障注入测试时，首先要部署被测系统，以及故障注入协调者和脚本。协调者负责决定注入哪些故障、何时注入；本地或远程脚本则负责让单个节点或进程发生失效。注入脚本会利用许多不同工具来触发故障：Linux 进程可以用 `kill` 命令暂停或终止，磁盘可以用 `umount` 卸载，网络连接可以通过防火墙规则中断。检查故障注入期间以及之后的系统行为，就能确认系统是否一如预期。
+Khi chạy kiểm thử chèn lỗi, trước hết phải triển khai hệ thống cần kiểm thử, cùng bộ điều phối chèn lỗi và các script. Bộ điều phối quyết định chèn lỗi nào, khi nào, còn các script cục bộ hoặc từ xa thì làm cho từng node hay tiến trình hỏng. Script chèn lỗi dùng nhiều công cụ khác nhau để kích hoạt lỗi: tiến trình Linux có thể dừng hoặc kết thúc bằng lệnh `kill`, đĩa có thể gỡ bằng `umount`, kết nối mạng có thể bị cắt bằng quy tắc tường lửa. Kiểm tra hành vi hệ thống trong và sau khi chèn lỗi sẽ xác nhận hệ thống có chạy đúng kỳ vọng không.
 
-触发不同失效所需的工具五花八门，因此故障注入测试写起来颇为繁琐。常见做法是采用 Jepsen 之类的故障注入框架来简化流程。这类框架集成了多种操作系统，并预置了大量故障注入器 [^129]。Jepsen 在许多广泛使用的系统中都成功发现过关键缺陷，成效极为显著 [^130] [^131]。
+Các công cụ cần để kích hoạt từng loại lỗi rất đa dạng, nên viết kiểm thử chèn lỗi khá rườm rà. Cách làm phổ biến là dùng framework chèn lỗi như Jepsen để đơn giản hóa quy trình. Các framework này tích hợp nhiều hệ điều hành và có sẵn nhiều bộ chèn lỗi [^129]. Jepsen đã thành công rực rỡ trong việc tìm ra các lỗi nghiêm trọng ở nhiều hệ thống được dùng rộng rãi [^130] [^131].
 
-#### 确定性模拟测试 {#deterministic-simulation-testing}
+#### Kiểm thử mô phỏng tất định {#deterministic-simulation-testing}
 
-确定性模拟测试（DST）也已成为模型检查与故障注入的一种流行补充。它探索状态空间的方式与模型检查器相似，但测试的是真实代码，而不是模型。
+Kiểm thử mô phỏng tất định (DST) cũng đã trở thành một bổ sung phổ biến cho model checking và chèn lỗi. Nó khám phá không gian trạng thái theo cách giống model checker, nhưng kiểm thử mã thực chứ không phải mô hình.
 
-在 DST 中，模拟器会自动运行大量随机化的系统执行。模拟期间的网络通信、I/O 和时钟计时都由模拟组件取代，让模拟器能够精确控制各种时序与失效场景下，所有事情发生的先后顺序。这样一来，模拟器所能探索的情形远多于手写测试或故障注入。如果测试失败，还可以重新运行，因为模拟器知道触发失败的准确操作序列；故障注入则无法对系统实施如此细粒度的控制。
+Trong DST, bộ mô phỏng tự động chạy rất nhiều lần thực thi ngẫu nhiên hóa của hệ thống. Giao tiếp mạng, I/O và đo thời gian của đồng hồ trong lúc mô phỏng đều được thay bằng các thành phần mô phỏng, để bộ mô phỏng kiểm soát chính xác thứ tự mọi việc xảy ra trong các tình huống thời gian và lỗi khác nhau. Nhờ vậy bộ mô phỏng khám phá được nhiều tình huống hơn hẳn kiểm thử viết tay hay chèn lỗi. Nếu kiểm thử thất bại, có thể chạy lại, vì bộ mô phỏng biết chính xác chuỗi thao tác gây ra thất bại, điều mà chèn lỗi không làm được vì không kiểm soát hệ thống chi tiết đến vậy.
 
-DST 要求模拟器能够控制网络延迟等一切非确定性来源。要让代码变得确定，通常采用以下三种策略之一：
+DST đòi hỏi bộ mô phỏng kiểm soát được mọi nguồn phi tất định như độ trễ mạng. Để mã trở nên tất định, thường dùng một trong ba chiến lược sau:
 
-应用程序层
-: 有些系统从一开始就以便于确定性执行代码为目标进行构建。例如，FoundationDB 是 DST 领域的先驱之一，它基于名为 Flow 的异步通信库构建。Flow 为开发者提供了一个接入点，可以把确定性网络模拟注入系统 [^132]。类似地，TigerBeetle 是一款原生支持 DST 的在线事务处理（OLTP）数据库。它把系统状态建模为状态机，所有状态变更都在单一事件循环内发生。再配合时钟等确定性模拟原语，这种架构便能以确定性方式运行 [^133]。
+Tầng ứng dụng
+: Một số hệ thống được xây dựng ngay từ đầu với mục tiêu dễ thực thi mã một cách tất định. Ví dụ, FoundationDB là một trong những hệ thống tiên phong về DST, được xây dựng trên thư viện giao tiếp bất đồng bộ tên Flow. Flow cho nhà phát triển một điểm chèn để đưa mô phỏng mạng tất định vào hệ thống [^132]. Tương tự, TigerBeetle là cơ sở dữ liệu xử lý giao dịch trực tuyến (OLTP) hỗ trợ DST từ gốc. Nó mô hình hóa trạng thái hệ thống thành một máy trạng thái, mọi thay đổi trạng thái đều diễn ra trong một event loop duy nhất. Kết hợp với các primitive mô phỏng tất định như đồng hồ, kiến trúc này có thể chạy một cách tất định [^133].
 
-运行时层
-: 带异步运行时与常用库的编程语言，为引入确定性提供了接入点。可以用单线程运行时，强制所有异步代码顺序执行。例如，FrostDB 修改 Go 运行时，让 goroutine 依次执行 [^134]。Rust 的 madsim 库也采用类似方式。Madsim 为 Tokio 异步运行时 API、AWS S3 库、Kafka 的 Rust 库以及许多其他组件提供确定性实现。应用程序只需换用确定性的库与运行时，无需修改自身代码，就能获得确定性的测试执行。
+Tầng runtime
+: Các ngôn ngữ lập trình có runtime bất đồng bộ và thư viện phổ biến cung cấp điểm chèn để đưa tính tất định vào. Có thể dùng runtime đơn luồng để ép mọi mã bất đồng bộ chạy tuần tự. Ví dụ, FrostDB sửa runtime của Go để các goroutine chạy lần lượt [^134]. Thư viện madsim của Rust cũng dùng cách tương tự. Madsim cung cấp bản hiện thực tất định cho API của runtime bất đồng bộ Tokio, thư viện AWS S3, thư viện Kafka dành cho Rust và nhiều thành phần khác. Ứng dụng chỉ cần đổi sang thư viện và runtime tất định, không phải sửa mã của chính nó, là có thể chạy kiểm thử tất định.
 
-机器层
-: 除了在运行时修改代码，也可以让整台机器变得确定。这个过程十分精细：机器必须对所有通常带有非确定性的调用给出确定性响应。Antithesis 等工具通过构建定制的虚拟机监控器来实现这一点，由它把通常非确定性的操作替换成确定性操作。从时钟到网络再到存储，一切都必须纳入考虑。完成后，开发者就能在虚拟机监控器内的一组容器中运行整个分布式系统，得到一个完全确定的分布式系统。
+Tầng máy
+: Thay vì sửa mã ở runtime, cũng có thể làm cho cả máy trở nên tất định. Quá trình này rất tinh vi: máy phải trả lời một cách tất định cho mọi lời gọi vốn có tính phi tất định. Các công cụ như Antithesis làm được việc này bằng cách xây dựng một hypervisor tùy biến, thay các thao tác vốn phi tất định bằng thao tác tất định. Từ đồng hồ đến mạng đến lưu trữ, mọi thứ đều phải được tính đến. Xong rồi, nhà phát triển có thể chạy toàn bộ hệ thống phân tán trong một nhóm container bên trong hypervisor và có được một hệ thống phân tán hoàn toàn tất định.
 
-DST 的优势不止是能够重放。Antithesis 等工具发现较为罕见的行为时，会把一次测试执行分叉成多个子执行，借此尝试探索应用程序中的更多代码路径。确定性测试通常使用模拟时钟与网络调用，因此运行速度可以快于现实中的时间流逝。例如，TigerBeetle 的时间抽象可以模拟网络延迟和超时，而无需真的等待足够长时间让超时触发。这类技术让模拟器能够以更快速度探索更多代码路径。
+Lợi thế của DST không chỉ là khả năng chạy lại. Khi các công cụ như Antithesis phát hiện hành vi tương đối hiếm gặp, chúng tách một lần thực thi kiểm thử thành nhiều lần thực thi con, nhằm khám phá thêm nhiều đường đi mã trong ứng dụng. Kiểm thử tất định thường dùng đồng hồ và lời gọi mạng mô phỏng, nên chạy nhanh hơn thời gian trôi qua ngoài đời. Ví dụ, phần trừu tượng hóa thời gian của TigerBeetle có thể mô phỏng độ trễ mạng và timeout mà không cần thật sự chờ đủ lâu để timeout kích hoạt. Các kỹ thuật này cho phép bộ mô phỏng khám phá nhiều đường đi mã hơn với tốc độ nhanh hơn.
 
 <a id="sidebar_distributed_determinism"></a>
 
-> [!TIP] 确定性的力量
+> [!TIP] Sức mạnh của tính tất định
 >
-> 非确定性正是本章所讨论的所有分布式系统难题的核心：并发、网络延迟、进程暂停、时钟跳变和崩溃都会以不可预测的方式发生，而且系统每次运行时都可能不同。反过来说，如果能让系统变得确定，许多事情都会大为简化。
+> Phi tất định chính là cốt lõi của mọi khó khăn trong hệ thống phân tán mà chương này đã bàn: tính đồng thời, độ trễ mạng, tiến trình bị dừng, đồng hồ nhảy và sự cố sập đều xảy ra theo cách không thể đoán trước, và mỗi lần chạy hệ thống có thể khác nhau. Ngược lại, nếu làm cho hệ thống tất định được thì nhiều thứ sẽ đơn giản hơn hẳn.
 >
-> 事实上，让事物具有确定性是个简单而强大的思想，在分布式系统设计中反复出现。除了确定性模拟测试，前面几章还介绍过多种利用确定性的方式：
+> Thật ra, làm cho mọi thứ tất định là một ý tưởng đơn giản mà mạnh mẽ, lặp đi lặp lại trong thiết kế hệ thống phân tán. Ngoài kiểm thử mô phỏng tất định, các chương trước đã giới thiệu nhiều cách khác tận dụng tính tất định:
 >
-> * 事件溯源的一项关键优势（参见 [“事件溯源与 CQRS”](/ch3#sec_datamodels_events)），是可以确定性地重放事件日志，重新构建派生的物化视图。
-> * 工作流引擎（参见 [“持久化执行与工作流”](/ch5#sec_encoding_dataflow_workflows)）依赖确定性的工作流定义，借此提供持久化执行语义。
-> * 我们将在 [“使用共享日志”](/ch10#sec_consistency_smr) 中讨论的 *状态机复制*，会在每个副本上独立执行相同的确定性事务序列，从而复制数据。我们已经见过这种思想的两个变体：基于语句的复制（参见 [“复制日志的实现”](/ch6#sec_replication_implementation)），以及通过存储过程串行执行事务（参见 [“存储过程的利弊”](/ch8#sec_transactions_stored_proc_tradeoffs)）。
+> * Một lợi thế then chốt của event sourcing (xem ["Event sourcing và CQRS"](/ch3#sec_datamodels_events)) là có thể phát lại log sự kiện một cách tất định để dựng lại các khung nhìn vật chất hóa dẫn xuất.
+> * Workflow engine (xem ["Durable execution và workflow"](/ch5#sec_encoding_dataflow_workflows)) dựa vào định nghĩa workflow tất định để cung cấp ngữ nghĩa durable execution.
+> * *Sao chép máy trạng thái* (*state machine replication*), mà ta sẽ bàn ở ["Sử dụng shared log"](/ch10#sec_consistency_smr), đồng bộ dữ liệu giữa các bản sao bằng cách thực thi độc lập cùng một chuỗi giao dịch tất định trên mỗi bản sao. Ta đã gặp hai biến thể của ý tưởng này: sao chép (*replication*) dựa trên câu lệnh (xem ["Triển khai replication log"](/ch6#sec_replication_implementation)) và thực thi tuần tự giao dịch qua thủ tục lưu trữ (xem ["Ưu và nhược điểm của thủ tục lưu trữ"](/ch8#sec_transactions_stored_proc_tradeoffs)).
 >
-> 不过，要让代码具有彻底的确定性，仍须十分小心。即使已经消除了所有并发，并用确定性模拟替换 I/O、网络通信、时钟和随机数生成器，系统里仍可能残留非确定性。例如，在某些编程语言中，遍历哈希表元素的顺序可能不确定；是否会触及资源上限（内存分配失败、栈溢出）同样具有非确定性。
+> Tuy nhiên, để mã hoàn toàn tất định vẫn phải hết sức cẩn thận. Kể cả đã loại bỏ mọi tính đồng thời, và đã thay I/O, giao tiếp mạng, đồng hồ và bộ sinh số ngẫu nhiên bằng mô phỏng tất định, trong hệ thống vẫn có thể còn sót phi tất định. Ví dụ, trong một số ngôn ngữ lập trình, thứ tự duyệt các phần tử của bảng băm có thể không tất định. Việc có chạm giới hạn tài nguyên hay không (cấp phát bộ nhớ thất bại, tràn stack) cũng mang tính phi tất định.
 
-## 总结 {#summary}
+## Tóm tắt {#summary}
 
-本章讨论了分布式系统中可能发生的各种问题，其中包括：
+Chương này đã bàn về nhiều vấn đề có thể xảy ra trong hệ thống phân tán, trong đó có:
 
-* 每当试图通过网络发送数据包时，它都可能丢失或遭到任意延迟。响应同样可能丢失或延迟，因此只要没有收到响应，你就无从知道消息是否送达。
-* 即使已经尽力配置 NTP，一个节点的时钟仍可能与其他节点严重不同步，也可能突然向前或向后跳变。依赖这样的时钟非常危险，因为你多半无法可靠估计其置信区间。
-* 进程可能在执行到任意位置时暂停很长时间，被其他节点宣告死亡；随后它又恢复执行，却完全没有意识到自己曾经暂停。
+* Mỗi khi cố gửi gói tin qua mạng, gói tin có thể bị mất hoặc bị trễ tùy ý. Phản hồi cũng có thể bị mất hoặc bị trễ, nên chừng nào chưa nhận được phản hồi, bạn không có cách nào biết thông điệp đã được chuyển đến hay chưa.
+* Dù đã cố hết sức cấu hình NTP, đồng hồ của một node vẫn có thể lệch nghiêm trọng so với các node khác, và có thể đột ngột nhảy tiến hoặc lùi. Dựa vào đồng hồ như vậy là rất nguy hiểm, vì nhiều khả năng bạn không có cách đo tốt khoảng tin cậy của đồng hồ.
+* Tiến trình có thể bị tạm dừng rất lâu ở một điểm bất kỳ trong quá trình thực thi, bị các node khác tuyên bố đã chết, rồi sau đó nó chạy lại mà hoàn toàn không nhận ra mình từng bị dừng.
 
-可能出现这类 *部分失效*，正是分布式系统的决定性特征。只要软件试图完成任何涉及其他节点的事情，就可能偶尔失败、莫名其妙地变慢，或彻底不作响应（最终超时）。在分布式系统中，我们会把容忍部分失效的能力构建到软件里，使整个系统即使有部分组件损坏，也能继续工作。
+Việc có thể xảy ra *hỏng hóc từng phần* như vậy chính là đặc trưng của hệ thống phân tán. Mỗi khi phần mềm cố làm bất cứ việc gì liên quan đến node khác, nó có thể thỉnh thoảng thất bại, chậm đi một cách ngẫu nhiên, hoặc không phản hồi gì cả (và cuối cùng bị timeout). Trong hệ thống phân tán, ta cố gắng xây khả năng chịu hỏng hóc từng phần vào phần mềm, để cả hệ thống vẫn chạy được ngay cả khi một số thành phần bị hỏng.
 
-要容忍故障，第一步是 *检测* 故障，可就连这一步也很困难。大多数系统都没有准确判断节点是否已经失效的机制，因此多数分布式算法只能依靠超时来判断远程节点是否仍然可用。然而，超时无法区分网络失效与节点失效，而网络延迟的波动有时又会让系统错误地怀疑某个节点已经崩溃。跛行节点更加难以处理：它们仍在响应，却慢得根本做不了任何有用的工作。
+Bước đầu tiên để chịu lỗi là *phát hiện* lỗi, nhưng ngay cả bước này cũng khó. Hầu hết hệ thống không có cơ chế chính xác để biết một node đã hỏng hay chưa, nên đa số thuật toán phân tán chỉ có thể dựa vào timeout để xác định node ở xa còn dùng được không. Tuy nhiên, timeout không phân biệt được sự cố mạng với sự cố node, và độ trễ mạng dao động đôi khi khiến hệ thống nghi nhầm một node đã sập. Node què còn khó xử lý hơn: nó vẫn phản hồi, nhưng chậm đến mức không làm được việc gì hữu ích.
 
-即便检测出了故障，要让系统容忍它也并不容易：机器之间既没有全局变量，没有共享内存，没有公共知识，也没有其他形式的共享状态 [^83]。节点甚至无法就“现在几点”达成一致，更不用说更深刻的问题了。信息从一个节点流向另一个节点的唯一途径，就是经由不可靠网络发送。重大决策不能安全地交给单个节点，因此我们需要协议来召集其他节点参与，并争取让达到法定人数的节点达成一致。
+Ngay cả khi phát hiện được lỗi, bắt hệ thống chịu được lỗi cũng không dễ: giữa các máy không có biến toàn cục, không có bộ nhớ chung, không có tri thức chung, cũng không có hình thức trạng thái chia sẻ nào khác [^83]. Các node thậm chí không thể thống nhất với nhau bây giờ là mấy giờ, chứ đừng nói đến những vấn đề sâu xa hơn. Cách duy nhất để thông tin truyền từ node này sang node khác là gửi nó qua mạng không đáng tin cậy. Những quyết định quan trọng không thể giao an toàn cho một node đơn lẻ, nên ta cần giao thức để huy động các node khác tham gia và cố gắng đạt được đồng thuận giữa các node trong quorum.
 
-如果你习惯于在单台计算机那种数学般完美的理想环境中编写软件——同一个操作总会确定性地返回相同结果——那么转向分布式系统混乱的物理现实，难免会感到震惊。反过来，分布式系统工程师常常认为，只要能在单台计算机上解决，问题就微不足道 [^4]。事实上，如今单台计算机确实能做很多事情。如果能够避免打开潘多拉魔盒，把工作简单地留在一台机器上，例如使用嵌入式存储引擎（参见 [“嵌入式存储引擎”](/ch4#sidebar_embedded)），通常就值得这样做。
+Nếu bạn quen viết phần mềm trong môi trường lý tưởng hoàn hảo như toán học của một máy tính duy nhất — nơi cùng một thao tác luôn cho cùng một kết quả một cách tất định — thì chuyển sang thực tế vật lý lộn xộn của hệ thống phân tán khó tránh khỏi cú sốc. Ngược lại, các kỹ sư hệ thống phân tán thường cho rằng một vấn đề mà giải quyết được trên một máy thì là tầm thường [^4]. Thực tế, ngày nay một máy đơn làm được rất nhiều việc. Nếu tránh được việc mở chiếc hộp Pandora, cứ để công việc trên một máy, ví dụ dùng storage engine nhúng (xem ["Storage engine nhúng"](/ch4#sidebar_embedded)), thì thường đáng làm như vậy.
 
-不过，正如 [“分布式与单节点系统”](/ch1#sec_introduction_distributed) 所讨论的，可伸缩性并不是采用分布式系统的唯一理由。容错与低延迟（把数据放在地理位置更靠近用户的地方）同样重要，而这些目标无法靠单个节点实现。分布式系统的力量在于，原则上它可以在服务层面永不停机，因为所有故障和维护都能在节点层面处理。（当然在实践中，如果把一项错误配置发布到所有节点，分布式系统照样会被彻底击垮。）
+Tuy nhiên, như đã bàn ở ["Hệ thống phân tán và hệ thống một node"](/ch1#sec_introduction_distributed), khả năng mở rộng không phải lý do duy nhất để dùng hệ thống phân tán. Khả năng chịu lỗi và độ trễ thấp (đặt dữ liệu gần người dùng hơn về mặt địa lý) cũng quan trọng không kém, và những mục tiêu này không đạt được bằng một node đơn lẻ. Sức mạnh của hệ thống phân tán là về nguyên tắc nó có thể không bao giờ ngừng hoạt động ở mức dịch vụ, vì mọi sự cố và bảo trì đều xử lý được ở mức node. (Dĩ nhiên trong thực tế, nếu triển khai một cấu hình sai lên mọi node thì hệ thống phân tán vẫn bị hạ gục hoàn toàn.)
 
-本章还稍稍岔开话题，探讨网络、时钟和进程的不可靠性是否属于无可避免的自然法则。答案是否定的：网络可以提供硬实时响应保证与有界延迟，只不过代价极其高昂，硬件资源的利用率也会随之降低。大多数非安全攸关系统都会在便宜而不可靠与昂贵而可靠之间选择前者。
+Chương này cũng đi lạc đề một chút để xem sự không đáng tin cậy của mạng, đồng hồ và tiến trình có phải là quy luật tự nhiên không thể tránh hay không. Câu trả lời là không: mạng có thể cung cấp bảo đảm phản hồi thời gian thực cứng và độ trễ có giới hạn, chỉ có điều cái giá cực kỳ đắt, và kéo theo mức sử dụng tài nguyên phần cứng thấp đi. Đa số hệ thống không liên quan đến an toàn sẽ chọn rẻ mà không đáng tin cậy thay vì đắt mà đáng tin cậy.
 
-本章始终在讨论问题，呈现出一幅颇为黯淡的图景。下一章将转向解决方案，讨论一些专为应对分布式系统问题而设计的算法。
+Suốt chương này ta toàn bàn về vấn đề, vẽ nên một bức tranh khá ảm đạm. Chương tiếp theo sẽ chuyển sang các giải pháp, bàn về một số thuật toán được thiết kế để đối phó với các vấn đề của hệ thống phân tán.
 
 
 
-### 参考文献
+### Tài liệu tham khảo
+
 
 [^1]: Mark Cavage. [There’s Just No Getting Around It: You’re Building a Distributed System](https://queue.acm.org/detail.cfm?id=2482856). *ACM Queue*, volume 11, issue 4, pages 80-89, April 2013. [doi:10.1145/2466486.2482856](https://doi.org/10.1145/2466486.2482856) 
 [^2]: Jay Kreps. [Getting Real About Distributed System Reliability](https://blog.empathybox.com/post/19574936361/getting-real-about-distributed-system-reliability). *blog.empathybox.com*, March 2012. Archived at [perma.cc/9B5Q-AEBW](https://perma.cc/9B5Q-AEBW) 

@@ -3672,3 +3672,113 @@ vi = "snapshot nhất quán"
 [[term]]
 en = "heterogeneous"
 vi = "không đồng nhất"
+
+[[term]]
+en = "unbounded delay"
+vi = "độ trễ không giới hạn"
+
+[[term]]
+en = "Asynchronous Transfer Mode"
+vi = "Asynchronous Transfer Mode"
+keep = true
+abbr = "ATM"
+note = "Tên công nghệ mạng, giữ nguyên."
+
+[[term]]
+en = "quality of service"
+vi = "chất lượng dịch vụ"
+abbr = "QoS"
+
+[[term]]
+en = "admission control"
+vi = "kiểm soát tiếp nhận"
+note = "Giới hạn tốc độ của bên gửi trước khi vào mạng/hệ thống."
+
+[[term]]
+en = "duration"
+vi = "khoảng thời gian"
+ctx = "đồng hồ"
+
+[[term]]
+en = "point in time"
+vi = "thời điểm"
+ctx = "đồng hồ"
+
+[[term]]
+en = "drift"
+vi = "độ trôi"
+ctx = "đồng hồ"
+note = "Đồng hồ chạy nhanh hoặc chậm hơn so với tốc độ chuẩn."
+
+[[term]]
+en = "suspend"
+vi = "tạm dừng"
+ctx = "máy ảo"
+note = "Dừng mọi tiến trình và lưu nội dung bộ nhớ ra đĩa."
+
+[[term]]
+en = "resume"
+vi = "tiếp tục"
+ctx = "máy ảo"
+note = "Khôi phục nội dung bộ nhớ và chạy tiếp từ chỗ đã dừng."
+
+[[term]]
+en = "swapping to disk"
+vi = "hoán đổi ra đĩa"
+
+[[term]]
+en = "paging"
+vi = "phân trang"
+ctx = "bộ nhớ"
+
+[[term]]
+en = "Byzantine fault tolerance"
+vi = "chịu lỗi Byzantine"
+abbr = "BFT"
+
+[[term]]
+en = "crash-stop"
+vi = "crash-stop"
+keep = true
+note = "Tên mô hình lỗi, giữ nguyên."
+
+[[term]]
+en = "fail-stop"
+vi = "fail-stop"
+keep = true
+note = "Đồng nghĩa với crash-stop."
+
+[[term]]
+en = "deterministic simulation testing"
+vi = "kiểm thử mô phỏng tất định"
+abbr = "DST"
+
+[[term]]
+en = "confidence interval"
+vi = "khoảng tin cậy"
+ctx = "đồng hồ"
+
+[[term]]
+en = "wall-clock time"
+vi = "thời gian đồng hồ treo tường"
+note = "Tên khác của time-of-day clock: giờ theo lịch của đồng hồ thật."
+
+[[term]]
+en = "crash-recovery"
+vi = "crash-recovery"
+keep = true
+note = "Tên mô hình lỗi (node có thể sập rồi hoạt động lại), giữ nguyên."
+
+[[term]]
+en = "formal verification"
+vi = "xác minh hình thức"
+
+[[term]]
+en = "property-based testing"
+vi = "kiểm thử dựa trên thuộc tính"
+
+[[term]]
+en = "fuzz testing"
+vi = "fuzz testing"
+keep = true
+note = "Quen dùng nguyên gốc."
