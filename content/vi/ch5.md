@@ -179,7 +179,7 @@ Khác biệt lớn nhất so với {{< xref fig="5-2" page="/ch5" anchor="fig_en
 Protocol Buffers tiết kiệm thêm không gian bằng cách nhét kiểu trường và số tag vào cùng một byte. Nó cũng dùng số nguyên có độ dài biến đổi: số 1337 được mã hóa trong hai byte, với bit cao nhất của mỗi byte cho biết còn byte nào theo sau hay không. Nghĩa là các số từ -64 đến 63 được mã hóa trong một byte, các số từ -8192 đến 8191 trong hai byte, và cứ thế. Số càng lớn thì dùng càng nhiều byte.
 
 > [!NOTE] Ghi chú người dịch: mã hóa số nguyên có dấu
-> Các khoảng có dấu ở trên áp dụng cho `sint32` và `sint64` dùng mã hóa ZigZag, không áp dụng cho `int64` trong ví dụ này. Với `int64`, giá trị không âm 0–127 được mã hóa bằng một byte dữ liệu, 128–16383 bằng hai byte; còn giá trị âm luôn chiếm mười byte dữ liệu, chưa tính field tag. Xem [tài liệu mã hóa của Protocol Buffers](https://protobuf.dev/programming-guides/encoding/#signed-integers).
+> Các khoảng có dấu ở trên áp dụng cho `sint32` và `sint64` dùng mã hóa ZigZag, không áp dụng cho `int64` trong ví dụ này. Với `int64`, giá trị không âm 0–127 được mã hóa bằng một byte dữ liệu, 128–16383 bằng hai byte, còn giá trị âm luôn chiếm mười byte dữ liệu, chưa tính field tag. Xem [tài liệu mã hóa của Protocol Buffers](https://protobuf.dev/programming-guides/encoding/#signed-integers).
 
 Protocol Buffers không có kiểu dữ liệu danh sách hay mảng tường minh. Thay vào đó, bộ bổ nghĩa `repeated` trên trường `interests` cho biết trường này chứa một danh sách giá trị thay vì một giá trị đơn. Trong mã hóa nhị phân, các phần tử danh sách chỉ đơn giản là cùng một field tag lặp lại nhiều lần trong cùng bản ghi.
 

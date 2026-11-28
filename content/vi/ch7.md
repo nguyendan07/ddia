@@ -49,7 +49,7 @@ Thật ra, sharding là một trong những công cụ chính để đạt *mở
 
 Sao chép (*replication*) hữu ích ở mọi quy mô vì nó giúp chịu lỗi và chạy ngoại tuyến, còn sharding là giải pháp nặng nề, chủ yếu phù hợp với quy mô lớn. Nếu dữ liệu và thông lượng ghi vẫn xử lý được trên một máy (ngày nay một máy đơn lẻ mạnh hơn nhiều so với tưởng tượng!), thường nên tránh sharding và dùng cơ sở dữ liệu một shard.
 
-Lý do là sharding thường làm tăng độ phức tạp. Thường bạn phải chọn một *partition key* (*partition key*) để quyết định bản ghi nào vào shard nào; các bản ghi cùng partition key sẽ vào cùng một shard [^4]. Lựa chọn này rất quan trọng: nếu biết bản ghi ở shard nào, việc truy cập nhanh, nhưng nếu không biết thì bạn phải tìm kiếm kém hiệu quả trên mọi shard, và sau này rất khó đổi sơ đồ sharding.
+Lý do là sharding thường làm tăng độ phức tạp. Thường bạn phải chọn một *partition key* (*partition key*) để quyết định bản ghi nào vào shard nào. Các bản ghi cùng partition key sẽ vào cùng một shard [^4]. Lựa chọn này rất quan trọng: nếu biết bản ghi ở shard nào, việc truy cập nhanh, nhưng nếu không biết thì bạn phải tìm kiếm kém hiệu quả trên mọi shard, và sau này rất khó đổi sơ đồ sharding.
 
 Vì vậy sharding thường hợp với dữ liệu khóa-giá trị, nơi có thể shard thẳng theo khóa. Dữ liệu quan hệ khó hơn, vì có thể bạn cần tìm theo *chỉ mục phụ* (*secondary index*) hoặc join các bản ghi nằm rải rác ở nhiều shard. Ta sẽ bàn thêm ở ["Sharding và chỉ mục phụ (*secondary index*)"](/ch7#sec_sharding_secondary_indexes).
 
@@ -108,7 +108,7 @@ Một cách shard là gán cho mỗi shard một khoảng liên tục của part
 
 Các khoảng khóa không nhất thiết có độ rộng bằng nhau, vì dữ liệu có thể phân bố không đều. Chẳng hạn, trong {{< xref fig="7-2" page="/ch7" anchor="fig_sharding_encyclopedia" >}}Hình 7-2{{< /xref >}}, tập 1 gồm các từ bắt đầu bằng A và B, nhưng tập 12 gồm các từ bắt đầu bằng T, U, V, W, X, Y và Z. Nếu cứ máy móc quy định mỗi tập hai chữ cái thì một số tập sẽ dày hơn hẳn các tập khác. Để phân bố dữ liệu đều, ranh giới shard phải được điều chỉnh theo dữ liệu.
 
-Ranh giới shard có thể do quản trị viên chọn thủ công, hoặc do cơ sở dữ liệu tự chọn. Chẳng hạn, Vitess (lớp sharding cho MySQL) dùng sharding theo khoảng khóa thủ công; còn Bigtable, phiên bản mã nguồn mở HBase, tùy chọn sharding theo khoảng của MongoDB, CockroachDB, RethinkDB và FoundationDB dùng cách tự động [^6]. YugabyteDB hỗ trợ cả tách tablet thủ công lẫn tự động.
+Ranh giới shard có thể do quản trị viên chọn thủ công, hoặc do cơ sở dữ liệu tự chọn. Chẳng hạn, Vitess (lớp sharding cho MySQL) dùng sharding theo khoảng khóa thủ công, còn Bigtable, phiên bản mã nguồn mở HBase, tùy chọn sharding theo khoảng của MongoDB, CockroachDB, RethinkDB và FoundationDB dùng cách tự động [^6]. YugabyteDB hỗ trợ cả tách tablet thủ công lẫn tự động.
 
 Trong mỗi shard, các khóa được lưu theo thứ tự, ví dụ dùng B-tree hoặc SSTable (xem [Chương 4](/ch4#ch_storage)). Nhờ vậy quét theo khoảng rất dễ, và bạn có thể coi khóa như một chỉ mục ghép (*concatenated index*) để lấy nhiều bản ghi liên quan trong một truy vấn (xem ["Chỉ mục đa chiều (*multidimensional index*) và chỉ mục (*index*) toàn văn"](/ch4#sec_storage_multidimensional)). Chẳng hạn, một ứng dụng lưu dữ liệu từ mạng cảm biến với khóa là dấu thời gian của phép đo. Quét theo khoảng rất hữu ích ở đây, vì nó cho phép dễ dàng lấy mọi số đo của một tháng.
 
@@ -133,7 +133,7 @@ Nhược điểm là việc tách shard rất tốn kém: phải ghi lại toàn
 
 ### Sharding theo hash của khóa {#sec_sharding_hash}
 
-Sharding theo khoảng khóa hữu ích khi bạn muốn các partition key liền kề (nhưng khác nhau) nằm cùng một shard; dấu thời gian là một ví dụ. Nếu bạn không quan tâm các partition key có liền kề hay không (ví dụ ID tenant trong ứng dụng multitenant), cách thường dùng là trước hết băm partition key, rồi ánh xạ giá trị hash vào shard.
+Sharding theo khoảng khóa hữu ích khi bạn muốn các partition key liền kề (nhưng khác nhau) nằm cùng một shard. Dấu thời gian là một ví dụ. Nếu bạn không quan tâm các partition key có liền kề hay không (ví dụ ID tenant trong ứng dụng multitenant), cách thường dùng là trước hết băm partition key, rồi ánh xạ giá trị hash vào shard.
 
 Một hàm hash tốt biến dữ liệu lệch thành dữ liệu phân bố đều. Giả sử có hàm hash 32-bit nhận đầu vào là chuỗi. Mỗi khi nhận một chuỗi mới, nó trả về một số trông như ngẫu nhiên giữa 0 và 2³² − 1. Ngay cả khi các chuỗi đầu vào rất giống nhau, hash của chúng vẫn phân bố đều trong khoảng đó (dù cùng đầu vào luôn cho cùng đầu ra).
 
@@ -198,7 +198,7 @@ Thuật toán *consistent hashing* (*consistent hashing*) là một hàm hash á
 
 Lưu ý rằng "consistent" (nhất quán) ở đây không liên quan gì đến nhất quán bản sao (xem [Chương 6](/ch6#ch_replication)) hay nhất quán ACID (xem [Chương 8](/ch8#ch_transactions)), mà mô tả xu hướng của một khóa ở lại trong cùng shard càng nhiều càng tốt.
 
-Thuật toán sharding của Cassandra và ScyllaDB tương tự định nghĩa gốc của consistent hashing [^20], nhưng cũng đã có nhiều thuật toán consistent hashing khác được đề xuất [^21], chẳng hạn *highest random weight* (*highest random weight*, còn gọi là *rendezvous hashing*) [^22] và *jump consistent hash* (*jump consistent hash*) [^23]. Với thuật toán của Cassandra, thêm một node sẽ tách một số shard hiện có thành các khoảng con; với rendezvous hashing hay jump consistent hash, node mới nhận từng khóa riêng lẻ mà trước đó nằm rải rác trên mọi node khác. Cách nào phù hợp hơn tùy thuộc vào ứng dụng.
+Thuật toán sharding của Cassandra và ScyllaDB tương tự định nghĩa gốc của consistent hashing [^20], nhưng cũng đã có nhiều thuật toán consistent hashing khác được đề xuất [^21], chẳng hạn *highest random weight* (*highest random weight*, còn gọi là *rendezvous hashing*) [^22] và *jump consistent hash* (*jump consistent hash*) [^23]. Với thuật toán của Cassandra, thêm một node sẽ tách một số shard hiện có thành các khoảng con, còn với rendezvous hashing hay jump consistent hash, node mới nhận từng khóa riêng lẻ mà trước đó nằm rải rác trên mọi node khác. Cách nào phù hợp hơn tùy thuộc vào ứng dụng.
 
 ### Khối lượng công việc lệch và giảm nhẹ hot spot {#sec_sharding_skew}
 
@@ -210,11 +210,11 @@ Tình huống này cần chiến lược sharding linh hoạt hơn [^25] [^26]. 
 
 Bạn cũng có thể bù lệch tải ở tầng ứng dụng. Chẳng hạn, nếu biết một khóa rất nóng, một cách đơn giản là thêm một số ngẫu nhiên vào đầu hoặc cuối khóa. Chỉ cần số ngẫu nhiên hai chữ số thập phân là có thể chia đều các lượt ghi vào khóa đó thành 100 khóa khác nhau, và chúng sẽ phân bố vào các shard khác nhau.
 
-Tuy nhiên, khi các lượt ghi đã bị chia ra nhiều khóa, mọi lượt đọc phải trả thêm chi phí: phải đọc dữ liệu từ cả 100 khóa rồi gộp kết quả. Do hot key được chia nhỏ, lượng đọc mỗi shard phải chịu không giảm; chỉ có tải ghi được giảm. Kỹ thuật này còn cần thêm công việc ghi sổ: chỉ nên thêm số ngẫu nhiên cho số ít khóa nóng; với đại đa số khóa có thông lượng ghi thấp thì chỉ thêm chi phí vô ích. Do đó, bạn cũng cần theo dõi khóa nào đã bị chia, và có quy trình chuyển khóa thường thành hot key cần xử lý đặc biệt.
+Tuy nhiên, khi các lượt ghi đã bị chia ra nhiều khóa, mọi lượt đọc phải trả thêm chi phí: phải đọc dữ liệu từ cả 100 khóa rồi gộp kết quả. Do hot key được chia nhỏ, lượng đọc mỗi shard phải chịu không giảm. Chỉ có tải ghi được giảm. Kỹ thuật này còn cần thêm công việc ghi sổ: chỉ nên thêm số ngẫu nhiên cho số ít khóa nóng, còn với đại đa số khóa có thông lượng ghi thấp thì chỉ thêm chi phí vô ích. Do đó, bạn cũng cần theo dõi khóa nào đã bị chia, và có quy trình chuyển khóa thường thành hot key cần xử lý đặc biệt.
 
 Vấn đề còn phức tạp hơn vì tải thay đổi theo thời gian. Chẳng hạn, một bài đăng mạng xã hội đột nhiên nổi như cồn có thể chịu tải cao trong vài ngày, sau đó nhiều khả năng lại yên ắng. Ngoài ra, có khóa nóng về ghi, có khóa nóng về đọc, và hai loại cần chiến lược xử lý khác nhau.
 
-Một số hệ thống (đặc biệt là dịch vụ đám mây thiết kế cho quy mô lớn) có thể tự động xử lý hot shard; ví dụ Amazon gọi cơ chế này là *heat management* (*heat management*) [^28] hay *adaptive capacity* (*adaptive capacity*) [^17]. Chi tiết cách các hệ thống này hoạt động nằm ngoài phạm vi cuốn sách.
+Một số hệ thống (đặc biệt là dịch vụ đám mây thiết kế cho quy mô lớn) có thể tự động xử lý hot shard. Ví dụ Amazon gọi cơ chế này là *heat management* (*heat management*) [^28] hay *adaptive capacity* (*adaptive capacity*) [^17]. Chi tiết cách các hệ thống này hoạt động nằm ngoài phạm vi cuốn sách.
 
 ### Vận hành: cân bằng lại tự động hay thủ công {#sec_sharding_operations}
 
@@ -224,7 +224,7 @@ Một số hệ thống tự quyết định khi nào tách shard và khi nào d
 
 Cân bằng lại hoàn toàn tự động rất tiện vì công việc vận hành bảo trì thường ngày ít hơn, và hệ thống như vậy thậm chí có thể tự co giãn theo khối lượng công việc. Các cơ sở dữ liệu đám mây như DynamoDB tuyên bố có thể tự động thêm bớt shard trong vài phút để đáp ứng tải tăng giảm mạnh [^17] [^29].
 
-Tuy nhiên, quản lý shard tự động cũng có thể khó đoán. Cân bằng lại là thao tác đắt đỏ, vì nó phải định tuyến lại yêu cầu và di chuyển lượng lớn dữ liệu giữa các node. Nếu làm không cẩn thận, quá trình này có thể làm quá tải mạng hoặc node và làm chậm các yêu cầu khác. Hệ thống còn phải tiếp tục xử lý ghi trong lúc cân bằng lại; nếu đã gần thông lượng ghi tối đa, tốc độ tách shard thậm chí có thể không theo kịp tốc độ ghi mới đến [^29].
+Tuy nhiên, quản lý shard tự động cũng có thể khó đoán. Cân bằng lại là thao tác đắt đỏ, vì nó phải định tuyến lại yêu cầu và di chuyển lượng lớn dữ liệu giữa các node. Nếu làm không cẩn thận, quá trình này có thể làm quá tải mạng hoặc node và làm chậm các yêu cầu khác. Hệ thống còn phải tiếp tục xử lý ghi trong lúc cân bằng lại. Nếu đã gần thông lượng ghi tối đa, tốc độ tách shard thậm chí có thể không theo kịp tốc độ ghi mới đến [^29].
 
 Tự động hóa kiểu này khi kết hợp với phát hiện lỗi tự động có thể nguy hiểm. Chẳng hạn, một node quá tải và tạm thời phản hồi yêu cầu chậm. Các node khác kết luận node đó đã hỏng và tự động cân bằng lại cụm để chuyển tải đi khỏi nó. Điều này đặt thêm tải lên các node khác và mạng, khiến tình hình tệ hơn và có thể gây lỗi dây chuyền: các node khác cũng quá tải và bị nhầm là đã chết.
 
@@ -238,7 +238,7 @@ Vấn đề này gọi là *định tuyến yêu cầu* (*request routing*), và
 
 Do đó, định tuyến yêu cầu phải biết ánh xạ từ khóa đến shard và từ shard đến node. Nhìn chung có vài cách (như {{< xref fig="7-7" page="/ch7" anchor="fig_sharding_routing" >}}Hình 7-7{{< /xref >}}):
 
-1. Cho phép client kết nối đến node bất kỳ (ví dụ qua bộ cân bằng tải round-robin). Nếu node đó tình cờ sở hữu shard mà yêu cầu liên quan, nó xử lý trực tiếp; nếu không, nó chuyển tiếp yêu cầu đến node đúng, nhận phản hồi rồi chuyển lại cho client.
+1. Cho phép client kết nối đến node bất kỳ (ví dụ qua bộ cân bằng tải round-robin). Nếu node đó tình cờ sở hữu shard mà yêu cầu liên quan, nó xử lý trực tiếp, nếu không thì nó chuyển tiếp yêu cầu đến node đúng, nhận phản hồi rồi chuyển lại cho client.
 2. Mọi yêu cầu của client trước hết đi đến một tầng định tuyến, tầng này xác định node nào nên xử lý từng yêu cầu rồi chuyển tiếp tương ứng. Tầng định tuyến tự nó không xử lý yêu cầu nào, chỉ đóng vai bộ cân bằng tải nhận biết shard.
 3. Để client biết sơ đồ sharding và việc gán shard cho node. Khi đó client có thể kết nối thẳng đến node đúng mà không cần qua trung gian.
 
@@ -332,7 +332,7 @@ Cách làm phổ biến là dùng phần đầu của khóa làm partition key (
 Ta cũng bàn về tương tác giữa sharding và chỉ mục phụ (*secondary index*). Chỉ mục phụ (*secondary index*) cũng cần được shard, có hai cách:
 
 * *Chỉ mục phụ (*secondary index*) cục bộ*: chỉ mục phụ (*secondary index*) được lưu cùng shard với khóa chính và giá trị. Nhờ vậy khi ghi chỉ cần cập nhật một shard, nhưng khi tra cứu chỉ mục phụ (*secondary index*) phải đọc mọi shard.
-* *Chỉ mục phụ (*secondary index*) toàn cục*: được shard riêng theo giá trị được lập chỉ mục (*index*). Mục chỉ mục phụ (*secondary index*) có thể tham chiếu bản ghi từ mọi shard của khóa chính. Khi ghi bản ghi, có thể cần cập nhật nhiều shard của chỉ mục phụ (*secondary index*); nhưng khi đọc postings list thì chỉ cần truy cập một shard (việc lấy bản ghi thực tế vẫn cần đọc nhiều shard).
+* *Chỉ mục phụ (*secondary index*) toàn cục*: được shard riêng theo giá trị được lập chỉ mục (*index*). Mục chỉ mục phụ (*secondary index*) có thể tham chiếu bản ghi từ mọi shard của khóa chính. Khi ghi bản ghi, có thể cần cập nhật nhiều shard của chỉ mục phụ (*secondary index*), nhưng khi đọc postings list thì chỉ cần truy cập một shard (việc lấy bản ghi thực tế vẫn cần đọc nhiều shard).
 
 Cuối cùng, ta đã bàn cách định tuyến truy vấn đến đúng shard, và cách dịch vụ điều phối theo dõi việc gán shard cho node.
 
