@@ -3654,3 +3654,21 @@ en = "version vector"
 vi = "version vector"
 keep = true
 note = "Tên cấu trúc dữ liệu, giữ nguyên (cùng họ với vector clock)."
+
+[[term]]
+en = "atomicity"
+vi = "tính nguyên tử"
+note = "Chữ A trong ACID (ch8): giao dịch hoặc commit hết, hoặc abort hết."
+
+[[term]]
+en = "durability"
+vi = "tính bền vững"
+note = "Chữ D trong ACID (ch8); khớp 'durable' = 'bền vững'."
+
+[[term]]
+en = "consistent snapshot"
+vi = "snapshot nhất quán"
+
+[[term]]
+en = "heterogeneous"
+vi = "không đồng nhất"
