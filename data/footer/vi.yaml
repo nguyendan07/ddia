@@ -1,6 +1,6 @@
 # DDIA fat footer (data/footer/<lang>.yaml), bản tiếng Việt.
 brand:
-  name: DDIA tiếng Việt
+  name: DDIA Tiếng Việt
   # ponytail: explicit logo; OINK 1.6.0 re-resolves params.logo and doubles a sub-path baseURL.
   logo: logo.png
   tagline: '**D**esigning **D**ata-**I**ntensive **A**pplications'

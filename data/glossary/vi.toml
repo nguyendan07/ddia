@@ -3782,3 +3782,18 @@ en = "fuzz testing"
 vi = "fuzz testing"
 keep = true
 note = "Quen dùng nguyên gốc."
+
+[[term]]
+en = "unclean leader election"
+vi = "bầu leader không đồng bộ"
+note = "Bầu một replica chưa bắt kịp làm leader, có thể mất dữ liệu đã commit."
+
+[[term]]
+en = "reconfiguration"
+vi = "cấu hình lại"
+note = "Đổi tập node tham gia thuật toán đồng thuận."
+
+[[term]]
+en = "hybrid logical clock"
+vi = "đồng hồ logic lai"
+abbr = "HLC"
