@@ -1,6 +1,4 @@
 ---
-draft: true
-book_status: draft
 translationKey: ddia-v2-ch7
 title: Phân mảnh
 book_kind: chapter
@@ -14,342 +12,333 @@ breadcrumbs: false
 
 ![](/map/ch06.png)
 
-> *显然，我们必须跳出电脑指令序列的窠臼，不能让计算机受制于此。我们必须陈述定义、指明优先级、描述数据；我们必须阐明关系，而不是编写过程。*
+> *Rõ ràng là ta phải thoát ra khỏi lối mòn của những chuỗi lệnh máy tính, đừng để máy tính bị trói buộc vào đó. Ta phải phát biểu định nghĩa, chỉ rõ thứ tự ưu tiên, mô tả dữ liệu. Ta phải làm rõ các mối quan hệ, thay vì viết ra các thủ tục.*
 >
-> Grace Murray Hopper，*未来的计算机及其管理*（1962）
+> Grace Murray Hopper, *Management and the Computer of the Future* (1962)
 
-分布式数据库通常通过两种方式在节点间分布数据：
+Cơ sở dữ liệu phân tán thường phân bố dữ liệu trên các node theo hai cách:
 
-1. 在多个节点上保存相同数据的副本：这就是 *复制*（*replication*），我们已在 [第 6 章](/ch6#ch_replication) 中讨论过。
-2. 如果不想让每个节点都存储全部数据，可以将大规模数据集拆成更小的 *分片（shard）* 或 *分区（partition）*，再把不同分片存放到不同节点上。本章讨论的就是分片。
+1. Giữ bản sao của cùng một dữ liệu trên nhiều node: đây là *sao chép* (*replication*), mà ta đã bàn ở [Chương 6](/ch6#ch_replication).
+2. Nếu không muốn mỗi node lưu toàn bộ dữ liệu, ta có thể tách tập dữ liệu lớn thành các *shard* (*shard*) hay *partition* (*partition*) nhỏ hơn, rồi lưu các shard khác nhau trên các node khác nhau. Đó là chủ đề của chương này.
 
-通常情况下，每条数据（每条记录、每行或每个文档）属于且仅属于一个分片。实现这一点有多种方法，本章将深入讨论其中几种。实际上，每个分片都是自己的小型数据库，尽管有些数据库支持同时涉及多个分片的操作。
+Thông thường, mỗi mẩu dữ liệu (mỗi bản ghi, dòng hay tài liệu) thuộc về đúng một shard. Có nhiều cách để làm điều này, và chương này sẽ bàn sâu một số cách. Thực tế, mỗi shard là một cơ sở dữ liệu nhỏ của riêng nó, dù một số cơ sở dữ liệu hỗ trợ cả các thao tác chạm đến nhiều shard cùng lúc.
 
-分片通常与复制结合使用，使得每个分片的副本存储在多个节点上。这意味着，即使每条记录只属于一个分片，它仍然可以存储在多个不同的节点上以获得容错能力。
+Sharding thường được kết hợp với sao chép (*replication*) để bản sao của mỗi shard được lưu trên nhiều node. Nghĩa là dù mỗi bản ghi chỉ thuộc về một shard, nó vẫn có thể nằm trên nhiều node khác nhau để chịu lỗi.
 
-一个节点可能存储多个分片。如果使用单主复制模型，则分片和复制的组合可能如 {{< xref fig="7-1" page="/ch7" anchor="fig_sharding_replicas" >}}图 7-1{{< /xref >}} 所示。每个分片的领导者被分配给一个节点，追随者被分配给其他节点。每个节点可能是某些分片的领导者，同时是其他分片的追随者，但每个分片仍然只有一个领导者。
+Một node có thể lưu nhiều shard. Nếu dùng mô hình sao chép đơn leader (*single-leader replication*), sự kết hợp giữa sharding và sao chép (*replication*) có thể trông như {{< xref fig="7-1" page="/ch7" anchor="fig_sharding_replicas" >}}Hình 7-1{{< /xref >}}. Leader của mỗi shard được gán cho một node, còn các follower được gán cho các node khác. Mỗi node có thể là leader của một số shard và đồng thời là follower của các shard khác, nhưng mỗi shard vẫn chỉ có một leader.
 
-{{< fig num="7-1" id="fig_sharding_replicas" src="/fig/ddia_0701.png" caption="复制与分片结合使用：每个节点对某些分片充当领导者，对另一些分片充当追随者。" class="ddia-figure ddia-figure--wide" width="2658" height="1380" />}}
+{{< fig num="7-1" id="fig_sharding_replicas" src="/fig/ddia_0701.png" caption="Kết hợp sao chép (*replication*) và sharding: mỗi node đóng vai trò leader của một số shard và follower của các shard khác." class="ddia-figure ddia-figure--wide" width="2658" height="1380" />}}
 
-我们在 [第 6 章](/ch6#ch_replication) 中讨论的关于数据库复制的所有内容，同样适用于分片的复制。大多数情况下，分片方案与复制方案可以独立选择；为简单起见，本章将忽略复制。
+Mọi điều ta đã bàn ở [Chương 6](/ch6#ch_replication) về sao chép (*replication*) cơ sở dữ liệu đều áp dụng tương tự cho việc sao chép (*replication*) các shard. Phần lớn trường hợp, việc chọn sơ đồ sharding độc lập với việc chọn sơ đồ sao chép (*replication*), nên để đơn giản, chương này sẽ bỏ qua sao chép (*replication*).
 
-> [!TIP] 分片与分区
+> [!TIP] Sharding và partitioning
 >
-> 本章所谓的 *分片*，在不同软件中有许多不同名称：Kafka 称其为 *分区（partition）*，CockroachDB 称为 *范围（range）*，HBase 和 TiDB 称为 *区域（region）*，Bigtable 和 YugabyteDB 称为 *表分片（tablet）*，Cassandra、ScyllaDB 和 Riak 称为 *虚节点（vnode）*，Couchbase 则称为 *虚桶（vBucket）*——这里只列举了其中几种。
+> Thứ mà chương này gọi là *shard* có rất nhiều tên khác nhau tùy phần mềm: Kafka gọi là *partition*, CockroachDB gọi là *range*, HBase và TiDB gọi là *region*, Bigtable và YugabyteDB gọi là *tablet*, Cassandra, ScyllaDB và Riak gọi là *vnode*, còn Couchbase gọi là *vBucket* — đây mới chỉ là vài ví dụ.
 >
-> 一些数据库把分区和分片视为两个不同概念。例如在 PostgreSQL 中，分区是把一张大表拆成存储在同一台机器上的多个文件（这样做有若干好处，比如可以极快地删除整个分区）；分片则是把数据集拆分到多台机器上 [^1] [^2]。而在许多其他系统中，分区不过是分片的另一个名称。
+> Một số cơ sở dữ liệu coi partitioning và sharding là hai khái niệm khác nhau. Ví dụ trong PostgreSQL, partitioning là chia một bảng lớn thành nhiều tệp lưu trên cùng một máy (có vài lợi ích, chẳng hạn xóa cả một partition cực nhanh), còn sharding là chia tập dữ liệu ra nhiều máy [^1] [^2]. Ở nhiều hệ thống khác, partitioning chỉ là một tên gọi khác của sharding.
 >
-> *分区* 一词相当直白，*分片* 这个叫法却有些出人意料。一种说法认为，它源于在线角色扮演游戏《网络创世纪》（*Ultima Online*）：游戏里一块魔法水晶碎裂成许多片，每块碎片都映照出一份游戏世界 [^3]。于是，*分片* 后来指一组并行游戏服务器中的一台，并进一步沿用到了数据库领域。另一种说法是，*shard* 原本是 *System for Highly Available Replicated Data*（高可用复制数据系统）的首字母缩写；据说这是 20 世纪 80 年代的一种数据库，但其详情已湮没在历史中。
+> Từ *partitioning* khá dễ hiểu, còn *sharding* thì cái tên hơi bất ngờ. Một giả thuyết cho rằng nó bắt nguồn từ game nhập vai trực tuyến *Ultima Online*, trong đó một viên pha lê ma thuật vỡ thành nhiều mảnh, và mỗi mảnh phản chiếu một bản sao của thế giới game [^3]. Sau đó *shard* được dùng để chỉ một trong các máy chủ game chạy song song, rồi lan sang cơ sở dữ liệu. Một giả thuyết khác là *shard* vốn là từ viết tắt của *System for Highly Available Replicated Data* — nghe nói đó là một cơ sở dữ liệu từ thập niên 1980, nhưng chi tiết đã chìm vào quên lãng.
 >
-> 顺便说一句，分区与 *网络分区*（network partition，也称 netsplit）毫无关系；后者是节点间网络发生的一类故障，我们将在 [第 9 章](/ch9#ch_distributed) 中讨论。
+> Nhân tiện, partitioning không liên quan gì đến *network partition* (còn gọi là netsplit), một loại lỗi xảy ra trong mạng giữa các node. Ta sẽ bàn ở [Chương 9](/ch9#ch_distributed).
 
-## 分片的利与弊 {#sec_sharding_reasons}
+## Ưu và nhược điểm của sharding {#sec_sharding_reasons}
 
-对数据库进行分片，主要是为了获得 *可伸缩性*（*scalability*）：当数据量或写入吞吐量大到单个节点无法承受时，分片可以把数据和写入分散到多个节点上。（如果瓶颈是读取吞吐量，则未必需要分片，可以采用 [第 6 章](/ch6#ch_replication) 介绍的 *读伸缩*，*read scaling*。）
+Lý do chính để shard một cơ sở dữ liệu là *khả năng mở rộng* (*scalability*): đây là giải pháp khi khối lượng dữ liệu hoặc thông lượng ghi lớn đến mức một node đơn lẻ không chịu nổi, vì nó cho phép trải dữ liệu và việc ghi ra nhiều node. (Nếu nút thắt là thông lượng đọc thì chưa chắc cần sharding — bạn có thể dùng *mở rộng đọc* (*read scaling*) như mô tả ở [Chương 6](/ch6#ch_replication).)
 
-事实上，分片是实现 *水平伸缩*（*horizontal scaling*，也称 *横向伸缩*，*scale-out* 架构）的主要手段之一，正如 [“共享内存、共享磁盘与无共享架构”](/ch2#sec_introduction_shared_nothing) 所述：系统不必换用更大的机器，而是通过增加更多（较小的）机器来扩充容量。如果能合理划分工作负载，让每个分片承担大致相等的份额，就可以把这些分片分配给不同机器，并行处理其中的数据和查询。
+Thật ra, sharding là một trong những công cụ chính để đạt *mở rộng theo chiều ngang* (*horizontal scaling*, còn gọi là kiến trúc *scale-out*), như đã bàn ở ["Kiến trúc chia sẻ bộ nhớ, chia sẻ đĩa và shared-nothing"](/ch2#sec_introduction_shared_nothing): thay vì mua máy to hơn, ta tăng dung lượng bằng cách thêm nhiều máy (nhỏ hơn). Nếu chia được khối lượng công việc sao cho mỗi shard đảm nhận phần xấp xỉ bằng nhau, ta có thể gán các shard cho các máy khác nhau để xử lý song song dữ liệu và truy vấn của chúng.
 
-复制可以提供容错和离线运行能力，因而无论规模大小都有用；分片却是一种重量级方案，主要适用于大规模场景。如果数据量和写入吞吐量仍可由单台机器处理（如今单机的能力可不容小觑！），通常最好避免分片，坚持使用单分片数据库。
+Sao chép (*replication*) hữu ích ở mọi quy mô vì nó giúp chịu lỗi và chạy ngoại tuyến, còn sharding là giải pháp nặng nề, chủ yếu phù hợp với quy mô lớn. Nếu dữ liệu và thông lượng ghi vẫn xử lý được trên một máy (ngày nay một máy đơn lẻ mạnh hơn nhiều so với tưởng tượng!), thường nên tránh sharding và dùng cơ sở dữ liệu một shard.
 
-之所以这样建议，是因为分片往往会增加复杂性。通常需要选择一个 *分区键*（*partition key*），据此决定每条记录应放入哪个分片；分区键相同的记录都会进入同一分片 [^4]。这个选择十分重要：如果知道记录在哪个分片，访问就很快；如果不知道，就只能低效地搜索所有分片，而且日后很难更改分片方案。
+Lý do là sharding thường làm tăng độ phức tạp. Thường bạn phải chọn một *partition key* (*partition key*) để quyết định bản ghi nào vào shard nào; các bản ghi cùng partition key sẽ vào cùng một shard [^4]. Lựa chọn này rất quan trọng: nếu biết bản ghi ở shard nào, việc truy cập nhanh, nhưng nếu không biết thì bạn phải tìm kiếm kém hiệu quả trên mọi shard, và sau này rất khó đổi sơ đồ sharding.
 
-因此，分片通常很适合键值数据，因为可以直接按键分片；关系数据则比较棘手，因为你可能需要通过二级索引（secondary index）搜索，或连接散落在不同分片中的记录。我们将在 [“分片与二级索引”](/ch7#sec_sharding_secondary_indexes) 中进一步讨论这个问题。
+Vì vậy sharding thường hợp với dữ liệu khóa-giá trị, nơi có thể shard thẳng theo khóa. Dữ liệu quan hệ khó hơn, vì có thể bạn cần tìm theo *chỉ mục phụ* (*secondary index*) hoặc join các bản ghi nằm rải rác ở nhiều shard. Ta sẽ bàn thêm ở ["Sharding và chỉ mục phụ (*secondary index*)"](/ch7#sec_sharding_secondary_indexes).
 
-分片还有一个问题：一次写入可能需要更新多个不同分片中的相关记录。单节点事务相当普遍（参见 [第 8 章](/ch8#ch_transactions)），但要保证多个分片之间的一致性，就需要 *分布式事务*（*distributed transaction*）。正如 [第 8 章](/ch8#ch_transactions) 将要说明的，有些数据库支持分布式事务，但这类事务通常比单节点事务慢得多，可能成为整个系统的瓶颈；还有些系统根本不支持分布式事务。
+Một vấn đề nữa: một lần ghi có thể cần cập nhật các bản ghi liên quan ở nhiều shard khác nhau. Giao dịch trên một node khá phổ biến (xem [Chương 8](/ch8#ch_transactions)), nhưng để đảm bảo nhất quán giữa nhiều shard thì cần *giao dịch phân tán* (*distributed transaction*). Như [Chương 8](/ch8#ch_transactions) sẽ giải thích, một số cơ sở dữ liệu hỗ trợ giao dịch phân tán, nhưng chúng thường chậm hơn nhiều so với giao dịch trên một node, có thể thành nút thắt của cả hệ thống, và một số hệ thống hoàn toàn không hỗ trợ.
 
-有些系统甚至会在单台机器上使用分片，通常是在每个 CPU 核心上运行一个单线程进程，以利用 CPU 的并行能力；或者利用 *非一致性内存访问*（NUMA）架构，因为其中某些内存区域离特定 CPU 比其他 CPU 更近 [^5]。例如，Redis、VoltDB 和 FoundationDB 都采用每个核心一个进程的方式，并依靠分片把负载分摊到同一台机器的各个 CPU 核心上 [^6]。
+Một số hệ thống còn dùng sharding ngay trên một máy đơn lẻ, thường bằng cách chạy một tiến trình đơn luồng cho mỗi lõi CPU để tận dụng song song của CPU, hoặc để tận dụng kiến trúc *truy cập bộ nhớ không đồng nhất* (*non-uniform memory access*, NUMA), trong đó một số vùng nhớ ở gần một CPU nhất định hơn các CPU khác [^5]. Chẳng hạn, Redis, VoltDB và FoundationDB dùng một tiến trình trên mỗi lõi và dựa vào sharding để trải tải ra các lõi CPU trong cùng một máy [^6].
 
-### 面向多租户的分片 {#sec_sharding_multitenancy}
+### Sharding cho hệ thống multitenant {#sec_sharding_multitenancy}
 
-软件即服务（SaaS）产品和云服务通常采用 *多租户*（*multitenant*）模式，每个租户对应一个客户。同一租户可以有多个用户账号，但每个租户拥有一份自成一体、与其他租户隔离的数据集。例如在电子邮件营销服务中，每家注册企业通常都是一个独立租户，因为各家企业的简报订阅信息、投递数据等彼此无关。
+Các sản phẩm phần mềm dạng dịch vụ (SaaS) và dịch vụ đám mây thường là *multitenant* (*multitenant*), trong đó mỗi tenant là một khách hàng. Một tenant có thể có nhiều tài khoản người dùng, nhưng mỗi tenant có một tập dữ liệu độc lập, tách biệt với các tenant khác. Chẳng hạn, trong dịch vụ email marketing, mỗi doanh nghiệp đăng ký thường là một tenant riêng, vì dữ liệu đăng ký bản tin, dữ liệu gửi thư... của các doanh nghiệp không liên quan đến nhau.
 
-多租户系统有时通过分片来实现：可以为每个租户分配一个独立分片，也可以把多个小租户归入一个较大的分片。这些分片可以是物理上相互独立的数据库（我们曾在 [“嵌入式存储引擎”](/ch4#sidebar_embedded) 中提到），也可以是一个更大逻辑数据库中能够单独管理的组成部分 [^7]。用分片实现多租户有以下优点：
+Đôi khi hệ thống multitenant được hiện thực bằng sharding: có thể gán cho mỗi tenant một shard riêng, hoặc gộp nhiều tenant nhỏ vào một shard lớn hơn. Các shard này có thể là các cơ sở dữ liệu tách biệt về mặt vật lý (như đã nhắc ở ["Storage engine nhúng"](/ch4#sidebar_embedded)), hoặc là các phần có thể quản lý riêng của một cơ sở dữ liệu logic lớn hơn [^7]. Dùng sharding để hiện thực multitenancy có những ưu điểm sau:
 
-资源隔离
-: 如果某个租户执行计算开销很大的操作，只要它与其他租户位于不同分片，其他租户的性能就不太容易受到影响。
+Cô lập tài nguyên
+: Nếu một tenant thực hiện thao tác tốn nhiều tính toán, thì khi nó nằm ở shard khác, các tenant khác ít bị ảnh hưởng hiệu năng hơn.
 
-权限隔离
-: 如果访问控制逻辑存在漏洞，只要各租户的数据集在物理上彼此隔离，意外让一个租户访问另一租户数据的可能性就会降低。
+Cô lập quyền truy cập
+: Nếu logic kiểm soát truy cập có lỗ hổng, thì khi dữ liệu của các tenant được cô lập về mặt vật lý, khả năng vô tình cho tenant này truy cập dữ liệu của tenant khác sẽ thấp hơn.
 
-单元化架构
-: 分片不仅可以用在数据存储层，也可以用来划分运行应用代码的服务。在 *单元化架构*（*cell-based architecture*）中，为一组特定租户服务的应用与存储会组成一个自包含的 *单元*（*cell*），不同单元大体可以彼此独立地运行。这种方法能够实现 *故障隔离*（*fault isolation*）：一个单元里的故障只影响该单元，不会殃及其他单元中的租户 [^8]。
+Kiến trúc dựa trên cell
+: Sharding không chỉ dùng ở tầng lưu trữ dữ liệu mà còn có thể dùng để chia các dịch vụ chạy mã ứng dụng. Trong *cell-based architecture*, các dịch vụ và lưu trữ phục vụ một nhóm tenant cụ thể được đóng gói thành một *cell* (*cell*) khép kín, và các cell khác nhau có thể chạy gần như độc lập với nhau. Cách này giúp *cô lập lỗi* (*fault isolation*): lỗi trong một cell chỉ ảnh hưởng đến cell đó, còn tenant ở các cell khác không bị tác động [^8].
 
-按租户备份和恢复
-: 分别备份每个租户的分片，就能从备份中恢复某个租户的状态，而不影响其他租户。租户意外删除或覆盖重要数据时，这一能力很有用 [^9]。
+Sao lưu và khôi phục theo từng tenant
+: Sao lưu riêng từng shard của tenant cho phép khôi phục trạng thái của một tenant từ bản sao lưu mà không ảnh hưởng đến các tenant khác. Điều này hữu ích khi tenant vô tình xóa hoặc ghi đè dữ liệu quan trọng [^9].
 
-法规合规性
-: GDPR 等数据隐私法规赋予个人访问并删除关于自己的全部存储数据的权利。如果每个人的数据都存放在独立分片中，实现这一权利就只需对相应分片执行简单的数据导出和删除操作 [^10]。
+Tuân thủ quy định
+: Các quy định về quyền riêng tư dữ liệu như GDPR trao cho cá nhân quyền truy cập và xóa toàn bộ dữ liệu được lưu về mình. Nếu dữ liệu của mỗi người nằm ở một shard riêng, việc này chỉ cần thao tác xuất và xóa dữ liệu đơn giản trên shard tương ứng [^10].
 
-数据驻留
-: 如果数据驻留法规要求某个租户的数据必须存放在特定司法管辖区，那么区域感知数据库可以把该租户的分片分配到指定区域。
+Lưu trú dữ liệu
+: Nếu quy định về lưu trú dữ liệu yêu cầu dữ liệu của một tenant phải nằm trong một khu vực pháp lý nhất định, thì cơ sở dữ liệu nhận biết khu vực có thể gán shard của tenant đó vào khu vực chỉ định.
 
-逐步推出模式变更
-: 模式迁移（前文已在 [“文档模型中的模式灵活性”](/ch3#sec_datamodels_schema_flexibility) 中讨论）可以逐步推出，每次只迁移一个租户。这样能在问题波及所有租户之前将其发现，从而降低风险，不过很难以事务方式完成 [^11]。
+Triển khai dần các thay đổi schema
+: Việc di chuyển schema (đã bàn ở ["Tính linh hoạt của schema trong mô hình tài liệu"](/ch3#sec_datamodels_schema_flexibility)) có thể triển khai dần, mỗi lần một tenant. Nhờ vậy ta phát hiện sự cố trước khi nó lan ra mọi tenant, giảm rủi ro, dù khó thực hiện dưới dạng giao dịch [^11].
 
-使用分片实现多租户的主要挑战是：
+Những thách thức chính của việc dùng sharding để hiện thực multitenancy là:
 
-* 这种做法假定每个租户的数据量都足够小，能装进单个节点。如果某个租户大到一台机器容纳不下，就还得在租户内部继续分片，于是问题又回到了为了可伸缩性而分片 [^12]。
-* 如果小租户很多，为每个租户单独建立分片的开销可能过大。可以把多个小租户合并到一个较大的分片里，但随着租户成长，又会遇到如何把它从一个分片迁移到另一个分片的问题。
-* 如果日后需要支持跨租户关联数据的功能，那么跨多个分片连接数据会使这些功能更难实现。
+* Cách này giả định dữ liệu của mỗi tenant đủ nhỏ để nằm gọn trên một node. Nếu một tenant lớn đến mức một máy không chứa nổi, bạn vẫn phải shard bên trong tenant đó, và ta quay lại bài toán shard để mở rộng [^12].
+* Nếu có nhiều tenant nhỏ, tạo shard riêng cho từng tenant có thể tốn kém quá mức. Bạn có thể gộp nhiều tenant nhỏ vào một shard lớn hơn, nhưng khi tenant lớn dần, sẽ gặp vấn đề di chuyển nó từ shard này sang shard khác.
+* Nếu sau này cần hỗ trợ các tính năng liên kết dữ liệu giữa các tenant, việc join dữ liệu qua nhiều shard sẽ khiến chúng khó hiện thực hơn.
 
+## Sharding dữ liệu khóa-giá trị {#sec_sharding_key_value}
 
+Giả sử bạn có một lượng lớn dữ liệu và muốn shard nó. Làm sao quyết định lưu bản ghi nào trên node nào?
 
-## 键值数据的分片 {#sec_sharding_key_value}
+Mục tiêu của sharding là phân bố đều dữ liệu và tải truy vấn trên các node. Nếu mỗi node gánh phần dữ liệu và tải công bằng, thì về lý thuyết 10 node sẽ xử lý được lượng dữ liệu và thông lượng đọc/ghi gấp 10 lần một node đơn lẻ (tạm bỏ qua sao chép (*replication*)). Ngoài ra, khi thêm hoặc bớt node, ta muốn có thể *cân bằng lại* (*rebalance*) tải để nó vẫn phân bố đều trên 11 node sau khi thêm, hoặc 9 node còn lại sau khi bớt.
 
-假设你有大量数据并且想要分片，如何决定在哪些节点上存储哪些记录呢？
+Nếu sharding không công bằng, tức một số shard chứa nhiều dữ liệu hoặc truy vấn hơn các shard khác, ta gọi đó là *lệch tải* (*skew*). Lệch tải làm giảm mạnh hiệu quả của sharding. Trong trường hợp cực đoan, toàn bộ tải có thể dồn vào một shard, khiến 9 trong 10 node nhàn rỗi và nút thắt nằm ở một node duy nhất đang bận. Shard có tải cao bất tương xứng gọi là *hot shard* (*hot shard*) hay *hot spot* (*hot spot*). Nếu một khóa có tải đặc biệt cao (ví dụ tài khoản người nổi tiếng trên mạng xã hội), ta gọi nó là *hot key* (*hot key*).
 
-分片的目标是将数据和查询负载均匀分布在各个节点上。如果每个节点公平分担数据和负载，那么理论上，10 个节点应该能够处理单个节点 10 倍的数据量和 10 倍的读写吞吐量（暂时忽略复制）。此外，在添加或移除节点时，我们希望能够 *再平衡*（*rebalance*）负载，使它均匀分布在增加后的 11 个节点上，或移除节点后剩余的 9 个节点上。
+Vì vậy ta cần một thuật toán nhận partition key của bản ghi làm đầu vào và cho biết bản ghi đó thuộc shard nào. Trong kho khóa-giá trị, partition key thường là khóa, hoặc phần đầu của khóa. Trong mô hình quan hệ, nó có thể là một cột của bảng (không nhất thiết phải là khóa chính). Thuật toán này cũng phải cho phép cân bằng lại, để giảm bớt hot spot.
 
-如果分片不公平，某些分片承载的数据或查询比其他分片更多，我们就称其为 *倾斜*（*skew*）。倾斜会大幅降低分片的效果。在极端情况下，全部负载都可能集中到一个分片上，10 个节点中有 9 个闲置，瓶颈却卡在唯一繁忙的节点上。负载高得不成比例的分片称为 *热分片*（*hot shard*）或 *热点*（*hot spot*）；如果某个键的负载特别高（例如社交网络中的名人账号），则称为 *热键*（*hot key*）。
+### Sharding theo khoảng khóa {#sec_sharding_key_range}
 
-因此，我们需要一种算法，以记录的分区键为输入，指出这条记录属于哪个分片。在键值存储中，分区键通常就是键或键的第一部分；在关系模型中，它可以是表中的某一列，不一定非得是主键。为了缓解热点，这种算法还必须便于再平衡。
+Một cách shard là gán cho mỗi shard một khoảng liên tục của partition key (từ một giá trị nhỏ nhất đến một giá trị lớn nhất), giống các tập của bộ bách khoa toàn thư giấy, như trong {{< xref fig="7-2" page="/ch7" anchor="fig_sharding_encyclopedia" >}}Hình 7-2{{< /xref >}}. Ở ví dụ này, tiêu đề mục từ là partition key. Nếu biết ranh giới giữa các khoảng, bạn dễ dàng xác định shard chứa mục từ: tìm tập có khoảng khóa bao phủ tiêu đề đó, rồi lấy đúng cuốn sách trên giá.
 
+{{< fig num="7-2" id="fig_sharding_encyclopedia" src="/fig/ddia_0702.png" caption="Bộ bách khoa toàn thư in được shard theo khoảng khóa." class="ddia-figure ddia-figure--wide" width="2880" height="1023" />}}
 
-### 按键的范围分片 {#sec_sharding_key_range}
+Các khoảng khóa không nhất thiết có độ rộng bằng nhau, vì dữ liệu có thể phân bố không đều. Chẳng hạn, trong {{< xref fig="7-2" page="/ch7" anchor="fig_sharding_encyclopedia" >}}Hình 7-2{{< /xref >}}, tập 1 gồm các từ bắt đầu bằng A và B, nhưng tập 12 gồm các từ bắt đầu bằng T, U, V, W, X, Y và Z. Nếu cứ máy móc quy định mỗi tập hai chữ cái thì một số tập sẽ dày hơn hẳn các tập khác. Để phân bố dữ liệu đều, ranh giới shard phải được điều chỉnh theo dữ liệu.
 
-一种分片方法，是为每个分片指定一段连续的分区键范围（从某个最小值到某个最大值），就像纸质百科全书的各卷，如 {{< xref fig="7-2" page="/ch7" anchor="fig_sharding_encyclopedia" >}}图 7-2{{< /xref >}} 所示。在这个例子中，词条标题就是分区键。如果知道各范围之间的边界，就能找到键范围涵盖该标题的卷，轻松确定词条所在的分片，并从书架上取下正确的书。
+Ranh giới shard có thể do quản trị viên chọn thủ công, hoặc do cơ sở dữ liệu tự chọn. Chẳng hạn, Vitess (lớp sharding cho MySQL) dùng sharding theo khoảng khóa thủ công; còn Bigtable, phiên bản mã nguồn mở HBase, tùy chọn sharding theo khoảng của MongoDB, CockroachDB, RethinkDB và FoundationDB dùng cách tự động [^6]. YugabyteDB hỗ trợ cả tách tablet thủ công lẫn tự động.
 
-{{< fig num="7-2" id="fig_sharding_encyclopedia" src="/fig/ddia_0702.png" caption="印刷版百科全书按键范围分片。" class="ddia-figure ddia-figure--wide" width="2880" height="1023" />}}
+Trong mỗi shard, các khóa được lưu theo thứ tự, ví dụ dùng B-tree hoặc SSTable (xem [Chương 4](/ch4#ch_storage)). Nhờ vậy quét theo khoảng rất dễ, và bạn có thể coi khóa như một chỉ mục ghép (*concatenated index*) để lấy nhiều bản ghi liên quan trong một truy vấn (xem ["Chỉ mục đa chiều (*multidimensional index*) và chỉ mục (*index*) toàn văn"](/ch4#sec_storage_multidimensional)). Chẳng hạn, một ứng dụng lưu dữ liệu từ mạng cảm biến với khóa là dấu thời gian của phép đo. Quét theo khoảng rất hữu ích ở đây, vì nó cho phép dễ dàng lấy mọi số đo của một tháng.
 
-各段键范围不一定等宽，因为数据本身很可能分布不均。例如在 {{< xref fig="7-2" page="/ch7" anchor="fig_sharding_encyclopedia" >}}图 7-2{{< /xref >}} 中，第 1 卷收录以 A 和 B 开头的单词，第 12 卷却收录以 T、U、V、W、X、Y 和 Z 开头的单词。如果简单地规定每两个字母一卷，有些卷就会比其他卷厚得多。为了均匀分布数据，分片边界必须根据数据进行调整。
+Nhược điểm của sharding theo khoảng khóa là dễ tạo hot shard nếu có nhiều lượt ghi dồn vào các khóa liền kề nhau. Chẳng hạn, nếu khóa là dấu thời gian thì các shard ứng với các khoảng thời gian, ví dụ mỗi tháng một shard. Đáng tiếc, nếu các cảm biến ghi dữ liệu vào cơ sở dữ liệu ngay khi đo, toàn bộ lượt ghi sẽ dồn vào cùng một shard (shard của tháng hiện tại), khiến nó bị quá tải vì ghi trong khi các shard khác ngồi chơi [^13].
 
-分片边界既可以由管理员手工选择，也可以由数据库自动确定。例如，Vitess（MySQL 的分片层）采用手动的键范围分片；Bigtable、其开源版本 HBase、MongoDB 的范围分片选项、CockroachDB、RethinkDB 和 FoundationDB 则采用自动方式 [^6]。YugabyteDB 同时支持手动和自动拆分表分片。
+Để tránh vấn đề này trong cơ sở dữ liệu cảm biến, phần đầu của khóa không nên chỉ là dấu thời gian. Chẳng hạn, bạn có thể thêm ID cảm biến vào trước dấu thời gian, để khóa được sắp xếp trước tiên theo ID cảm biến rồi mới đến dấu thời gian. Khi có nhiều cảm biến hoạt động đồng thời, tải ghi sẽ được trải đều hơn trên các shard. Cái giá phải trả là khi cần lấy số đo của nhiều cảm biến trong một khoảng thời gian, giờ bạn phải thực hiện một truy vấn khoảng riêng cho từng cảm biến.
 
-每个分片内部都按顺序存储键，例如使用 B 树或 SSTable（参见 [第 4 章](/ch4#ch_storage)）。这样很容易执行范围扫描，也可以把键当作联合索引，在一次查询中获取多条相关记录（参见 [“多维索引与全文索引”](/ch4#sec_storage_multidimensional)）。例如，某个应用程序存储传感器网络的数据，并以测量时间戳作为键；范围扫描在这里就非常有用，可以轻松取出某个月份的全部读数。
+#### Cân bằng lại dữ liệu shard theo khoảng khóa {#rebalancing-key-range-sharded-data}
 
-键范围分片的缺点是，如果大量写入集中在相邻的键上，很容易形成热分片。例如，键若是时间戳，分片就对应不同时间范围，比如每个月一个分片。遗憾的是，如果传感器在产生测量值时就立即写入数据库，所有写入都会落到同一个分片（本月的分片）中。结果该分片可能被写入压垮，其他分片却无所事事 [^13]。
+Khi mới thiết lập cơ sở dữ liệu, chưa có dữ liệu nên chưa có cơ sở để vạch ranh giới khoảng khóa. Một số cơ sở dữ liệu, như HBase và MongoDB, cho phép cấu hình một tập shard ban đầu trên cơ sở dữ liệu rỗng, việc này gọi là *pre-splitting* (*pre-splitting*). Để làm vậy, bạn phải biết trước đại khái các khóa sẽ phân bố ra sao để chọn được ranh giới hợp lý [^14].
 
-为了避免传感器数据库出现这个问题，键的第一部分就不能只用时间戳。例如，可以在每个时间戳前加上传感器 ID，使键先按传感器 ID、再按时间戳排序。只要有许多传感器同时工作，写入负载就会更均匀地分布到各个分片。代价是，要获取多个传感器在某段时间内的测量值，现在必须为每个传感器分别执行一次范围查询。
+Về sau, khi dữ liệu và thông lượng ghi tăng, hệ thống sharding theo khoảng khóa sẽ tách shard hiện có thành hai hoặc nhiều shard nhỏ hơn, mỗi shard mới giữ một khoảng con liên tục của khoảng khóa ban đầu. Các shard nhỏ này sau đó có thể được trải ra nhiều node. Ngược lại, nếu nhiều dữ liệu bị xóa, một vài shard liền kề đã nhỏ đi cũng có thể cần gộp thành một shard lớn hơn. Quá trình này tương tự điều xảy ra ở tầng trên cùng của B-tree (xem ["B-tree"](/ch4#sec_storage_b_trees)).
 
-#### 再平衡键范围分片数据 {#rebalancing-key-range-sharded-data}
+Với cơ sở dữ liệu tự quản lý ranh giới shard, việc tách shard thường được kích hoạt bởi:
 
-首次建立数据库时，还没有数据可供划定键范围。一些数据库（如 HBase 和 MongoDB）允许在空数据库上配置一组初始分片，这称为 *预拆分（pre-splitting）*。采用这种办法，必须事先大致了解键将如何分布，才能选出合适的键范围边界 [^14]。
+* shard đạt đến kích thước cấu hình (ví dụ mặc định của HBase là 10 GB), hoặc
+* ở một số hệ thống, thông lượng ghi liên tục vượt một ngưỡng nào đó. Vì thế, một hot shard cũng có thể bị tách dù không lưu nhiều dữ liệu, để tải ghi của nó được phân bố đều hơn.
 
-此后，随着数据量和写入吞吐量增长，采用键范围分片的系统会把现有分片拆成两个或更多较小分片，每个新分片都保存原键范围中的一段连续子范围；这些较小的分片随后可以分散到多个节点上。如果大量数据被删除，几个相邻且已经变小的分片也可能需要合并成一个较大的分片。这个过程类似于 B 树顶层发生的变化（参见 [“B 树”](/ch4#sec_storage_b_trees)）。
+Ưu điểm của sharding theo khoảng khóa là số shard thích ứng với lượng dữ liệu. Dữ liệu ít thì chỉ cần vài shard, chi phí nhỏ; dữ liệu khổng lồ thì kích thước mỗi shard vẫn bị giới hạn ở mức tối đa cấu hình được [^15].
 
-对于自动管理分片边界的数据库，分片的拆分通常由以下情况触发：
+Nhược điểm là việc tách shard rất tốn kém: phải ghi lại toàn bộ dữ liệu của nó vào các tệp mới, tương tự thao tác nén (compaction) trong engine lưu trữ dựa trên log. Shard cần tách thường đang chịu tải cao, và chi phí tách có thể làm nó quá tải hơn nữa, thậm chí sập hẳn.
 
-* 分片达到配置的大小（例如 HBase 默认为 10 GB）；或者
-* 在某些系统中，写入吞吐量持续高于某个阈值。因此，即使一个热分片存储的数据不多，也可能被拆分，以便将其写入负载分布得更加均匀。
+### Sharding theo hash của khóa {#sec_sharding_hash}
 
-键范围分片的优点是，分片数量能够随数据量调整。数据很少时，只需少量分片，开销也很小；数据量巨大时，每个分片的大小仍会被限制在可配置的上限之内 [^15]。
+Sharding theo khoảng khóa hữu ích khi bạn muốn các partition key liền kề (nhưng khác nhau) nằm cùng một shard; dấu thời gian là một ví dụ. Nếu bạn không quan tâm các partition key có liền kề hay không (ví dụ ID tenant trong ứng dụng multitenant), cách thường dùng là trước hết băm partition key, rồi ánh xạ giá trị hash vào shard.
 
-这种方法的缺点是，拆分分片代价很高：必须把其中的全部数据重写到新文件里，类似于日志结构存储引擎的压实操作。需要拆分的分片往往本就处于高负载，拆分开销还会雪上加霜，甚至使它彻底过载。
+Một hàm hash tốt biến dữ liệu lệch thành dữ liệu phân bố đều. Giả sử có hàm hash 32-bit nhận đầu vào là chuỗi. Mỗi khi nhận một chuỗi mới, nó trả về một số trông như ngẫu nhiên giữa 0 và 2³² − 1. Ngay cả khi các chuỗi đầu vào rất giống nhau, hash của chúng vẫn phân bố đều trong khoảng đó (dù cùng đầu vào luôn cho cùng đầu ra).
 
-### 按键的哈希分片 {#sec_sharding_hash}
+Hàm hash dùng cho sharding không cần mạnh về mật mã: chẳng hạn MongoDB dùng MD5, còn Cassandra và ScyllaDB dùng Murmur3. Nhiều ngôn ngữ lập trình có sẵn hàm hash đơn giản cho bảng băm, nhưng chúng có thể không phù hợp với sharding. Ví dụ, `Object.hashCode()` của Java và `Object#hash` của Ruby có thể cho các giá trị hash khác nhau với cùng một khóa ở các tiến trình khác nhau, nên không dùng được cho sharding [^16].
 
-如果希望相邻（但不同）的分区键进入同一个分片，键范围分片就很有用，时间戳便是一个例子。如果不关心分区键是否相邻（例如多租户应用中的租户 ID），常见做法是先计算分区键的哈希值，再将它映射到分片。
+#### Hash modulo số node {#hash-modulo-number-of-nodes}
 
-好的哈希函数可以把倾斜的数据均匀打散。假设有一个接受字符串输入的 32 位哈希函数，每输入一个新字符串，它都会返回一个看似随机、介于 0 和 2³² − 1 之间的数。即使输入字符串非常相似，所得哈希值也会均匀分布在这个范围内（不过相同输入总会产生相同输出）。
+Sau khi băm khóa, làm sao chọn shard để lưu? Có thể bạn nghĩ ngay đến việc lấy giá trị hash *modulo* số node trong hệ thống (nhiều ngôn ngữ dùng toán tử `%`). Chẳng hạn, *hash*(*key*) % 10 trả về số từ 0 đến 9 (nếu viết hash ở dạng thập phân thì hash % 10 chính là chữ số cuối). Với 10 node đánh số từ 0 đến 9, đây có vẻ là cách đơn giản để gán mỗi khóa cho một node.
 
-用于分片的哈希函数不必具备密码学强度：例如 MongoDB 使用 MD5，Cassandra 和 ScyllaDB 则使用 Murmur3。许多编程语言都内置了用于哈希表的简单哈希函数，但它们未必适合分片。例如，Java 的 `Object.hashCode()` 和 Ruby 的 `Object#hash` 可能会让同一个键在不同进程中得到不同哈希值，因此不能用于分片 [^16]。
+Vấn đề của cách *mod N* là khi số node *N* thay đổi, hầu hết các khóa phải chuyển từ node này sang node khác. {{< xref fig="7-3" page="/ch7" anchor="fig_sharding_hash_mod_n" >}}Hình 7-3{{< /xref >}} minh họa khi tăng từ ba lên bốn node. Trước khi cân bằng lại, node 0 lưu các khóa có hash 0, 3, 6, 9... Sau khi thêm node thứ tư, khóa có hash 3 chuyển sang node 3, khóa có hash 6 chuyển sang node 2, khóa có hash 9 chuyển sang node 1, và cứ thế.
 
-#### 哈希取模节点数 {#hash-modulo-number-of-nodes}
+{{< fig num="7-3" id="fig_sharding_hash_mod_n" src="/fig/ddia_0703.png" caption="Gán khóa cho node bằng cách băm khóa rồi lấy modulo số node. Đổi số node khiến nhiều khóa phải chuyển từ node này sang node khác." class="ddia-figure ddia-figure--wide" width="2658" height="1314" />}}
 
-算出键的哈希值之后，该如何选择存储它的分片？你首先想到的也许是让哈希值对系统中的节点数 *取模*（许多编程语言使用 `%` 运算符）。例如，*hash*(*key*) % 10 会返回 0 到 9 之间的数；如果把哈希值写成十进制，hash % 10 就是它的末位数字。假设有 10 个节点，编号为 0 到 9，这似乎是把键分配到节点的简单办法。
+Phép *mod N* dễ tính, nhưng dẫn đến việc cân bằng lại cực kỳ kém hiệu quả vì phải di chuyển quá nhiều bản ghi giữa các node một cách không cần thiết. Ta cần cách chỉ di chuyển lượng dữ liệu tối thiểu cần thiết.
 
-*模 N* 方法的问题在于，只要节点数 *N* 发生变化，大多数键就必须从一个节点移到另一个节点。{{< xref fig="7-3" page="/ch7" anchor="fig_sharding_hash_mod_n" >}}图 7-3{{< /xref >}} 展示了三个节点增加到四个时的情况。再平衡之前，节点 0 存储哈希值为 0、3、6、9 等的键；加入第四个节点之后，哈希值为 3 的键移到节点 3，哈希值为 6 的键移到节点 2，哈希值为 9 的键移到节点 1，依此类推。
+#### Số shard cố định {#fixed-number-of-shards}
 
-{{< fig num="7-3" id="fig_sharding_hash_mod_n" src="/fig/ddia_0703.png" caption="通过对键进行哈希并取模节点数来将键分配给节点。更改节点数会导致许多键从一个节点移动到另一个节点。" class="ddia-figure ddia-figure--wide" width="2658" height="1314" />}}
+Một giải pháp đơn giản và phổ biến là tạo số shard nhiều hơn hẳn số node, rồi gán nhiều shard cho mỗi node. Ví dụ, cơ sở dữ liệu chạy trên cụm 10 node có thể được chia ngay từ đầu thành 1.000 shard, mỗi node nhận 100 shard. Khóa được lưu vào shard số *hash*(*key*) % 1.000, và hệ thống ghi lại riêng shard nào nằm trên node nào.
 
-*模 N* 很容易计算，却会导致极其低效的再平衡，因为大量记录在节点之间进行了不必要的迁移。我们需要一种只移动必要数据的办法。
+Khi thêm node vào cụm, hệ thống có thể gán lại một số shard từ các node hiện có sang node mới cho đến khi các shard lại phân bố đều. {{< xref fig="7-4" page="/ch7" anchor="fig_sharding_rebalance_fixed" >}}Hình 7-4{{< /xref >}} minh họa quá trình này. Khi bớt node thì làm ngược lại.
 
-#### 固定数量的分片 {#fixed-number-of-shards}
+{{< fig num="7-4" id="fig_sharding_rebalance_fixed" src="/fig/ddia_0704.png" caption="Thêm node mới vào cụm cơ sở dữ liệu mà mỗi node có nhiều shard." class="ddia-figure ddia-figure--wide" width="2658" height="1436" />}}
 
-一种简单而常用的解决方案，是创建远多于节点数的分片，再给每个节点分配多个分片。例如，一个运行在 10 节点集群上的数据库可以从一开始就划分成 1,000 个分片，每个节点分得 100 个。键会存入编号为 *hash*(*key*) % 1,000 的分片，而系统另行记录每个分片存放在哪个节点上。
+Trong mô hình này, chỉ có nguyên shard được di chuyển giữa các node, rẻ hơn tách shard. Số shard không đổi, và việc khóa thuộc shard nào cũng không đổi. Thứ duy nhất thay đổi là shard nằm trên node nào. Thay đổi này không tức thời — truyền nhiều dữ liệu qua mạng cần thời gian — nên mọi lượt đọc/ghi diễn ra trong lúc truyền vẫn dùng ánh xạ shard-node cũ.
 
-如果向集群加入一个节点，系统可以把现有节点上的一部分分片重新分配给新节点，直到分片再次均匀分布。{{< xref fig="7-4" page="/ch7" anchor="fig_sharding_rebalance_fixed" >}}图 7-4{{< /xref >}} 展示了这一过程。移除节点时，则反向执行同样的操作。
+Số shard thường được chọn là một số có nhiều ước, để tập dữ liệu chia đều được cho nhiều kích cỡ cụm khác nhau, chẳng hạn không đòi hỏi số node là lũy thừa của 2 [^4]. Thậm chí có thể tính đến sự khác biệt phần cứng trong cụm: gán nhiều shard hơn cho node mạnh hơn để chúng gánh tỉ lệ tải lớn hơn.
 
-{{< fig num="7-4" id="fig_sharding_rebalance_fixed" src="/fig/ddia_0704.png" caption="向每个节点有多个分片的数据库集群添加新节点。" class="ddia-figure ddia-figure--wide" width="2658" height="1436" />}}
+Cách sharding này được dùng trong Citus (lớp sharding cho PostgreSQL), Riak, Elasticsearch và Couchbase, cùng các hệ thống khác. Nó hoạt động tốt miễn là bạn ước lượng chính xác số shard cần có khi tạo cơ sở dữ liệu lần đầu. Sau đó có thể thêm bớt node dễ dàng, nhưng số node không thể vượt quá số shard.
 
-在这种模型中，只有完整的分片在节点之间移动，成本低于拆分分片。分片的数量不会改变，键所指定的分片也不会改变；唯一改变的是分片所在的节点。这种变更并非即时——在网络上传输大量数据需要时间——所以传输期间发生的读写，仍按原有的分片到节点映射处理。
+Nếu số shard cấu hình ban đầu hóa ra không phù hợp — ví dụ hệ thống đã lớn đến mức cần nhiều node hơn số shard — thì phải thực hiện việc sharding lại rất tốn kém. Nó đòi hỏi tách từng shard và ghi ra các tệp mới, đồng thời cần nhiều dung lượng đĩa dư. Một số hệ thống không cho phép shard lại khi cơ sở dữ liệu vẫn đang nhận ghi, nên khó đổi số shard mà không có thời gian ngừng hoạt động.
 
-分片数量通常会选成一个因数很多的数字，使数据集能够均匀分配到多种不同规模的节点集群中，例如不必要求节点数是 2 的幂 [^4]。甚至还可以照顾集群中的硬件差异：给性能更强的节点分配更多分片，让它们承担更大比例的负载。
+Chọn đúng số shard khó nếu tổng kích thước tập dữ liệu biến động mạnh (ví dụ ban đầu nhỏ nhưng có thể tăng gấp nhiều lần). Vì mỗi shard chứa một tỉ lệ cố định trên tổng dữ liệu, kích thước shard tăng tỉ lệ với tổng dữ liệu trong cụm. Shard quá lớn thì việc cân bằng lại và phục hồi sau khi node hỏng đều rất tốn kém. Còn shard quá nhỏ thì phát sinh quá nhiều chi phí quản lý. Hiệu năng tốt nhất khi kích thước shard "vừa phải", không quá lớn cũng không quá nhỏ — điều này khó đạt được khi số shard cố định còn kích thước tập dữ liệu thì liên tục thay đổi.
 
-Citus（PostgreSQL 的分片层）、Riak、Elasticsearch 和 Couchbase 等系统都采用这种分片方法。只要首次创建数据库时能较准确地估计所需分片数，它就很好用：此后可以轻松增删节点，不过节点数不能超过分片数。
+#### Sharding theo khoảng hash {#sharding-by-hash-range}
 
-如果发现最初配置的分片数不合适——例如系统规模已经大到所需节点数超过分片数——就必须执行代价高昂的重新分片。这个过程要拆开每个分片、写出新文件，并占用大量额外磁盘空间。有些系统不允许在数据库继续接受写入时重新分片，因此很难在不停机的情况下改变分片数量。
+Nếu không thể đoán trước cần bao nhiêu shard, tốt hơn là dùng sơ đồ cho phép số shard dễ dàng thích ứng với khối lượng công việc. Sharding theo khoảng khóa ở trên có tính chất này, nhưng dễ tạo hot spot khi nhiều lượt ghi dồn vào các khóa liền kề. Một cách khắc phục là kết hợp sharding theo khoảng khóa với hàm hash, sao cho mỗi shard chứa một khoảng *giá trị hash* thay vì một khoảng *khóa*.
 
-如果数据集总量变化很大（例如开始时很小，随后可能增长许多倍），选择合适的分片数就很困难。由于每个分片包含总数据量的固定比例，其大小会随集群中的数据总量同比增长。分片太大，再平衡和从节点失效中恢复都会十分昂贵；分片太小，又会带来过多管理开销。分片大小不大不小、“恰到好处”时性能最佳，但在分片数固定而数据集大小不断变化时，这一状态很难维持。
+{{< xref fig="7-5" page="/ch7" anchor="fig_sharding_hash_range" >}}Hình 7-5{{< /xref >}} dùng hàm hash 16-bit trả về số từ 0 đến 65.535 = 2¹⁶ − 1 (các hash thực tế thường có ít nhất 32 bit). Ngay cả khi khóa đầu vào rất giống nhau (ví dụ các dấu thời gian liên tiếp), hash của chúng vẫn phân bố đều trong khoảng này. Khi đó ta có thể gán cho mỗi shard một khoảng giá trị hash: ví dụ 0 đến 16.383 cho shard 0, 16.384 đến 32.767 cho shard 1, v.v.
 
-#### 按哈希范围分片 {#sharding-by-hash-range}
+{{< fig num="7-5" id="fig_sharding_hash_range" src="/fig/ddia_0705.png" caption="Gán cho mỗi shard một khoảng liên tục các giá trị hash." class="ddia-figure ddia-figure--panorama" width="2658" height="832" />}}
 
-如果无法事先预测需要多少分片，最好采用一种能让分片数量轻松适应工作负载的方案。前述键范围分片具备这一性质，但大量写入集中到相邻键时容易形成热点。一种解决办法是将键范围分片与哈希函数结合，使每个分片包含一段 *哈希值* 范围，而不是一段 *键* 范围。
+Giống sharding theo khoảng khóa, trong sharding theo khoảng hash, shard cũng có thể bị tách khi quá lớn hoặc quá tải. Thao tác này vẫn tốn kém nhưng có thể thực hiện khi cần, nên số shard thích ứng với lượng dữ liệu thay vì cố định từ trước.
 
-{{< xref fig="7-5" page="/ch7" anchor="fig_sharding_hash_range" >}}图 7-5{{< /xref >}} 展示了一个 16 位哈希函数，它会返回 0 到 65,535 = 2¹⁶ − 1 之间的数（实际使用的哈希通常至少有 32 位）。即使输入键十分相似（例如连续的时间戳），它们的哈希值也会均匀分布在这个范围内。于是，可以为每个分片分配一段哈希值范围：例如 0 到 16,383 归分片 0，16,384 到 32,767 归分片 1，依此类推。
+Nhược điểm so với sharding theo khoảng khóa là không thể thực hiện truy vấn khoảng hiệu quả trên partition key, vì các khóa trong một khoảng giờ nằm rải rác ở mọi shard. Tuy nhiên, nếu khóa gồm hai cột trở lên và partition key chỉ là cột đầu tiên, bạn vẫn có thể truy vấn khoảng hiệu quả trên các cột còn lại: miễn là mọi bản ghi trong truy vấn khoảng có cùng partition key thì chúng sẽ nằm cùng một shard.
 
-{{< fig num="7-5" id="fig_sharding_hash_range" src="/fig/ddia_0705.png" caption="为每个分片分配连续的哈希值范围。" class="ddia-figure ddia-figure--panorama" width="2658" height="832" />}}
-
-与键范围分片一样，哈希范围分片也可以在分片过大或负载过重时将其拆分。这个操作依然昂贵，但可以按需执行，因此分片数量会随数据量调整，而不是预先固定不变。
-
-它相对于键范围分片的缺点，是无法高效地对分区键执行范围查询，因为范围内的键如今散布在所有分片中。不过，如果键由两列或更多列组成，而分区键只是其中第一列，仍然可以对第二列及之后的列高效执行范围查询：只要范围查询中的所有记录拥有相同分区键，它们就会落在同一个分片中。
-
-> [!TIP] 数据仓库中的分区与范围查询
+> [!TIP] Partitioning và truy vấn khoảng trong kho dữ liệu
 >
-> BigQuery、Snowflake 和 Delta Lake 等数据仓库也支持类似的索引方式，只是术语有所不同。例如在 BigQuery 中，分区键决定记录属于哪个分区，而“聚簇列”（cluster columns）决定记录在分区内的排序方式。Snowflake 会自动把记录分配给“微分区”（micro-partitions），但允许用户为表定义聚簇键（cluster keys）。Delta Lake 同时支持手动与自动分配分区，也支持聚簇键。对数据进行聚簇，不仅能改善范围扫描的性能，还能提高压缩率和过滤效率。
+> Các kho dữ liệu (data warehouse) như BigQuery, Snowflake và Delta Lake cũng hỗ trợ kiểu lập chỉ mục (*index*) tương tự, dù thuật ngữ khác. Ví dụ trong BigQuery, partition key quyết định bản ghi thuộc partition nào, còn các "cột cluster" (cluster columns) quyết định thứ tự sắp xếp bản ghi trong partition. Snowflake tự động gán bản ghi vào các "micro-partition" nhưng cho phép người dùng định nghĩa cluster key cho bảng. Delta Lake hỗ trợ cả gán partition thủ công lẫn tự động, và cũng hỗ trợ cluster key. Việc phân cụm (cluster) dữ liệu không chỉ cải thiện hiệu năng quét theo khoảng mà còn cải thiện tỉ lệ nén và hiệu quả lọc.
 
-YugabyteDB 和 DynamoDB 采用哈希范围分片 [^17]，MongoDB 也把它作为一种可选方案。Cassandra 和 ScyllaDB 则采用这种方法的一个变体，如 {{< xref fig="7-6" page="/ch7" anchor="fig_sharding_cassandra" >}}图 7-6{{< /xref >}} 所示：它们把哈希值空间划分成若干范围，范围数与节点数成正比（{{< xref fig="7-6" page="/ch7" anchor="fig_sharding_cassandra" >}}图 7-6{{< /xref >}} 中每个节点有 3 个范围；实际默认值是 Cassandra 每个节点 8 个、ScyllaDB 每个节点 256 个），各范围之间的边界随机选定。这样有些范围会比其他范围大，但每个节点拥有多个范围之后，这些不均衡往往能相互抵消 [^15] [^18]。
+YugabyteDB và DynamoDB dùng sharding theo khoảng hash [^17], và MongoDB cũng cung cấp nó như một tùy chọn. Cassandra và ScyllaDB dùng một biến thể của cách này, như {{< xref fig="7-6" page="/ch7" anchor="fig_sharding_cassandra" >}}Hình 7-6{{< /xref >}}: chúng chia không gian giá trị hash thành các khoảng với số lượng tỉ lệ thuận với số node (trong {{< xref fig="7-6" page="/ch7" anchor="fig_sharding_cassandra" >}}Hình 7-6{{< /xref >}} mỗi node có 3 khoảng, nhưng giá trị mặc định thực tế là 8 khoảng mỗi node ở Cassandra và 256 khoảng mỗi node ở ScyllaDB), với ranh giới giữa các khoảng được chọn ngẫu nhiên. Cách này khiến một số khoảng lớn hơn số khác, nhưng khi mỗi node có nhiều khoảng, sự mất cân đối đó có xu hướng triệt tiêu lẫn nhau [^15] [^18].
 
-{{< fig num="7-6" id="fig_sharding_cassandra" src="/fig/ddia_0706.png" caption="Cassandra 和 ScyllaDB 将可能的哈希值范围（这里是 0–1023）拆成边界随机的连续区间，并为每个节点分配多个区间。" class="ddia-figure ddia-figure--standard" width="2658" height="2012" />}}
+{{< fig num="7-6" id="fig_sharding_cassandra" src="/fig/ddia_0706.png" caption="Cassandra và ScyllaDB chia khoảng giá trị hash có thể có (ở đây là 0–1023) thành các khoảng liên tục với ranh giới ngẫu nhiên, và gán nhiều khoảng cho mỗi node." class="ddia-figure ddia-figure--standard" width="2658" height="2012" />}}
 
-添加或移除节点时，系统会相应增删范围边界，并拆分或合并分片 [^19]。在 {{< xref fig="7-6" page="/ch7" anchor="fig_sharding_cassandra" >}}图 7-6{{< /xref >}} 的例子中，加入节点 3 之后，节点 1 把自己两个范围中的一部分交给节点 3，节点 2 也把一个范围中的一部分交给节点 3。这样，新节点便能分得大致公平的一份数据，同时避免在节点间传输不必要的数据。
+Khi thêm hoặc bớt node, ranh giới khoảng được thêm hoặc xóa tương ứng, và shard được tách hoặc gộp [^19]. Trong ví dụ ở {{< xref fig="7-6" page="/ch7" anchor="fig_sharding_cassandra" >}}Hình 7-6{{< /xref >}}, khi node 3 được thêm vào, node 1 chuyển một phần của hai khoảng của nó sang node 3, và node 2 chuyển một phần của một khoảng sang node 3. Nhờ vậy node mới nhận được phần dữ liệu khá công bằng mà không phải truyền dữ liệu không cần thiết giữa các node.
 
-#### 一致性哈希 {#sec_sharding_consistent_hashing}
+#### Consistent hashing {#sec_sharding_consistent_hashing}
 
-*一致性哈希*（*consistent hashing*）算法是一种哈希函数，它把键映射到指定数量的分片，并满足两个性质：
+Thuật toán *consistent hashing* (*consistent hashing*) là một hàm hash ánh xạ khóa vào một số shard xác định và thỏa hai tính chất:
 
-1. 映射到各个分片的键数大致相等；
-2. 分片数量改变时，尽可能少地在分片之间迁移键。
+1. số khóa ánh xạ vào mỗi shard xấp xỉ bằng nhau, và
+2. khi số shard thay đổi, số khóa phải di chuyển giữa các shard là ít nhất có thể.
 
-注意，这里的 *一致性* 与副本一致性（参见 [第 6 章](/ch6#ch_replication)）或 ACID 一致性（参见 [第 8 章](/ch8#ch_transactions)）毫无关系；它描述的是让一个键尽量留在原分片中的倾向。
+Lưu ý rằng "consistent" (nhất quán) ở đây không liên quan gì đến nhất quán bản sao (xem [Chương 6](/ch6#ch_replication)) hay nhất quán ACID (xem [Chương 8](/ch8#ch_transactions)), mà mô tả xu hướng của một khóa ở lại trong cùng shard càng nhiều càng tốt.
 
-Cassandra 和 ScyllaDB 的分片算法与一致性哈希的原始定义相似 [^20]，此外还有人提出了多种其他一致性哈希算法 [^21]，例如 *最高随机权重*（*highest random weight*，也称 *约会哈希*，*rendezvous hashing*）[^22] 和 *跳跃一致性哈希*（*jump consistent hash*）[^23]。采用 Cassandra 的算法时，加入一个节点会把少量现有分片拆成若干子范围；采用约会哈希或跳跃一致性哈希时，新节点得到的则是此前散布在所有其他节点上的一个个键。哪种方式更合适，取决于具体应用。
+Thuật toán sharding của Cassandra và ScyllaDB tương tự định nghĩa gốc của consistent hashing [^20], nhưng cũng đã có nhiều thuật toán consistent hashing khác được đề xuất [^21], chẳng hạn *highest random weight* (*highest random weight*, còn gọi là *rendezvous hashing*) [^22] và *jump consistent hash* (*jump consistent hash*) [^23]. Với thuật toán của Cassandra, thêm một node sẽ tách một số shard hiện có thành các khoảng con; với rendezvous hashing hay jump consistent hash, node mới nhận từng khóa riêng lẻ mà trước đó nằm rải rác trên mọi node khác. Cách nào phù hợp hơn tùy thuộc vào ứng dụng.
 
-### 倾斜的工作负载与缓解热点 {#sec_sharding_skew}
+### Khối lượng công việc lệch và giảm nhẹ hot spot {#sec_sharding_skew}
 
-一致性哈希可以保证键大致均匀地分布到各节点，却不能保证实际负载也同样均匀。如果工作负载高度倾斜——也就是某些分区键下的数据量远大于其他键，或者某些键的请求速率远高于其他键——仍然可能有些服务器不堪重负，另一些服务器却几乎闲置。
+Consistent hashing đảm bảo các khóa được phân bố đều trên các node, nhưng không có nghĩa tải thực tế cũng phân bố đều. Nếu khối lượng công việc bị lệch nặng — tức lượng dữ liệu dưới một số partition key lớn hơn nhiều so với các khóa khác, hoặc tốc độ yêu cầu với một số khóa cao hơn nhiều — thì vẫn có thể có máy chủ quá tải trong khi máy khác gần như rảnh.
 
-例如在社交媒体网站上，一个拥有数百万粉丝的名人做出某个举动，可能引发一场活动风暴 [^24]，进而产生针对同一个键的大量读写（分区键也许是该名人的用户 ID，也许是众人正在评论的事件 ID）。
+Ví dụ trên mạng xã hội, một người nổi tiếng với hàng triệu người theo dõi thực hiện một hành động có thể gây ra cơn bão hoạt động [^24], dẫn đến lượng đọc/ghi khổng lồ vào cùng một khóa (partition key có thể là ID người dùng của người nổi tiếng, hoặc ID của sự kiện mà mọi người đang bình luận).
 
-这种情况需要更加灵活的分片策略 [^25] [^26]。如果系统按键范围（或哈希范围）定义分片，就可以把一个热键单独放进一个分片，甚至给它分配一台专用机器 [^27]。
+Tình huống này cần chiến lược sharding linh hoạt hơn [^25] [^26]. Nếu hệ thống định nghĩa shard theo khoảng khóa (hoặc khoảng hash), bạn có thể đặt riêng một hot key vào một shard, thậm chí cấp cho nó một máy chuyên dụng [^27].
 
-也可以在应用层补偿倾斜。例如，如果已知某个键非常热，一种简单办法是在键的开头或末尾添加随机数。只需两位十进制随机数，就能把针对该键的写入均匀拆成 100 个不同的键，让它们分布到不同分片。
+Bạn cũng có thể bù lệch tải ở tầng ứng dụng. Chẳng hạn, nếu biết một khóa rất nóng, một cách đơn giản là thêm một số ngẫu nhiên vào đầu hoặc cuối khóa. Chỉ cần số ngẫu nhiên hai chữ số thập phân là có thể chia đều các lượt ghi vào khóa đó thành 100 khóa khác nhau, và chúng sẽ phân bố vào các shard khác nhau.
 
-不过，写入分散到不同键之后，读取就得付出额外代价：必须从全部 100 个键读取数据，再把结果合并起来。热键分散后，每个分片承受的读取量并没有减少，降低的只有写入负载。这种技术还需要额外的记录工作：只有少数热键值得添加随机数；对于写入吞吐量很低的绝大多数键，这样做只会徒增开销。因此，还需要记录哪些键已被拆分，并设计一个流程，把普通键转换成需要特殊管理的热键。
+Tuy nhiên, khi các lượt ghi đã bị chia ra nhiều khóa, mọi lượt đọc phải trả thêm chi phí: phải đọc dữ liệu từ cả 100 khóa rồi gộp kết quả. Do hot key được chia nhỏ, lượng đọc mỗi shard phải chịu không giảm; chỉ có tải ghi được giảm. Kỹ thuật này còn cần thêm công việc ghi sổ: chỉ nên thêm số ngẫu nhiên cho số ít khóa nóng; với đại đa số khóa có thông lượng ghi thấp thì chỉ thêm chi phí vô ích. Do đó, bạn cũng cần theo dõi khóa nào đã bị chia, và có quy trình chuyển khóa thường thành hot key cần xử lý đặc biệt.
 
-负载还会随时间变化，使问题更加复杂。例如，某条突然爆火的社交媒体帖子可能连续几天承受很高负载，之后很可能又归于平静。此外，有些键是写入热点，有些则是读取热点，二者需要采用不同的处理策略。
+Vấn đề còn phức tạp hơn vì tải thay đổi theo thời gian. Chẳng hạn, một bài đăng mạng xã hội đột nhiên nổi như cồn có thể chịu tải cao trong vài ngày, sau đó nhiều khả năng lại yên ắng. Ngoài ra, có khóa nóng về ghi, có khóa nóng về đọc, và hai loại cần chiến lược xử lý khác nhau.
 
-一些系统（尤其是面向大规模场景设计的云服务）能够自动处理热分片；例如，Amazon 把相关机制称为 *热度管理*（*heat management*）[^28] 或 *自适应容量*（*adaptive capacity*）[^17]。这些系统的具体工作方式超出了本书的讨论范围。
+Một số hệ thống (đặc biệt là dịch vụ đám mây thiết kế cho quy mô lớn) có thể tự động xử lý hot shard; ví dụ Amazon gọi cơ chế này là *heat management* (*heat management*) [^28] hay *adaptive capacity* (*adaptive capacity*) [^17]. Chi tiết cách các hệ thống này hoạt động nằm ngoài phạm vi cuốn sách.
 
-### 运维：自动/手动再平衡 {#sec_sharding_operations}
+### Vận hành: cân bằng lại tự động hay thủ công {#sec_sharding_operations}
 
-关于再平衡有一个此前略过的重要问题：自动还是手动进行？
+Về cân bằng lại có một câu hỏi quan trọng mà ta đã lướt qua: nó diễn ra tự động hay thủ công?
 
-有些系统无需人工介入，会自动决定何时拆分分片、何时把分片从一个节点迁移到另一个节点；另一些系统则要求管理员显式配置分片。两者之间也有折中方案：例如，Couchbase 和 Riak 会自动生成建议的分片分配，但必须由管理员确认提交后才会生效。
+Một số hệ thống tự quyết định khi nào tách shard và khi nào di chuyển shard từ node này sang node khác mà không cần con người can thiệp, trong khi số khác yêu cầu quản trị viên cấu hình shard tường minh. Cũng có cách dung hòa: ví dụ Couchbase và Riak tự sinh đề xuất phân bổ shard, nhưng cần quản trị viên xác nhận (commit) thì mới có hiệu lực.
 
-全自动再平衡很方便，因为日常维护所需的运维工作更少；这样的系统甚至可以自动伸缩，以适应工作负载的变化。DynamoDB 等云数据库宣称，能够在几分钟内自动增删分片，应对负载的大幅升降 [^17] [^29]。
+Cân bằng lại hoàn toàn tự động rất tiện vì công việc vận hành bảo trì thường ngày ít hơn, và hệ thống như vậy thậm chí có thể tự co giãn theo khối lượng công việc. Các cơ sở dữ liệu đám mây như DynamoDB tuyên bố có thể tự động thêm bớt shard trong vài phút để đáp ứng tải tăng giảm mạnh [^17] [^29].
 
-然而，自动分片管理也可能难以预测。再平衡代价很高，因为它要重新路由请求，并在节点间迁移大量数据。如果处理不够谨慎，这一过程可能使网络或节点过载，拖累其他请求的性能。系统在再平衡期间还必须继续处理写入；如果已经接近最大写入吞吐量，分片拆分的速度甚至可能赶不上新写入到达的速度 [^29]。
+Tuy nhiên, quản lý shard tự động cũng có thể khó đoán. Cân bằng lại là thao tác đắt đỏ, vì nó phải định tuyến lại yêu cầu và di chuyển lượng lớn dữ liệu giữa các node. Nếu làm không cẩn thận, quá trình này có thể làm quá tải mạng hoặc node và làm chậm các yêu cầu khác. Hệ thống còn phải tiếp tục xử lý ghi trong lúc cân bằng lại; nếu đã gần thông lượng ghi tối đa, tốc độ tách shard thậm chí có thể không theo kịp tốc độ ghi mới đến [^29].
 
-这种自动化机制如果再与自动失效检测结合，可能十分危险。假设某个节点过载，暂时无法及时响应请求；其他节点据此断定它已经失效，于是自动对集群进行再平衡，把负载从该节点移走。这会给其他节点和网络施加额外负载，让局面进一步恶化，甚至引发级联失效：其他节点也相继过载，并被错误地判定为已经宕机。
+Tự động hóa kiểu này khi kết hợp với phát hiện lỗi tự động có thể nguy hiểm. Chẳng hạn, một node quá tải và tạm thời phản hồi yêu cầu chậm. Các node khác kết luận node đó đã hỏng và tự động cân bằng lại cụm để chuyển tải đi khỏi nó. Điều này đặt thêm tải lên các node khác và mạng, khiến tình hình tệ hơn và có thể gây lỗi dây chuyền: các node khác cũng quá tải và bị nhầm là đã chết.
 
-出于这个原因，让人参与再平衡过程是一件好事。这比全自动流程慢，但有助于防止运维意外。
+Vì vậy, để con người tham gia vào quy trình cân bằng lại là điều tốt. Nó chậm hơn quy trình hoàn toàn tự động, nhưng giúp ngăn ngừa các bất ngờ trong vận hành.
 
+## Định tuyến yêu cầu {#sec_sharding_routing}
 
+Ta đã bàn cách shard tập dữ liệu trên nhiều node, và cách cân bằng lại các shard khi thêm bớt node. Giờ đến vấn đề tiếp theo: nếu muốn đọc hoặc ghi một khóa cụ thể, làm sao biết phải kết nối đến node nào — tức địa chỉ IP và cổng nào?
 
-## 请求路由 {#sec_sharding_routing}
+Vấn đề này gọi là *định tuyến yêu cầu* (*request routing*), và rất giống *service discovery* (*service discovery*) đã bàn ở ["Bộ cân bằng tải, service discovery và service mesh"](/ch5#sec_encoding_service_discovery). Khác biệt lớn nhất: với các instance dịch vụ chạy mã ứng dụng, chúng thường không giữ trạng thái và bộ cân bằng tải có thể gửi yêu cầu đến instance bất kỳ. Còn với cơ sở dữ liệu được shard, yêu cầu cho một khóa chỉ có thể do node giữ bản sao của shard chứa khóa đó xử lý.
 
-我们已经讨论了如何把数据集分片到多个节点，以及如何在增删节点时再平衡这些分片。现在来看下一个问题：如果想读写某个特定的键，怎样知道应该连接哪个节点——也就是哪个 IP 地址和端口？
+Do đó, định tuyến yêu cầu phải biết ánh xạ từ khóa đến shard và từ shard đến node. Nhìn chung có vài cách (như {{< xref fig="7-7" page="/ch7" anchor="fig_sharding_routing" >}}Hình 7-7{{< /xref >}}):
 
-这个问题称为 *请求路由*（*request routing*），与前文 [“负载均衡器、服务发现和服务网格”](/ch5#sec_encoding_service_discovery) 讨论的 *服务发现*（*service discovery*）十分相似。二者最大的区别在于：运行应用代码的服务实例通常是无状态的，负载均衡器可以把请求发给任意实例；而在分片数据库中，某个键的请求只能交给持有该键所在分片副本的节点处理。
+1. Cho phép client kết nối đến node bất kỳ (ví dụ qua bộ cân bằng tải round-robin). Nếu node đó tình cờ sở hữu shard mà yêu cầu liên quan, nó xử lý trực tiếp; nếu không, nó chuyển tiếp yêu cầu đến node đúng, nhận phản hồi rồi chuyển lại cho client.
+2. Mọi yêu cầu của client trước hết đi đến một tầng định tuyến, tầng này xác định node nào nên xử lý từng yêu cầu rồi chuyển tiếp tương ứng. Tầng định tuyến tự nó không xử lý yêu cầu nào, chỉ đóng vai bộ cân bằng tải nhận biết shard.
+3. Để client biết sơ đồ sharding và việc gán shard cho node. Khi đó client có thể kết nối thẳng đến node đúng mà không cần qua trung gian.
 
-因此，请求路由必须了解键到分片、以及分片到节点的映射。概括来说，有以下几种办法（如 {{< xref fig="7-7" page="/ch7" anchor="fig_sharding_routing" >}}图 7-7{{< /xref >}} 所示）：
+{{< fig num="7-7" id="fig_sharding_routing" src="/fig/ddia_0707.png" caption="Ba cách khác nhau để định tuyến yêu cầu đến đúng node." class="ddia-figure ddia-figure--wide" width="2658" height="1182" />}}
 
-1. 允许客户端连接任意节点（例如通过轮询负载均衡器）。如果该节点恰好持有请求涉及的分片，就直接处理请求；否则，它把请求转发给正确的节点，收到响应后再转交给客户端。
-2. 客户端的所有请求都先发送到一个路由层，由路由层判断哪个节点应当处理每个请求，再相应地转发。路由层本身并不处理请求，只充当一个能够感知分片的负载均衡器。
-3. 让客户端了解分片方式以及分片到节点的分配关系。这样，客户端无须经过任何中间层，就能直接连接到正确的节点。
+Trong mọi trường hợp đều có một số câu hỏi then chốt:
 
-{{< fig num="7-7" id="fig_sharding_routing" src="/fig/ddia_0707.png" caption="将请求路由到正确节点的三种不同方式。" class="ddia-figure ddia-figure--wide" width="2658" height="1182" />}}
+* Ai quyết định shard nào nằm trên node nào? Cách đơn giản nhất là một coordinator duy nhất quyết định, nhưng khi đó làm sao chịu lỗi nếu node chạy coordinator chết? Và nếu coordinator có thể failover sang node khác, làm sao ngăn chặn split-brain (xem ["Xử lý sự cố node"](/ch6#sec_replication_failover)) khiến hai coordinator đưa ra các phân bổ shard mâu thuẫn nhau?
+* Thành phần chịu trách nhiệm định tuyến (có thể là một node cơ sở dữ liệu, tầng định tuyến hoặc client) biết thế nào về việc thay đổi phân bổ shard cho node?
+* Khi một shard được chuyển từ node này sang node khác, có một khoảng thời gian chuyển giao: node mới đã tiếp quản, nhưng các yêu cầu gửi đến node cũ có thể vẫn đang trên đường. Xử lý các yêu cầu này thế nào?
 
-在所有情况下，都有一些关键问题：
+Nhiều hệ thống dữ liệu phân tán dựa vào dịch vụ điều phối riêng như ZooKeeper hay etcd để theo dõi việc phân bổ shard, như {{< xref fig="7-8" page="/ch7" anchor="fig_sharding_zookeeper" >}}Hình 7-8{{< /xref >}}. Chúng dùng thuật toán đồng thuận (xem [Chương 10](/ch10#ch_consistency)) để chịu lỗi và ngăn split-brain. Mỗi node đăng ký với ZooKeeper, và ZooKeeper giữ ánh xạ đáng tin cậy từ shard đến node. Các bên khác, như tầng định tuyến hoặc client nhận biết shard, có thể đăng ký nhận thông tin này từ ZooKeeper. Bất cứ khi nào shard đổi chủ, hoặc node được thêm hay bị loại, ZooKeeper thông báo cho tầng định tuyến để thông tin định tuyến luôn cập nhật.
 
-* 由谁决定每个分片应当放在哪个节点？最简单的办法是由单一协调者来决定，但如果运行协调者的节点宕机，怎样让协调者具备容错能力？如果协调者能够故障切换到另一个节点，又该如何防止发生脑裂（参见 [“处理节点故障”](/ch6#sec_replication_failover)），让两个协调者作出相互矛盾的分片分配？
-* 负责路由的组件（可以是某个数据库节点、路由层或客户端）怎样得知分片到节点的分配发生了变化？
-* 分片从一个节点迁移到另一个节点时，会有一段切换期：新节点已经接管，但发往旧节点的请求可能仍在途中。应当如何处理这些请求？
+{{< fig num="7-8" id="fig_sharding_zookeeper" src="/fig/ddia_0708.png" caption="Dùng ZooKeeper để theo dõi việc gán shard cho node." class="ddia-figure ddia-figure--wide" width="2658" height="1163" />}}
 
-许多分布式数据系统依靠 ZooKeeper、etcd 等独立协调服务来记录分片分配，如 {{< xref fig="7-8" page="/ch7" anchor="fig_sharding_zookeeper" >}}图 7-8{{< /xref >}} 所示。这些服务使用共识算法（参见 [第 10 章](/ch10#ch_consistency)）实现容错并防止脑裂。每个节点都在 ZooKeeper 中注册，ZooKeeper 维护分片到节点的权威映射；路由层或能够感知分片的客户端等其他参与者，可以订阅 ZooKeeper 中的信息。只要分片易主，或有节点加入、退出，ZooKeeper 就会通知路由层，使其路由信息保持最新。
+Ví dụ, HBase và SolrCloud dùng ZooKeeper để quản lý phân bổ shard, còn Kubernetes dùng etcd để theo dõi mỗi instance dịch vụ đang chạy ở đâu. MongoDB có kiến trúc tương tự, nhưng dựa vào *config server* (*config server*) của riêng nó và dùng tiến trình nền *mongos* làm tầng định tuyến. Kafka, YugabyteDB và TiDB dùng giao thức đồng thuận Raft tích hợp sẵn để thực hiện chức năng điều phối này.
 
-{{< fig num="7-8" id="fig_sharding_zookeeper" src="/fig/ddia_0708.png" caption="使用 ZooKeeper 跟踪分片到节点的分配。" class="ddia-figure ddia-figure--wide" width="2658" height="1163" />}}
+Cassandra, ScyllaDB và Riak theo cách khác: chúng lan truyền các thay đổi trạng thái cụm giữa các node bằng *giao thức gossip* (*gossip protocol*). Cách này cung cấp tính nhất quán yếu hơn nhiều so với giao thức đồng thuận, nên có thể xảy ra split-brain, khi các phần khác nhau của cụm có phân bổ node khác nhau cho cùng một shard. Cơ sở dữ liệu không leader chấp nhận được điều này vì chúng thường chỉ cung cấp đảm bảo nhất quán yếu (xem ["Giới hạn của nhất quán quorum"](/ch6#sec_replication_quorum_limitations)).
 
-例如，HBase 和 SolrCloud 使用 ZooKeeper 管理分片分配，Kubernetes 使用 etcd 记录每个服务实例的运行位置。MongoDB 的架构与之相似，不过它依靠自有的 *配置服务器*（*config server*）实现，并以 *mongos* 守护进程作为路由层。Kafka、YugabyteDB 和 TiDB 则使用内置的 Raft 共识协议实现这项协调功能。
+Dù dùng tầng định tuyến hay gửi yêu cầu đến node ngẫu nhiên, client vẫn cần tìm được địa chỉ IP để kết nối. Địa chỉ IP ít thay đổi hơn việc gán shard cho node, nên thường chỉ cần dùng DNS.
 
-Cassandra、ScyllaDB 和 Riak 采用另一种办法：节点之间通过 *流言协议*（*gossip protocol*）传播集群状态的变化。它提供的一致性比共识协议弱得多，因而可能出现脑裂，使集群的不同部分对同一个分片持有不同的节点分配。无主数据库可以容忍这种情况，因为它们通常只提供较弱的一致性保证（参见 [“仲裁一致性的局限”](/ch6#sec_replication_quorum_limitations)）。
+Phần định tuyến yêu cầu ở trên chủ yếu bàn về việc tìm shard cho một khóa đơn lẻ, phù hợp nhất với cơ sở dữ liệu OLTP được shard. Cơ sở dữ liệu phân tích cũng thường được shard, nhưng cách thực thi truy vấn rất khác: thay vì chạy trong một shard, truy vấn thường phải tổng hợp và join dữ liệu từ nhiều shard song song. Ta sẽ bàn các kỹ thuật thực thi truy vấn song song này ở ["JOIN và GROUP BY"](/ch11#sec_batch_join).
 
-无论使用路由层还是把请求发送给随机节点，客户端仍然要先找到可供连接的 IP 地址。IP 地址的变化没有分片到节点的分配那么频繁，因此通常用 DNS 就足够了。
+## Sharding và chỉ mục phụ (*secondary index*) {#sec_sharding_secondary_indexes}
 
-以上请求路由主要关注如何为单个键找到对应分片，这最适用于分片的 OLTP 数据库。分析型数据库通常也会分片，但其查询执行方式截然不同：查询一般不是在单个分片中执行，而是要并行聚合并连接来自许多分片的数据。我们将在 [“JOIN 与 GROUP BY”](/ch11#sec_batch_join) 中讨论这类并行查询执行技术。
+Các sơ đồ sharding đã bàn cho đến giờ đều dựa vào việc client biết partition key của bản ghi cần truy cập. Điều này dễ nhất với mô hình dữ liệu khóa-giá trị, nơi partition key là phần đầu (hoặc toàn bộ) của khóa chính, nên có thể dùng nó để xác định shard và định tuyến yêu cầu đọc/ghi đến node chịu trách nhiệm khóa đó.
 
-## 分片与二级索引 {#sec_sharding_secondary_indexes}
+Mọi thứ phức tạp hơn nhiều khi có chỉ mục phụ (*secondary index*) (xem thêm ["Chỉ mục (*index*) nhiều cột và chỉ mục phụ (*secondary index*)"](/ch4#sec_storage_index_multicolumn)). Chỉ mục phụ (*secondary index*) thường không định danh duy nhất một bản ghi mà dùng để tìm nơi một giá trị cụ thể xuất hiện: ví dụ tìm mọi hành động của người dùng `123`, mọi bài viết chứa từ `hogwash`, hoặc mọi chiếc xe màu `red`.
 
-到目前为止讨论的分片方案，都要求客户端知道待访问记录的分区键。这在键值数据模型中最容易做到：分区键是主键的第一部分（或整个主键），因此可以据此确定分片，并把读写请求路由到负责该键的节点。
+Kho khóa-giá trị thường không có chỉ mục phụ (*secondary index*), nhưng chúng là tính năng nền tảng của cơ sở dữ liệu quan hệ, rất phổ biến trong cơ sở dữ liệu tài liệu, và là *lý do tồn tại* của các công cụ tìm kiếm toàn văn như Solr và Elasticsearch. Rắc rối của chỉ mục phụ (*secondary index*) là chúng không ánh xạ gọn gàng vào shard. Có hai cách chính để shard cơ sở dữ liệu có chỉ mục phụ (*secondary index*): chỉ mục cục bộ (*local index*) và chỉ mục toàn cục (*global index*).
 
-涉及二级索引时，情况会复杂得多（另见 [“多列索引与二级索引”](/ch4#sec_storage_index_multicolumn)）。二级索引通常不能唯一标识一条记录，而是用来搜索某个特定值出现在哪里：例如，查找用户 `123` 的所有操作、所有包含单词 `hogwash` 的文章，或所有颜色为 `red` 的汽车。
+### Chỉ mục phụ (*secondary index*) cục bộ {#id166}
 
-键值存储通常没有二级索引，但它是关系数据库的基础能力，在文档数据库中也十分常见，更是 Solr、Elasticsearch 等全文检索引擎的 *立身之本*。二级索引的问题在于，它无法干净利落地映射到分片。对带有二级索引的数据库进行分片，主要有两种办法：本地索引和全局索引。
+Giả sử bạn đang vận hành một trang rao bán xe cũ (như {{< xref fig="7-9" page="/ch7" anchor="fig_sharding_local_secondary" >}}Hình 7-9{{< /xref >}}). Mỗi tin đăng có một ID duy nhất, dùng làm partition key để shard (ví dụ ID từ 0 đến 499 vào shard 0, ID từ 500 đến 999 vào shard 1, v.v.).
 
-### 本地二级索引 {#id166}
+Nếu muốn cho người dùng tìm xe và lọc theo màu và hãng, bạn cần chỉ mục phụ (*secondary index*) trên `color` và `make` (trong cơ sở dữ liệu tài liệu chúng là trường, trong cơ sở dữ liệu quan hệ là cột). Sau khi khai báo chỉ mục (*index*), cơ sở dữ liệu tự động duy trì nó. Chẳng hạn, mỗi khi một chiếc xe đỏ được thêm vào, shard chứa nó tự động thêm ID của xe vào danh sách ID của mục chỉ mục (*index*) `color:red`. Như đã nói ở [Chương 4](/ch4#ch_storage), danh sách ID này còn gọi là *postings list* (*postings list*).
 
-假设你正在运营一个二手车交易网站（如 {{< xref fig="7-9" page="/ch7" anchor="fig_sharding_local_secondary" >}}图 7-9{{< /xref >}} 所示）。每条车辆信息都有唯一 ID，并以该 ID 作为分区键进行分片（例如，ID 0 到 499 归分片 0，ID 500 到 999 归分片 1，依此类推）。
+{{< fig num="7-9" id="fig_sharding_local_secondary" src="/fig/ddia_0709.png" caption="Chỉ mục phụ (*secondary index*) cục bộ: mỗi shard chỉ lập chỉ mục (*index*) các bản ghi trong shard của chính nó." class="ddia-figure ddia-figure--wide" width="2658" height="1260" />}}
 
-如果要让用户搜索车辆，并按颜色与品牌筛选，就需要在 `color` 和 `make` 上建立二级索引（在文档数据库中它们是字段，在关系数据库中则是列）。声明索引后，数据库会自动维护它。例如，每增加一辆红色汽车，所在分片就会自动把它的 ID 加入索引条目 `color:red` 对应的 ID 列表。正如 [第 4 章](/ch4#ch_storage) 所述，这种 ID 列表也称为 *倒排列表*（*postings list*）。
-
-{{< fig num="7-9" id="fig_sharding_local_secondary" src="/fig/ddia_0709.png" caption="本地二级索引：每个分片只索引其自己分片内的记录。" class="ddia-figure ddia-figure--wide" width="2658" height="1260" />}}
-
-> [!WARNING] 警告
+> [!WARNING] Cảnh báo
 >
-> 如果数据库只支持键值模型，你也许会想在应用代码中建立值到 ID 的映射，自行实现二级索引。如果选择这条路，务必万分小心，确保索引与底层数据始终一致。竞态条件和间歇性写入失败（有些变更保存成功，另一些却没有）很容易让两者失去同步——参见 [“多对象事务的需求”](/ch8#sec_transactions_need)。
+> Nếu cơ sở dữ liệu chỉ hỗ trợ mô hình khóa-giá trị, bạn có thể bị cám dỗ tự hiện thực chỉ mục phụ (*secondary index*) ở mã ứng dụng bằng cách tạo ánh xạ từ giá trị sang ID. Nếu đi đường này, bạn phải hết sức cẩn thận để chỉ mục (*index*) luôn nhất quán với dữ liệu gốc. Race condition và lỗi ghi chập chờn (khi một số thay đổi được lưu còn số khác thì không) rất dễ khiến hai bên lệch nhau — xem ["Nhu cầu về giao dịch nhiều đối tượng"](/ch8#sec_transactions_need).
 
-在这种索引方式中，每个分片都完全独立：各自维护自己的二级索引，只覆盖本分片中的记录，而不关心其他分片保存了什么数据。每次写入数据库——添加、删除或更新记录——只需处理包含该记录的分片。因此，这种二级索引称为 *本地索引*（*local index*）；在信息检索领域，它也称为 *按文档分区的索引*（*document-partitioned index*）[^30]。
+Với cách lập chỉ mục (*index*) này, mỗi shard hoàn toàn độc lập: nó duy trì chỉ mục phụ (*secondary index*) riêng, chỉ bao phủ các bản ghi trong shard đó, không quan tâm shard khác lưu dữ liệu gì. Mỗi lần ghi vào cơ sở dữ liệu — thêm, xóa hay cập nhật bản ghi — bạn chỉ cần xử lý shard chứa bản ghi đó. Vì vậy loại chỉ mục phụ (*secondary index*) này được gọi là *chỉ mục cục bộ* (*local index*). Trong lĩnh vực truy xuất thông tin, nó còn gọi là *chỉ mục phân vùng theo tài liệu* (*document-partitioned index*) [^30].
 
-读取本地二级索引时，如果已经知道目标记录的分区键，就只需在对应分片上搜索。如果只想获得 *部分* 结果而不要求全部，也可以把请求发给任意分片。
+Khi đọc từ chỉ mục phụ (*secondary index*) cục bộ, nếu đã biết partition key của bản ghi cần tìm, bạn chỉ cần tìm trên shard tương ứng. Nếu chỉ cần kết quả *một phần* chứ không cần đầy đủ, bạn cũng có thể gửi yêu cầu đến shard bất kỳ.
 
-但是，如果需要全部结果，又事先不知道这些记录的分区键，就必须把查询发送到所有分片，再合并返回结果，因为匹配的记录可能散布在每个分片中。在 {{< xref fig="7-9" page="/ch7" anchor="fig_sharding_local_secondary" >}}图 7-9{{< /xref >}} 中，分片 0 和分片 1 都有红色汽车。
+Nhưng nếu cần toàn bộ kết quả mà không biết trước partition key của chúng, bạn phải gửi truy vấn đến mọi shard rồi gộp các kết quả trả về, vì các bản ghi khớp có thể nằm rải rác ở mọi shard. Trong {{< xref fig="7-9" page="/ch7" anchor="fig_sharding_local_secondary" >}}Hình 7-9{{< /xref >}}, cả shard 0 và shard 1 đều có xe đỏ.
 
-这种查询分片数据库的方式，会让二级索引上的读取查询变得相当昂贵。即使并行查询所有分片，也很容易出现尾部延迟放大（参见 [“响应时间指标的应用”](/ch2#sec_introduction_slo_sla)）。它还会限制应用的可伸缩性：增加分片能容纳更多数据，但如果每次查询仍要由所有分片处理，查询吞吐量并不会随之提高。
+Cách truy vấn cơ sở dữ liệu được shard này có thể khiến truy vấn đọc trên chỉ mục phụ (*secondary index*) khá tốn kém. Ngay cả khi truy vấn các shard song song, nó vẫn dễ bị khuếch đại độ trễ đuôi (xem ["Ứng dụng các chỉ số thời gian phản hồi"](/ch2#sec_introduction_slo_sla)). Nó cũng hạn chế khả năng mở rộng của ứng dụng: thêm shard giúp chứa nhiều dữ liệu hơn, nhưng nếu mọi truy vấn vẫn phải do tất cả shard xử lý thì thông lượng truy vấn không tăng theo.
 
-尽管如此，本地二级索引依然应用广泛 [^31]：MongoDB、Riak、Cassandra [^32]、Elasticsearch [^33]、SolrCloud 和 VoltDB [^34] 都采用这种索引。
+Dù vậy, chỉ mục phụ (*secondary index*) cục bộ vẫn được dùng rộng rãi [^31] — MongoDB, Riak, Cassandra [^32], Elasticsearch [^33], SolrCloud và VoltDB [^34] đều dùng chúng.
 
-### 全局二级索引 {#id167}
+### Chỉ mục phụ (*secondary index*) toàn cục {#id167}
 
-除了让每个分片各自维护本地二级索引，也可以构建一个覆盖所有分片数据的 *全局索引*（*global index*）。不过，不能只把这个索引存放在单个节点上，否则它很可能成为瓶颈，使分片失去意义。因此全局索引本身也必须分片，但可以采用与主键索引不同的分片方式。
+Thay vì để mỗi shard có chỉ mục phụ (*secondary index*) cục bộ riêng, ta có thể xây một *chỉ mục toàn cục* (*global index*) bao phủ dữ liệu của mọi shard. Tuy nhiên, không thể chỉ lưu chỉ mục (*index*) này trên một node, vì nó dễ trở thành nút thắt và làm mất ý nghĩa của sharding. Chỉ mục toàn cục (*global index*) cũng phải được shard, nhưng có thể shard theo cách khác với chỉ mục (*index*) khóa chính.
 
-{{< xref fig="7-10" page="/ch7" anchor="fig_sharding_global_secondary" >}}图 7-10{{< /xref >}} 展示了它可能采用的形式：来自所有分片的红色汽车 ID 都列在索引的 `color:red` 条目下；索引本身则经过分片，以字母 *a* 到 *r* 开头的颜色归分片 0，以 *s* 到 *z* 开头的颜色归分片 1。汽车品牌索引也以类似方式分片，边界位于 *f* 与 *h* 之间。
+{{< xref fig="7-10" page="/ch7" anchor="fig_sharding_global_secondary" >}}Hình 7-10{{< /xref >}} minh họa dạng của nó: ID các xe đỏ từ mọi shard được liệt kê dưới mục `color:red` của chỉ mục (*index*), nhưng bản thân chỉ mục (*index*) được shard sao cho các màu bắt đầu từ chữ *a* đến *r* vào shard 0, và các màu bắt đầu từ *s* đến *z* vào shard 1. Chỉ mục (*index*) theo hãng xe cũng được shard tương tự, với ranh giới giữa *f* và *h*.
 
-{{< fig num="7-10" id="fig_sharding_global_secondary" src="/fig/ddia_0710.png" caption="全局二级索引反映来自所有分片的数据，并且本身按索引值进行分片。" class="ddia-figure ddia-figure--wide" width="2658" height="1129" />}}
+{{< fig num="7-10" id="fig_sharding_global_secondary" src="/fig/ddia_0710.png" caption="Chỉ mục phụ (*secondary index*) toàn cục phản ánh dữ liệu từ mọi shard, và bản thân nó được shard theo giá trị được lập chỉ mục (*index*)." class="ddia-figure ddia-figure--wide" width="2658" height="1129" />}}
 
-这种索引也称为 *按词项分区*（*term-partitioned*）[^30]。回顾 [“全文检索”](/ch4#sec_storage_full_text)：在全文检索中，*词项*（*term*）是文本中可供搜索的关键字；这里我们把它推广为二级索引中任何可供搜索的值。
+Loại chỉ mục (*index*) này còn gọi là *phân vùng theo term* (*term-partitioned*) [^30]. Nhớ lại ở ["Tìm kiếm toàn văn"](/ch4#sec_storage_full_text) rằng trong tìm kiếm toàn văn, *term* (*term*) là từ khóa có thể tìm trong văn bản. Ở đây ta tổng quát hóa thành mọi giá trị có thể tìm trong chỉ mục phụ (*secondary index*).
 
-全局索引以词项作为分区键，因此查找某个词项或值时，可以直接确定需要查询哪个分片。和前面一样，每个分片可以包含一段连续的词项范围（如 {{< xref fig="7-10" page="/ch7" anchor="fig_sharding_global_secondary" >}}图 7-10{{< /xref >}} 所示），也可以根据词项的哈希值把词项分配到各个分片。
+Chỉ mục toàn cục (*global index*) dùng term làm partition key, nên khi tìm một term hay giá trị, ta xác định được ngay cần truy vấn shard nào. Như trước, một shard có thể chứa một khoảng term liên tục (như {{< xref fig="7-10" page="/ch7" anchor="fig_sharding_global_secondary" >}}Hình 7-10{{< /xref >}}), hoặc có thể gán term vào shard dựa trên hash của term.
 
-全局索引的优点是，如果查询只有一个条件（如 *color = red*），只需读取一个分片就能取得倒排列表。不过，如果想要的不只是 ID，而是完整记录，仍需读取负责存储这些 ID 的所有分片。
+Ưu điểm của chỉ mục toàn cục (*global index*) là nếu truy vấn chỉ có một điều kiện (như *color = red*), chỉ cần đọc một shard để lấy postings list. Tuy nhiên, nếu bạn muốn không chỉ ID mà cả bản ghi đầy đủ, bạn vẫn phải đọc mọi shard chịu trách nhiệm lưu các ID đó.
 
-如果查询包含多个条件或词项（例如搜索某种颜色且属于某个品牌的汽车，或搜索同一段文本中同时出现的多个单词），这些词项很可能分属不同分片。为了计算两个条件的逻辑 AND，系统必须找出同时出现在两个倒排列表中的 ID。倒排列表较短时并不难；但如果列表很长，通过网络传输它们再计算交集，速度就可能很慢 [^30]。
+Nếu truy vấn có nhiều điều kiện hay nhiều term (ví dụ tìm xe theo màu và hãng, hoặc tìm nhiều từ cùng xuất hiện trong một văn bản), các term này nhiều khả năng nằm ở các shard khác nhau. Để tính phép AND logic của hai điều kiện, hệ thống phải tìm các ID có mặt trong cả hai postings list. Nếu list ngắn thì không khó, nhưng nếu dài, việc gửi chúng qua mạng để tính giao có thể chậm [^30].
 
-全局二级索引的另一个难题，是写入比本地索引复杂：写入一条记录可能影响索引的多个分片（文档中的每个词项都可能位于不同分片）。因此，二级索引很难与底层数据保持同步。一种办法是使用分布式事务，以原子方式更新保存主记录的分片及其二级索引分片（参见 [第 8 章](/ch8#ch_transactions)）。
+Một khó khăn khác của chỉ mục phụ (*secondary index*) toàn cục là việc ghi phức tạp hơn chỉ mục cục bộ (*local index*): ghi một bản ghi có thể ảnh hưởng nhiều shard của chỉ mục (*index*) (mỗi term trong tài liệu có thể nằm ở một shard khác). Do đó khó giữ cho chỉ mục phụ (*secondary index*) đồng bộ với dữ liệu gốc. Một cách là dùng giao dịch phân tán để cập nhật nguyên tử shard chứa bản ghi chính và các shard chứa chỉ mục phụ (*secondary index*) của nó (xem [Chương 8](/ch8#ch_transactions)).
 
-CockroachDB、TiDB 和 YugabyteDB 都使用全局二级索引；DynamoDB 则同时支持本地和全局二级索引。在 DynamoDB 中，写入会异步反映到全局索引，因此从全局索引读到的结果可能是陈旧的（类似于 [“复制延迟的问题”](/ch6#sec_replication_lag)）。尽管如此，如果读取吞吐量高于写入吞吐量，而且倒排列表不太长，全局索引仍然很有用。
+CockroachDB, TiDB và YugabyteDB dùng chỉ mục phụ (*secondary index*) toàn cục; DynamoDB hỗ trợ cả chỉ mục phụ (*secondary index*) cục bộ lẫn toàn cục. Trong DynamoDB, các lượt ghi được phản ánh vào chỉ mục toàn cục (*global index*) một cách bất đồng bộ, nên kết quả đọc từ chỉ mục toàn cục (*global index*) có thể đã cũ (tương tự ["Vấn đề của replication lag"](/ch6#sec_replication_lag)). Dù vậy, chỉ mục toàn cục (*global index*) vẫn hữu ích nếu thông lượng đọc cao hơn thông lượng ghi và postings list không quá dài.
 
+## Tóm tắt {#summary}
 
-## 总结 {#summary}
+Trong chương này, ta đã khám phá các cách chia tập dữ liệu lớn thành các tập con nhỏ hơn. Khi lượng dữ liệu rất lớn, lưu trữ và xử lý trên một máy không còn khả thi, và sharding trở nên cần thiết.
 
-在本章中，我们探讨了将大数据集划分成更小子集的不同方法。数据量非常大的时候，在单台机器上存储和处理不再可行，而分片则十分必要。
+Mục tiêu của sharding là phân bố đều dữ liệu và tải truy vấn trên nhiều máy, tránh hot spot (node có tải bất tương xứng). Điều này đòi hỏi chọn sơ đồ sharding phù hợp với dữ liệu, và cân bằng lại các shard khi node được thêm vào hoặc bị loại khỏi cụm.
 
-分片的目标是在多台机器上均匀分布数据和查询负载，避免出现热点（负载不成比例的节点）。这需要选择适合数据的分片方案，并在将节点添加到集群或从集群删除时重新平衡分片。
+Ta đã bàn hai cách sharding chính:
 
-我们讨论了两种主要的分片方法：
+* *Sharding theo khoảng khóa*: các khóa được sắp xếp, và mỗi shard sở hữu mọi khóa từ một giá trị nhỏ nhất đến một giá trị lớn nhất. Lưu trữ có thứ tự cho phép truy vấn khoảng hiệu quả, nhưng có nguy cơ tạo hot spot nếu ứng dụng thường xuyên truy cập các khóa gần nhau trong thứ tự sắp xếp.
 
-* *键范围分片*：键按顺序排列，每个分片拥有从某个最小值到某个最大值之间的所有键。有序存储的优点是能够高效执行范围查询，但如果应用经常访问排序位置彼此接近的键，就可能形成热点。
+  Với cách này, shard thường được cân bằng lại động bằng cách tách khoảng khóa thành hai khoảng con khi shard quá lớn.
+* *Sharding theo hash*: hàm hash được áp dụng cho từng khóa, và mỗi shard sở hữu một khoảng giá trị hash (hoặc có thể dùng thuật toán consistent hashing khác để ánh xạ hash vào shard). Cách này phá vỡ thứ tự của khóa, làm truy vấn khoảng kém hiệu quả, nhưng có thể phân bố tải đều hơn.
 
-  采用这种方法时，分片过大之后通常会把键范围拆成两个子范围，从而动态地再平衡分片。
-* *哈希分片*：先对每个键应用哈希函数，每个分片拥有一段哈希值范围（也可以采用其他一致性哈希算法，把哈希映射到分片）。这种方法破坏了键的顺序，使范围查询效率降低，却可能让负载分布得更加均匀。
+  Khi shard theo hash, thường tạo trước một số shard cố định, gán nhiều shard cho mỗi node, và di chuyển nguyên shard từ node này sang node khác khi thêm bớt node. Cũng có thể tách shard như với khoảng khóa.
 
-  按哈希分片时，通常会预先创建固定数量的分片，给每个节点分配多个分片；增删节点时，再把整个分片从一个节点迁移到另一个节点。也可以像键范围分片那样拆分分片。
+Cách làm phổ biến là dùng phần đầu của khóa làm partition key (tức dùng để xác định shard), rồi sắp xếp các bản ghi trong shard theo phần còn lại của khóa. Như vậy vẫn có thể truy vấn khoảng hiệu quả giữa các bản ghi có cùng partition key.
 
-常见做法是以键的第一部分作为分区键（即用来确定分片），再按键的其余部分对分片内的记录排序。这样，对于分区键相同的记录，仍然可以高效执行范围查询。
+Ta cũng bàn về tương tác giữa sharding và chỉ mục phụ (*secondary index*). Chỉ mục phụ (*secondary index*) cũng cần được shard, có hai cách:
 
-我们还讨论了分片与二级索引的相互作用。二级索引也需要分片，有两种方法：
+* *Chỉ mục phụ (*secondary index*) cục bộ*: chỉ mục phụ (*secondary index*) được lưu cùng shard với khóa chính và giá trị. Nhờ vậy khi ghi chỉ cần cập nhật một shard, nhưng khi tra cứu chỉ mục phụ (*secondary index*) phải đọc mọi shard.
+* *Chỉ mục phụ (*secondary index*) toàn cục*: được shard riêng theo giá trị được lập chỉ mục (*index*). Mục chỉ mục phụ (*secondary index*) có thể tham chiếu bản ghi từ mọi shard của khóa chính. Khi ghi bản ghi, có thể cần cập nhật nhiều shard của chỉ mục phụ (*secondary index*); nhưng khi đọc postings list thì chỉ cần truy cập một shard (việc lấy bản ghi thực tế vẫn cần đọc nhiều shard).
 
-* *本地二级索引*：二级索引与主键及其值存储在同一个分片。因此写入时只需更新一个分片，但查找二级索引时必须读取所有分片。
-* *全局二级索引*：根据索引值采用另一套分片方式。二级索引条目可以引用来自主键任意分片的记录。写入记录时，可能需要更新多个二级索引分片；但读取倒排列表时，只需访问一个分片（获取实际记录仍然要读取多个分片）。
+Cuối cùng, ta đã bàn cách định tuyến truy vấn đến đúng shard, và cách dịch vụ điều phối theo dõi việc gán shard cho node.
 
-最后，我们讨论了如何把查询路由到正确的分片，以及如何通过协调服务记录分片到节点的分配关系。
+Về thiết kế, mỗi shard phần lớn hoạt động độc lập — chính điều này cho phép cơ sở dữ liệu được shard mở rộng ra nhiều máy. Tuy nhiên, các thao tác cần ghi vào nhiều shard có thể rất khó: chẳng hạn, nếu ghi vào một shard thành công nhưng shard khác thất bại thì sao? Ta sẽ trả lời câu hỏi này trong các chương tiếp theo.
 
-从设计上说，每个分片大体独立运行——正因如此，分片数据库才能伸缩到多台机器。然而，需要写入多个分片的操作会变得很棘手：例如，一个分片写入成功，另一个分片却失败时会怎样？我们将在接下来的章节中回答这个问题。
-
-
-
-
-### 参考文献
+### Tài liệu tham khảo
 
 [^1]: Claire Giordano. [Understanding partitioning and sharding in Postgres and Citus](https://www.citusdata.com/blog/2023/08/04/understanding-partitioning-and-sharding-in-postgres-and-citus/). *citusdata.com*, August 2023. Archived at [perma.cc/8BTK-8959](https://perma.cc/8BTK-8959) 
 [^2]: Brandur Leach. [Partitioning in Postgres, 2022 edition](https://brandur.org/fragments/postgres-partitioning-2022). *brandur.org*, October 2022. Archived at [perma.cc/Z5LE-6AKX](https://perma.cc/Z5LE-6AKX) 
